@@ -105,6 +105,30 @@
       margin: 0.5rem auto 0;
     }
 
+    /* ── CONTADOR DE VISITAS ─────────────────────── */
+    .visitas-badge {
+      position: absolute;
+      top: 0.7rem;
+      right: 1rem;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(240,192,64,0.35);
+      border-radius: 20px;
+      padding: 0.28rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--gold-mid);
+      letter-spacing: 0.04em;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+    .visitas-badge .vnum {
+      color: var(--gold-light);
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
     /* ── NAV ─────────────────────────────────── */
     nav {
       background: var(--dark);
@@ -941,11 +965,16 @@
       <div class="school-sub">González Ortega, Sombrerete, Zac.</div>
       <div class="divider-gold"></div>
     </div>
+
+    <!-- Badge contador de visitas -->
+    <div class="visitas-badge" title="Número de visitas al sistema">
+      👁 Visitas: <span class="vnum" id="visitas-count">—</span>
+    </div>
   </header>
 
   <!-- ═══ NAV ═══ -->
   <nav>
-    <a href="#" onclick="ocultarInformacion();return false;">Inicio</a>
+    <a href="#" onclick="ocultarInformacion();ocultarPadres();return false;">Inicio</a>
     <a href="#" onclick="mostrarInformacion();return false;">Información</a>
     <div class="nav-item">
       <a href="#" onclick="return false;">Alumnos ▾</a>
@@ -956,104 +985,17 @@
       </div>
     </div>
     <a href="#" onclick="mostrarPadres();return false;">Padres de Familia</a>
-    <a href="#">Docentes</a>
+    <div class="nav-item">
+      <a href="#" onclick="return false;">Docentes ▾</a>
+      <div class="dropdown">
+        <a href="#" onclick="openModal('eval-login');return false;">✏️ Captura de Calificaciones</a>
+        <a href="#" onclick="openModal('consulta-login');return false;">🔍 Consulta y Modificación</a>
+      </div>
+    </div>
     <a href="#">Contacto</a>
   </nav>
 
-  <!-- ═══ MODAL LOGIN DATOS DEL ALUMNO ═══ -->
-  <div class="modal-overlay" id="modal-datos">
-    <div class="modal modal-login">
-      <div class="modal-header">
-        <h3>🔍 Consulta de Alumnos(as)</h3>
-        <button class="modal-close" onclick="closeModal('datos')">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="login-icon">👤</div>
-        <p class="modal-subtitle">Ingresa tu CURP y Clave para acceder a tu información.</p>
-        <div class="form-group">
-          <label>Usuario (CURP)</label>
-          <input type="text" id="curp-datos" placeholder="Ej. GOML020315HZSNPR01" maxlength="18" autocomplete="username"/>
-        </div>
-        <div class="form-group">
-          <label>Contraseña (Clave del Alumno)</label>
-          <div class="input-eye-wrap">
-            <input type="password" id="clave-datos" placeholder="Clave del alumno" autocomplete="current-password"/>
-            <button class="eye-btn" type="button" onclick="togglePass('clave-datos', this)">👁</button>
-          </div>
-        </div>
-        <div id="resultado-datos"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeModal('datos')">Cancelar</button>
-        <button class="btn-submit" id="btn-datos" onclick="loginAlumno('datos')">Ingresar</button>
-      </div>
-      <div style="padding:0.4rem 1.4rem 1rem;text-align:center">
-        <button onclick="testConexion()" style="background:none;border:none;color:#b08040;font-size:0.72rem;cursor:pointer;text-decoration:underline">🔌 Probar conexión con el servidor</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ MODAL FICHA DESCRIPTIVA ═══ -->
-  <div class="modal-overlay" id="modal-ficha">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>📋 Ficha Descriptiva</h3>
-        <button class="modal-close" onclick="closeModal('ficha')">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-subtitle">Ingresa los siguientes datos para generar la ficha descriptiva del alumno(a).</p>
-        <div class="form-group">
-          <label>CURP</label>
-          <input type="text" id="curp-ficha" placeholder="Ej. GOML020315HZSNPR01" maxlength="18"/>
-        </div>
-        <div class="form-group">
-          <label>Clave del Alumno</label>
-          <input type="text" id="clave-ficha" placeholder="Ej. 32EST0003A001"/>
-        </div>
-      </div>
-      <div id="resultado-ficha"></div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeModal('ficha')">Cancelar</button>
-        <button class="btn-submit" id="btn-ficha" onclick="loginAlumno('ficha')">Generar Ficha</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ MODAL ACTUALIZACIÓN / ALTA ═══ -->
-  <div class="modal-overlay" id="modal-alta">
-    <div class="modal modal-login">
-      <div class="modal-header">
-        <h3>✏️ Actualización de Alumnos(as)</h3>
-        <button class="modal-close" onclick="closeModal('alta')">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="login-icon">🔐</div>
-        <p class="modal-subtitle">Ingresa tus credenciales para acceder al sistema de gestión escolar.</p>
-        <div class="form-group">
-          <label>Usuario</label>
-          <input type="text" id="curp-alta" placeholder="Ingresa tu usuario (CURP)" maxlength="18" autocomplete="username"/>
-        </div>
-        <div class="form-group">
-          <label>Contraseña</label>
-          <div class="input-eye-wrap">
-            <input type="password" id="clave-alta" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
-            <button class="eye-btn" type="button" onclick="togglePass('clave-alta', this)">👁</button>
-          </div>
-        </div>
-        <div id="resultado-alta"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeModal('alta')">Cancelar</button>
-        <button class="btn-submit" id="btn-alta" onclick="accederActualizacion()">Continuar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ HERO ═══ -->
-  
-
-  <!-- ═══ TARJETAS ═══ -->
-  <main>
+<main>
 
     <!-- ═══ HERO — página inicial ═══ -->
     <section id="sec-hero" style="
@@ -1523,13 +1465,134 @@
 
   </main>
 
+
+
+<!-- ═══ MODAL LOGIN DATOS DEL ALUMNO ═══ -->
+  <div class="modal-overlay" id="modal-datos">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🔍 Consulta de Alumnos(as)</h3>
+        <button class="modal-close" onclick="closeModal('datos')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="login-icon">👤</div>
+        <p class="modal-subtitle">Ingresa tu CURP y Clave para acceder a tu información.</p>
+        <div class="form-group">
+          <label>Usuario (CURP)</label>
+          <input type="text" id="curp-datos" placeholder="Ej. GOML020315HZSNPR01" maxlength="18" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label>Contraseña (Clave del Alumno)</label>
+          <div class="input-eye-wrap">
+            <input type="password" id="clave-datos" placeholder="Clave del alumno" autocomplete="current-password"/>
+            <button class="eye-btn" type="button" onclick="togglePass('clave-datos', this)">👁</button>
+          </div>
+        </div>
+        <div id="resultado-datos"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('datos')">Cancelar</button>
+        <button class="btn-submit" id="btn-datos" onclick="loginAlumno('datos')">Ingresar</button>
+      </div>
+      <div style="padding:0.4rem 1.4rem 1rem;text-align:center">
+        <button onclick="testConexion()" style="background:none;border:none;color:#b08040;font-size:0.72rem;cursor:pointer;text-decoration:underline">🔌 Probar conexión con el servidor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL FICHA DESCRIPTIVA ═══ -->
+  <div class="modal-overlay" id="modal-ficha">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>📋 Ficha Descriptiva</h3>
+        <button class="modal-close" onclick="closeModal('ficha')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">Ingresa los siguientes datos para generar la ficha descriptiva del alumno(a).</p>
+        <div class="form-group">
+          <label>CURP</label>
+          <input type="text" id="curp-ficha" placeholder="Ej. GOML020315HZSNPR01" maxlength="18"/>
+        </div>
+        <div class="form-group">
+          <label>Clave del Alumno</label>
+          <input type="text" id="clave-ficha" placeholder="Ej. 32EST0003A001"/>
+        </div>
+      </div>
+      <div id="resultado-ficha"></div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('ficha')">Cancelar</button>
+        <button class="btn-submit" id="btn-ficha" onclick="loginAlumno('ficha')">Generar Ficha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL ACTUALIZACIÓN / ALTA ═══ -->
+  <div class="modal-overlay" id="modal-alta">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>✏️ Actualización de Alumnos(as)</h3>
+        <button class="modal-close" onclick="closeModal('alta')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="login-icon">🔐</div>
+        <p class="modal-subtitle">Ingresa tus credenciales para acceder al sistema de gestión escolar.</p>
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" id="curp-alta" placeholder="Ingresa tu usuario (CURP)" maxlength="18" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <div class="input-eye-wrap">
+            <input type="password" id="clave-alta" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
+            <button class="eye-btn" type="button" onclick="togglePass('clave-alta', this)">👁</button>
+          </div>
+        </div>
+        <div id="resultado-alta"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('alta')">Cancelar</button>
+        <button class="btn-submit" id="btn-alta" onclick="accederActualizacion()">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ HERO ═══ -->
+  
+
+  <!-- ═══ TARJETAS ═══ -->
+  <main class="section">
+    <h2 class="section-title">Áreas del Proyecto</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <div class="card-title">Objetivo General</div>
+        <p class="card-body">Describe aquí el objetivo principal que el proyecto busca alcanzar durante el ciclo escolar.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📋</div>
+        <div class="card-title">Metodología</div>
+        <p class="card-body">Explica el enfoque, etapas y herramientas que se emplearán para llevar a cabo el proyecto.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <div class="card-title">Participantes</div>
+        <p class="card-body">Indica los grados, grupos o equipos de alumnos y docentes involucrados en la iniciativa.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📅</div>
+        <div class="card-title">Cronograma</div>
+        <p class="card-body">Muestra las fechas clave, entregas y actividades programadas a lo largo del proyecto.</p>
+      </div>
+    </div>
+  </main>
+
   <!-- ═══ FOOTER ═══ -->
   <footer>
     <span>EST 3 · González Ortega, Sombrerete, Zac.</span>
   </footer>
 
   <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyUEaX4VqizvyyKrBBOw12a46QYliGKtflV2PJrx8xIGdgTXA8k3Wz4P_a4FuysBqzM/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGjUn-WCDxmFbjFzk_T3KxW5_xSQhIxofuLk8ZUgxdIxcmkNi_fcPIN9Qm5AGuAKu2/exec';
 
     // Inyectar logo en ficha
     window.addEventListener('DOMContentLoaded', () => {
@@ -1540,26 +1603,38 @@
         if (fl) fl.src = logoSrc;
         if (al) al.src = logoSrc;
       } catch(e) {}
+
+      // ── Registrar y mostrar visita ──
+      registrarYMostrarVisita();
     });
 
-    function mostrarPadres() {
-      document.getElementById('sec-hero').style.display = 'none';
-      document.getElementById('sec-informacion').style.display = 'none';
-      document.getElementById('sec-padres').style.display = 'block';
-      window.scrollTo({top:0,behavior:'smooth'});
+    function cerrarDropdowns() {}
+
+    // ── CONTADOR DE VISITAS ──────────────────────────────────
+    function registrarYMostrarVisita() {
+      const cb = 'cbVisita_' + Date.now();
+      const url = APPS_SCRIPT_URL + '?accion=registrarVisita&callback=' + cb;
+      const s = document.createElement('script');
+      window[cb] = function(json) {
+        delete window[cb];
+        try { document.head.removeChild(s); } catch(e) {}
+        if (json && json.ok) {
+          const el = document.getElementById('visitas-count');
+          if (el) el.textContent = Number(json.visitas).toLocaleString('es-MX');
+        }
+      };
+      s.onerror = function() {
+        delete window[cb];
+        try { document.head.removeChild(s); } catch(e) {}
+      };
+      s.src = url;
+      document.head.appendChild(s);
+      // Timeout de seguridad
+      setTimeout(function() {
+        if (window[cb]) { delete window[cb]; }
+      }, 15000);
     }
-    function ocultarPadres() {
-      document.getElementById('sec-padres').style.display = 'none';
-      document.getElementById('sec-hero').style.display = 'block';
-      window.scrollTo({top:0,behavior:'smooth'});
-    }
-    function toggleCap(card) {
-      var body  = card.querySelector('.cap-body');
-      var arrow = card.querySelector('.cap-arrow');
-      var open  = body.style.display === 'block';
-      body.style.display  = open ? 'none' : 'block';
-      arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
-    }
+    // ────────────────────────────────────────────────────────
 
     function mostrarInformacion() {
       document.getElementById('sec-hero').style.display = 'none';
@@ -1571,6 +1646,27 @@
       document.getElementById('sec-informacion').style.display = 'none';
       document.getElementById('sec-hero').style.display = 'block';
       window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function mostrarPadres() {
+      document.getElementById('sec-hero').style.display = 'none';
+      document.getElementById('sec-informacion').style.display = 'none';
+      document.getElementById('sec-padres').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function ocultarPadres() {
+      document.getElementById('sec-padres').style.display = 'none';
+      document.getElementById('sec-hero').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function toggleCap(card) {
+      var body  = card.querySelector('.cap-body');
+      var arrow = card.querySelector('.cap-arrow');
+      var open  = body.style.display === 'block';
+      body.style.display  = open ? 'none' : 'block';
+      arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
     }
 
     function openModal(tipo) {
@@ -2770,19 +2866,44 @@
         try { document.head.removeChild(s); } catch(e) {}
         res.innerHTML = '<div class="result-error">❌ Error de red al contactar el servidor.</div>';
       };
-      s.src = 'https://script.google.com/macros/s/AKfycbyUEaX4VqizvyyKrBBOw12a46QYliGKtflV2PJrx8xIGdgTXA8k3Wz4P_a4FuysBqzM/exec?accion=diagnostico&curp=TEST&callback=' + cb;
+      s.src = 'https://script.google.com/macros/s/AKfycbzGjUn-WCDxmFbjFzk_T3KxW5_xSQhIxofuLk8ZUgxdIxcmkNi_fcPIN9Qm5AGuAKu2/exec?accion=diagnostico&curp=TEST&callback=' + cb;
       document.head.appendChild(s);
     }
 
-    function jsonpCall(url) {
-      return new Promise((resolve) => {
-        const cb = 'cb_' + Date.now();
-        const script = document.createElement('script');
-        window[cb] = function(r) { delete window[cb]; try{document.head.removeChild(script);}catch(e){} resolve(r); };
-        script.onerror = () => { delete window[cb]; resolve(null); };
-        script.src = url + `&callback=${cb}`;
+    function jsonpCall(paramsOrUrl, timeoutMs) {
+      return new Promise(function(resolve) {
+        var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+        var url;
+        if (typeof paramsOrUrl === 'string') {
+          url = paramsOrUrl + (paramsOrUrl.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+        } else {
+          var qs = Object.keys(paramsOrUrl).map(function(k){
+            return encodeURIComponent(k) + '=' + encodeURIComponent(paramsOrUrl[k]);
+          }).join('&');
+          url = APPS_SCRIPT_URL + '?' + qs + '&callback=' + cbName;
+        }
+        var script = document.createElement('script');
+        var timer = setTimeout(function() {
+          if (window[cbName]) {
+            delete window[cbName];
+            try { document.head.removeChild(script); } catch(e) {}
+            resolve({ ok: false, timeout: true, mensaje: 'Tiempo agotado' });
+          }
+        }, timeoutMs || 15000);
+        window[cbName] = function(data) {
+          clearTimeout(timer);
+          delete window[cbName];
+          try { document.head.removeChild(script); } catch(e) {}
+          resolve(data);
+        };
+        script.onerror = function() {
+          clearTimeout(timer);
+          delete window[cbName];
+          try { document.head.removeChild(script); } catch(e) {}
+          resolve({ ok: false, networkError: true, mensaje: 'Error de red' });
+        };
+        script.src = url;
         document.head.appendChild(script);
-        setTimeout(function() { if(window[cb]){ delete window[cb]; try{document.head.removeChild(script);}catch(e){} resolve(null); } }, 25000);
       });
     }
 
@@ -2934,6 +3055,464 @@
         if (md && md.classList.contains('active')) loginAlumno('datos');
       }
     });
+
+    // ══════════════════════════════════════════
+    //  MÓDULO EVALUACIONES
+    // ══════════════════════════════════════════
+    const ASIGNATURAS_EVAL = {
+      '1':['Español','Matemáticas','Biología','Geografía','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.'],
+      '2':['Español','Matemáticas','Física','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.'],
+      '3':['Español','Matemáticas','Química','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.']
+    };
+    function semanasT(t){
+      if(t==='1'){
+        const r=[{v:'D',l:'Diagnóstico'}];
+        for(let i=1;i<=12;i++) r.push({v:i,l:'Semana '+i});
+        r.push({v:'EX',l:'⭐ Examen'});
+        r.push({v:'PE',l:'➕ Puntos Extras'});
+        return r;
+      }
+      if(t==='2'){
+        const r=[];
+        for(let i=13;i<=26;i++) r.push({v:i,l:'Semana '+i});
+        r.push({v:'EX',l:'⭐ Examen'});
+        r.push({v:'PE',l:'➕ Puntos Extras'});
+        return r;
+      }
+      if(t==='3'){
+        const r=[];
+        for(let i=27;i<=38;i++) r.push({v:i,l:'Semana '+i});
+        r.push({v:'EX',l:'⭐ Examen'});
+        r.push({v:'PE',l:'➕ Puntos Extras'});
+        return r;
+      }
+      return [];
+    }
+    let _evalDoc='', _evalAlumnos=[];
+
+    async function accederEval(){
+      const user=(document.getElementById('eval-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('eval-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-eval-login');
+      const btn=document.getElementById('btn-eval-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      // Usar consultarUsuario — misma función que usa Actualización (que sí funciona)
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _evalDoc=json.usuario.nombre||user;
+        closeModal('eval-login');
+        document.getElementById('eval-doc-label').textContent='Docente: '+_evalDoc;
+        document.getElementById('eval-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('eval-user').value='';
+        document.getElementById('eval-pass').value='';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('eval-pass').value='';
+        document.getElementById('eval-pass').focus();
+      }
+    }
+    function cerrarEval(){
+      document.getElementById('eval-overlay').style.display='none';
+      document.body.style.overflow='';
+      volverP1Eval();
+      _evalDoc='';
+    }
+    function actualizarAsigEval(){
+      const g=document.getElementById('ev-grado').value;
+      const s=document.getElementById('ev-asig');
+      s.innerHTML='<option value="">-- Selecciona --</option>';
+      (ASIGNATURAS_EVAL[g]||[]).forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
+    }
+    function actualizarSemanasEval(){
+      const t=document.getElementById('ev-trim').value;
+      const s=document.getElementById('ev-sem');
+      const w=document.getElementById('ev-sem-wrap');
+      s.innerHTML='';
+      if(!t){w.style.display='none';return;}
+      w.style.display='block';
+      semanasT(t).forEach(x=>{const o=document.createElement('option');o.value=x.v;o.text=x.l;s.appendChild(o);});
+    }
+    async function cargarListaEval(){
+      const g=document.getElementById('ev-grado').value;
+      const gr=document.getElementById('ev-grupo').value;
+      const a=document.getElementById('ev-asig').value;
+      const t=document.getElementById('ev-trim').value;
+      const s=document.getElementById('ev-sem').value;
+      const msg=document.getElementById('ev-p1-msg');
+      if(!g||!gr||!a||!t||!s){msg.textContent='⚠️ Completa todos los campos.';return;}
+      msg.textContent='⏳ Cargando lista…';
+      const json=await jsonpCall({accion:'listarGrupo',grado:g,grupo:gr},15000);
+      if(!json){msg.textContent='❌ Sin respuesta del servidor.';return;}
+      if(json.timeout){msg.textContent='❌ Tiempo agotado. Verifica el Apps Script.';return;}
+      if(!json.alumnos){
+        msg.innerHTML='❌ Respuesta: '+JSON.stringify(json).substring(0,150);return;
+      }
+      _evalAlumnos=json.alumnos||[]; // ya filtrado y ordenado por servidor
+      if(_evalAlumnos.length===0){msg.textContent='⚠️ Sin alumnos en '+g+'°'+gr+'.';return;}
+      msg.textContent='';
+      const chips=[`📚 ${a}`,`🎓 ${g}° Grado`,`👥 Grupo ${gr}`,`📅 Trimestre ${t}`,`📌 ${document.getElementById('ev-sem').options[document.getElementById('ev-sem').selectedIndex].text}`];
+      document.getElementById('ev-resumen').innerHTML=chips.map(c=>`<span style="background:rgba(200,146,42,0.2);border:1px solid rgba(200,146,42,0.4);color:#e8d8b0;padding:0.25rem 0.8rem;border-radius:12px;font-size:0.78rem">${c}</span>`).join('');
+      const tbody=document.getElementById('ev-tbody');
+      tbody.innerHTML=_evalAlumnos.map((al,i)=>`
+        <tr style="border-bottom:1px solid #f0e8c0;background:${i%2===0?'#fffdf5':'#fff8ea'}">
+          <td style="padding:0.5rem 0.7rem;color:#7a6030;font-size:0.8rem">${i+1}</td>
+          <td style="padding:0.5rem 0.7rem;font-weight:600;font-size:0.87rem;color:#2d1f08">${al.Nombre||''}</td>
+          <td style="padding:0.5rem;text-align:center">
+            <input type="number" id="ec-${i}"
+              min="${_evalSemActual==='EX'||_evalSemActual==='PE'?0:5}"
+              max="10" step="0.5"
+              placeholder="${_evalSemActual==='EX'?'0-10 examen':_evalSemActual==='PE'?'0-10 extras':'5-10'}"
+              style="width:76px;padding:0.4rem;text-align:center;
+                border:1.5px solid ${_evalSemActual==='EX'?'#b0c4f0':_evalSemActual==='PE'?'#90d080':'#e8d88a'};
+                border-radius:6px;font-size:0.9rem;font-weight:700;font-family:'Inter',sans-serif;
+                color:${_evalSemActual==='EX'?'#1a3a7a':_evalSemActual==='PE'?'#1a5a00':'#2d1f08'}"
+              oninput="vcalAdapt(this)"
+              onkeydown="if(event.key==='Enter'){var nx=document.getElementById('ec-${Math.min(i+1,_evalAlumnos.length-1)}');if(nx)nx.focus();}"/>
+          </td>
+          <td style="padding:0.5rem;text-align:center;font-size:1rem" id="est-${i}"></td>
+        </tr>`).join('');
+      document.getElementById('ev-paso1').style.display='none';
+      document.getElementById('ev-paso2').style.display='block';
+      setTimeout(()=>{const f=document.getElementById('ec-0');if(f)f.focus();},100);
+    }
+    let _evalSemActual = '';
+
+    function vcalAdapt(inp){
+      const s=_evalSemActual;
+      const v=parseFloat(inp.value);
+      if(inp.value===''){inp.style.borderColor=s==='EX'?'#b0c4f0':s==='PE'?'#90d080':'#e8d88a';return;}
+      const min=s==='EX'||s==='PE'?0:5;
+      inp.style.borderColor=(isNaN(v)||v<min||v>10)?'#c0392b':(s==='EX'?'#4472C4':s==='PE'?'#70AD47':'#27ae60');
+    }
+
+    function calcPromCap(i){
+      const cal=parseFloat(document.getElementById('ec-'+i).value);
+      const ex =parseFloat(document.getElementById('ex-'+i).value);
+      const pe =parseFloat(document.getElementById('pe-'+i).value);
+      const vals=[];
+      if(!isNaN(cal)&&cal>=5&&cal<=10) vals.push(cal);
+      if(!isNaN(ex) &&ex >=0&&ex <=10) vals.push(ex);
+      const extra=(!isNaN(pe)&&pe>=0&&pe<=10)?pe:0;
+      let prom = vals.length>0 ? vals.reduce((a,b)=>a+b,0)/vals.length + extra : null;
+      if(prom!==null) prom=Math.min(10,prom);
+      const el=document.getElementById('pfc-'+i);
+      if(el) el.innerHTML='<span style="font-weight:800;color:#9B1C1C;font-size:0.9rem">'+(prom!==null?prom.toFixed(2):'—')+'</span>';
+    }
+
+    function vcal(inp){
+      const v=parseFloat(inp.value);
+      if(inp.value===''){inp.style.borderColor='#e8d88a';return;}
+      inp.style.borderColor=(isNaN(v)||v<5||v>10)?'#c0392b':'#27ae60';
+    }
+    async function guardarEval(){
+      const g=document.getElementById('ev-grado').value;
+      const gr=document.getElementById('ev-grupo').value;
+      const a=document.getElementById('ev-asig').value;
+      const t=document.getElementById('ev-trim').value;
+      const s=document.getElementById('ev-sem').value;
+      const msg=document.getElementById('ev-msg');
+      const recs=[];let err=0;
+      _evalAlumnos.forEach((al,i)=>{
+        const inp=document.getElementById('ec-'+i);
+        const v=parseFloat(inp.value);
+        if(inp.value===''){document.getElementById('est-'+i).textContent='⏭️';return;}
+        const minV=_evalSemActual==='EX'||_evalSemActual==='PE'?0:5;
+        if(isNaN(v)||v<minV||v>10){document.getElementById('est-'+i).textContent='❌';inp.style.borderColor='#c0392b';err++;return;}
+        recs.push({n:al.Nombre||'',c:al.CURP||'',g:g,gr:gr,a:a,t:t,s:s,cal:v,d:_evalDoc});
+      });
+      if(err>0){msg.innerHTML='<span style="color:#c0392b">❌ Corrige calificaciones marcadas (5-10).</span>';return;}
+      if(recs.length===0){msg.innerHTML='<span style="color:#e67e22">⚠️ No hay calificaciones capturadas.</span>';return;}
+
+      // Enviar en lotes de 6 para no exceder límite de URL
+      const LOTE=6;
+      let guardados=0, errLote=0;
+      msg.innerHTML='<span style="color:#7a6030">⏳ Guardando '+recs.length+' registros…</span>';
+
+      for(let i=0;i<recs.length;i+=LOTE){
+        const lote=recs.slice(i,i+LOTE);
+        const json=await jsonpCall({accion:'guardarEvaluaciones',datos:JSON.stringify(lote)},20000);
+        if(!json||json.timeout||json.networkError||!json.ok){
+          errLote++;
+          msg.innerHTML='<span style="color:#c0392b">❌ Error en lote '+(Math.floor(i/LOTE)+1)+': '+(json&&json.mensaje?json.mensaje:'sin respuesta')+'</span>';
+          return;
+        }
+        guardados+=json.guardados||lote.length;
+        // Marcar guardados
+        lote.forEach((_,li)=>{
+          const idx2=i+li;
+          const inp=document.getElementById('ec-'+idx2);
+          if(inp&&inp.value) document.getElementById('est-'+idx2).textContent='✅';
+        });
+        msg.innerHTML='<span style="color:#7a6030">⏳ Guardados '+guardados+' de '+recs.length+'…</span>';
+      }
+
+      msg.innerHTML='<span style="color:#1D7A4E">✅ '+guardados+' calificaciones guardadas correctamente.</span>';
+      setTimeout(()=>{
+        _evalAlumnos.forEach((_,i)=>{const inp=document.getElementById('ec-'+i);if(inp){inp.value='';inp.style.borderColor='#e8d88a';}document.getElementById('est-'+i).textContent='';});
+        const selS=document.getElementById('ev-sem');
+        if(selS.selectedIndex<selS.options.length-1){selS.selectedIndex++;const chips=document.getElementById('ev-resumen').querySelectorAll('span');if(chips[4])chips[4].textContent='📌 '+selS.options[selS.selectedIndex].text;}
+        msg.innerHTML='<span style="color:#1D7A4E">✅ Listo. Captura la siguiente semana o cambia selección.</span>';
+        const f=document.getElementById('ec-0');if(f)f.focus();
+      },2000);
+    }
+    function volverP1Eval(){
+      document.getElementById('ev-paso1').style.display='block';
+      document.getElementById('ev-paso2').style.display='none';
+      document.getElementById('ev-msg').innerHTML='';
+      _evalAlumnos=[];
+    }
+
+
+    // ══════════════════════════════════════════
+    //  MÓDULO CONSULTA Y MODIFICACIÓN
+    // ══════════════════════════════════════════
+    let _cnsDoc = '';
+    let _cnsData = []; // {nombre, curp, semanas:{D:val,1:val,...}, rowIds:{semana:rowIndex}}
+
+    async function accederConsulta(){
+      const user=(document.getElementById('cns-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('cns-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-consulta-login');
+      const btn=document.getElementById('btn-consulta-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json=await consultarUsuario(user,pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor.</div>';return;}
+      if(json.ok){
+        _cnsDoc=json.usuario.nombre||user;
+        closeModal('consulta-login');
+        document.getElementById('cns-doc-label').textContent='Docente: '+_cnsDoc;
+        document.getElementById('consulta-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('cns-user').value='';
+        document.getElementById('cns-pass').value='';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('cns-pass').value='';
+      }
+    }
+
+    function cerrarConsulta(){
+      document.getElementById('consulta-overlay').style.display='none';
+      document.body.style.overflow='';
+      _cnsDoc=''; _cnsData=[];
+      document.getElementById('cns-resultados').style.display='none';
+    }
+
+    function actualizarAsigCns(){
+      const g=document.getElementById('cns-grado').value;
+      const s=document.getElementById('cns-asig');
+      s.innerHTML='<option value="">-- Selecciona --</option>';
+      (ASIGNATURAS_EVAL[g]||[]).forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
+    }
+
+    async function consultarEvaluaciones(){
+      const g=document.getElementById('cns-grado').value;
+      const gr=document.getElementById('cns-grupo').value;
+      const a=document.getElementById('cns-asig').value;
+      const t=document.getElementById('cns-trim').value;
+      const msg=document.getElementById('cns-msg');
+      if(!g||!gr||!a||!t){msg.textContent='⚠️ Completa todos los campos.';return;}
+      msg.textContent='⏳ Consultando…';
+
+      const json=await jsonpCall({accion:'consultarEvaluaciones',grado:g,grupo:gr,asignatura:a,trimestre:t},20000);
+      if(!json||json.timeout||json.networkError){msg.textContent='❌ Sin respuesta del servidor.';return;}
+      if(!json.ok){msg.textContent='❌ '+(json.mensaje||'Error al consultar.');return;}
+      msg.textContent='';
+
+      _cnsData=json.datos||[];
+      const semanas=json.semanas||[]; // lista de semanas con datos ej: ['D','1','2',...]
+
+      // Resumen
+      document.getElementById('cns-resumen').innerHTML=
+        [`📚 ${a}`,`🎓 ${g}° Grado`,`👥 Grupo ${gr}`,`📅 Trimestre ${t}`,`👥 ${_cnsData.length} alumnos`]
+        .map(c=>`<span style="background:rgba(200,146,42,0.2);border:1px solid rgba(200,146,42,0.4);color:#e8d8b0;padding:0.25rem 0.8rem;border-radius:12px;font-size:0.78rem">${c}</span>`).join('');
+
+      // Construir tabla
+      const tabla=document.getElementById('cns-tabla');
+
+      // Encabezado
+      const semLabel=s=>s==='D'?'Diag':s;
+      const thStyle='padding:0.5rem 0.6rem;border:1px solid #e8d88a;font-size:0.75rem;font-weight:700;white-space:nowrap;';
+      let thead=`<thead><tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">
+        <th style="${thStyle}text-align:left">#</th>
+        <th style="${thStyle}text-align:left;min-width:180px">Alumno(a)</th>
+        ${semanas.map(s=>`<th style="${thStyle}text-align:center">${semLabel(s)}</th>`).join('')}
+        <th style="${thStyle}text-align:center;background:rgba(68,114,196,0.5)">Examen</th>
+        <th style="${thStyle}text-align:center;background:rgba(112,173,71,0.5)">Pts.Extra</th>
+        <th style="${thStyle}text-align:center;background:#9B1C1C">Prom.Final</th>
+      </tr></thead>`;
+
+      // Filas
+      const tdStyle='padding:0.4rem 0.3rem;border:1px solid #e8e0c0;text-align:center;';
+      let tbody='<tbody>';
+      _cnsData.forEach((al,ri)=>{
+        const cals=semanas.map(s=>al.cals[s]!==undefined&&al.cals[s]!==''?parseFloat(al.cals[s]):null);
+        // Promedio: excluir Diagnóstico ('D') y PE/EX — solo semanas numéricas
+        const validosProm=semanas.map((s,si)=>({s,v:cals[si]}))
+          .filter(x=>x.s!=='D'&&x.s!=='EX'&&x.s!=='PE'&&x.v!==null)
+          .map(x=>x.v);
+        const exAl=al.examen!==undefined&&al.examen!==''?parseFloat(al.examen):null;
+        const peAl=al.puntosExtras!==undefined&&al.puntosExtras!==''?parseFloat(al.puntosExtras):null;
+        // Sumar examen al promedio
+        const toPromArr=[...validosProm];
+        if(exAl!==null&&!isNaN(exAl)) toPromArr.push(exAl);
+        const promBase=toPromArr.length>0?toPromArr.reduce((a,b)=>a+b,0)/toPromArr.length:null;
+        // Puntos extras se SUMAN
+        const extra=(peAl!==null&&!isNaN(peAl))?peAl:0;
+        const prom=promBase!==null?Math.min(10,promBase+extra).toFixed(2):'—';
+        const exVal  = al.examen       !== undefined ? al.examen       : '';
+        const peVal  = al.puntosExtras!== undefined ? al.puntosExtras : '';
+        const pfVal  = al.promedioFinal!==undefined ? al.promedioFinal: '';
+        tbody+=`<tr style="background:${ri%2===0?'#fffdf5':'#fff8ea'}">
+          <td style="${tdStyle}color:#7a6030;font-size:0.78rem">${ri+1}</td>
+          <td style="padding:0.4rem 0.6rem;border:1px solid #e8e0c0;font-weight:600;font-size:0.82rem;color:#2d1f08">${al.nombre}</td>
+          ${semanas.map((s,si)=>{
+            const v=cals[si];
+            const color=v===null?'#ccc':v<6?'#c0392b':v<8?'#e67e22':'#27ae60';
+            return `<td style="${tdStyle}">
+              <input type="number" min="5" max="10" step="0.5"
+                value="${v!==null?v:''}"
+                data-alumno="${ri}" data-semana="${s}"
+                style="width:52px;padding:0.25rem;text-align:center;border:1.5px solid #e8d88a;
+                       border-radius:4px;font-size:0.82rem;font-weight:700;color:${color};
+                       font-family:'Inter',sans-serif;background:transparent"
+                oninput="vcalCns(this);recalcPromFinal(${ri})" onchange="recalcProm(${ri})"/>
+            </td>`;
+          }).join('')}
+          <td style="${tdStyle}background:rgba(68,114,196,0.06)">
+            <input type="number" min="0" max="10" step="0.5"
+              value="${exVal!==''?parseFloat(exVal)||'':''}"
+              data-alumno="${ri}" data-semana="__ex"
+              style="width:52px;padding:0.25rem;text-align:center;border:1.5px solid #b0c4f0;
+                     border-radius:4px;font-size:0.82rem;font-weight:700;color:#1a3a7a;
+                     font-family:'Inter',sans-serif;background:transparent"
+              oninput="vcalCns(this);recalcPromFinal(${ri})"/>
+          </td>
+          <td style="${tdStyle}background:rgba(112,173,71,0.06)">
+            <input type="number" min="0" max="10" step="0.5"
+              value="${peVal!==''?parseFloat(peVal)||'':''}"
+              data-alumno="${ri}" data-semana="__pe"
+              style="width:52px;padding:0.25rem;text-align:center;border:1.5px solid #90d080;
+                     border-radius:4px;font-size:0.82rem;font-weight:700;color:#1a5a00;
+                     font-family:'Inter',sans-serif;background:transparent"
+              oninput="vcalCns(this);recalcPromFinal(${ri})"/>
+          </td>
+          <td id="pf-cns-${ri}" style="${tdStyle}font-weight:800;color:#9B1C1C;font-size:0.9rem;background:rgba(155,28,28,0.06)">
+            ${prom}
+          </td>
+        </tr>`;
+      });
+      tbody+='</tbody>';
+      tabla.innerHTML=thead+tbody;
+
+      document.getElementById('cns-filtros').style.display='none';
+      document.getElementById('cns-resultados').style.display='block';
+    }
+
+    function vcalCns(inp){
+      const v=parseFloat(inp.value);
+      if(inp.value===''){inp.style.borderColor='#e8d88a';inp.style.color='#999';return;}
+      if(isNaN(v)||v<5||v>10){inp.style.borderColor='#c0392b';inp.style.color='#c0392b';}
+      else{inp.style.borderColor='#27ae60';inp.style.color=v<6?'#c0392b':v<8?'#e67e22':'#27ae60';}
+    }
+
+    function recalcProm(ri){
+      const inputs=document.querySelectorAll(`input[data-alumno="${ri}"][data-semana]`);
+      const vals=[...inputs].filter(i=>i.dataset.semana!=='__ex'&&i.dataset.semana!=='__pe')
+        .map(i=>parseFloat(i.value)).filter(v=>!isNaN(v)&&v>=5&&v<=10);
+      const prom=vals.length>0?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2):'—';
+      recalcPromFinal(ri);
+    }
+
+    function recalcPromFinal(ri){
+      const allInputs=document.querySelectorAll(`input[data-alumno="${ri}"][data-semana]`);
+      // Semanas que SÍ promedian: excluir Diagnóstico ('D'), Examen ('__ex'), PuntosExtras ('__pe')
+      // Solo entran al promedio las semanas numéricas (1-38) + Examen (__ex)
+      const semVals=[...allInputs]
+        .filter(i=>i.dataset.semana!=='D'&&i.dataset.semana!=='__pe'&&i.dataset.semana!=='__ex')
+        .map(i=>parseFloat(i.value)).filter(v=>!isNaN(v)&&v>=5&&v<=10);
+
+      const exInput=document.querySelector(`input[data-alumno="${ri}"][data-semana="__ex"]`);
+      const peInput=document.querySelector(`input[data-alumno="${ri}"][data-semana="__pe"]`);
+      const exV=exInput?parseFloat(exInput.value):NaN;
+      const peV=peInput?parseFloat(peInput.value):NaN;
+
+      // Promedio = promedio de (semanas + examen)
+      const toPromedio=[...semVals];
+      if(!isNaN(exV)&&exV>=0&&exV<=10) toPromedio.push(exV);
+
+      const prom=toPromedio.length>0?toPromedio.reduce((a,b)=>a+b,0)/toPromedio.length:null;
+
+      // Puntos Extras se SUMAN al promedio (no se promedian)
+      const extra=(!isNaN(peV)&&peV>=0&&peV<=10)?peV:0;
+      let pf=prom!==null?Math.min(10, prom+extra):null;
+
+      const el=document.getElementById('pf-cns-'+ri);
+      if(el) el.textContent=pf!==null?pf.toFixed(2):'—';
+    }
+
+    async function guardarCambiosCns(){
+      const g=document.getElementById('cns-grado').value;
+      const gr=document.getElementById('cns-grupo').value;
+      const a=document.getElementById('cns-asig').value;
+      const t=document.getElementById('cns-trim').value;
+      const msg=document.getElementById('cns-save-msg');
+
+      // Recopilar todos los cambios
+      const cambios=[];
+      const inputs=document.querySelectorAll('#cns-tabla input[data-alumno]');
+      let err=0;
+      inputs.forEach(inp=>{
+        const v=inp.value;
+        if(v==='') return;
+        const n=parseFloat(v);
+        const sem=inp.dataset.semana;
+        const minV=(sem==='__pe'||sem==='__ex')?0:5;
+        if(isNaN(n)||n<minV||n>10){err++;inp.style.borderColor='#c0392b';return;}
+        const ri=parseInt(inp.dataset.alumno);
+        const al=_cnsData[ri];
+        // Si es examen o puntos extras, usar campo especial
+        let pushObj;
+        if(sem==='__ex') pushObj={n:al.nombre,c:al.curp,g,gr,a,t,s:'EX',ex:n,d:_cnsDoc};
+        else if(sem==='__pe') pushObj={n:al.nombre,c:al.curp,g,gr,a,t,s:'PE',pe:n,d:_cnsDoc};
+        else {
+          // Calcular promedio final
+          const pfEl=document.getElementById('pf-cns-'+ri);
+          const pfV=pfEl?parseFloat(pfEl.textContent)||'':'';
+          pushObj={n:al.nombre,c:al.curp,g,gr,a,t,s:sem,cal:n,pf:pfV,d:_cnsDoc};
+        }
+        cambios.push(pushObj);
+      });
+
+      if(err>0){msg.innerHTML='<span style="color:#c0392b">❌ Corrige valores fuera de rango (5-10).</span>';return;}
+      if(cambios.length===0){msg.innerHTML='<span style="color:#e67e22">⚠️ Sin cambios para guardar.</span>';return;}
+
+      msg.innerHTML=`<span style="color:#7a6030">⏳ Guardando ${cambios.length} registros…</span>`;
+
+      const LOTE=6;
+      let guardados=0;
+      for(let i=0;i<cambios.length;i+=LOTE){
+        const lote=cambios.slice(i,i+LOTE);
+        const json=await jsonpCall({accion:'actualizarEvaluaciones',datos:JSON.stringify(lote)},20000);
+        if(!json||!json.ok){
+          msg.innerHTML='<span style="color:#c0392b">❌ Error: '+(json&&json.mensaje?json.mensaje:'sin respuesta')+'</span>';
+          return;
+        }
+        guardados+=json.guardados||lote.length;
+      }
+      msg.innerHTML=`<span style="color:#1D7A4E">✅ ${guardados} registros actualizados correctamente.</span>`;
+    }
+
   </script>
 
   <!-- ═══ PANTALLA COMPLETA — EXPEDIENTE ALUMNO ═══ -->
@@ -2972,5 +3551,309 @@
   </div>
 
 
+
+  <!-- MODAL LOGIN EVALUACIONES -->
+  <div class="modal-overlay" id="modal-eval-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📝 Acceso — Evaluaciones</h3>
+        <button class="modal-close" onclick="closeModal('eval-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="eval-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="eval-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederEval()"/>
+            <span onclick="togglePass('eval-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-eval-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('eval-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-eval-login" onclick="accederEval()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL EVALUACIONES -->
+  <div id="eval-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">📝</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Sistema de Evaluaciones — EST No. 3
+          </div>
+          <div id="eval-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarEval()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:860px;margin:0 auto;padding:1.5rem 1rem 3rem">
+
+      <!-- PASO 1 -->
+      <div id="ev-paso1">
+        <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                   border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+          Paso 1 — Seleccionar Grupo, Asignatura y Período
+        </h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.9rem;margin-bottom:1rem">
+          <!-- Grado -->
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="ev-grado" onchange="actualizarAsigEval()"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Grado</option>
+              <option value="2">2° Grado</option>
+              <option value="3">3° Grado</option>
+            </select>
+          </div>
+          <!-- Grupo -->
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="ev-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="A">Grupo A</option>
+              <option value="B">Grupo B</option>
+              <option value="C">Grupo C</option>
+              <option value="D">Grupo D</option>
+              <option value="E">Grupo E</option>
+            </select>
+          </div>
+          <!-- Asignatura -->
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Asignatura</label>
+            <select id="ev-asig"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona grado --</option>
+            </select>
+          </div>
+          <!-- Trimestre -->
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Trimestre</label>
+            <select id="ev-trim" onchange="actualizarSemanasEval()"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Trimestre (Diag + Sem 2-12)</option>
+              <option value="2">2° Trimestre (Sem 13-26)</option>
+              <option value="3">3° Trimestre (Sem 27-38)</option>
+            </select>
+          </div>
+        </div>
+        <!-- Semanas -->
+        <div id="ev-sem-wrap" style="display:none;margin-bottom:1rem">
+          <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Semana de Evaluación</label>
+          <select id="ev-sem"
+            style="width:100%;max-width:260px;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+          </select>
+        </div>
+        <div id="ev-p1-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+        <button onclick="cargarListaEval()"
+          style="background:#C8922A;color:#1a1408;border:none;padding:0.6rem 1.5rem;border-radius:6px;font-size:0.87rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.03em">
+          📋 Cargar Lista de Alumnos
+        </button>
+      </div>
+
+      <!-- PASO 2 -->
+      <div id="ev-paso2" style="display:none">
+        <div id="ev-resumen" style="background:rgba(200,146,42,0.1);border:1px solid #C8922A;border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.5rem"></div>
+        <div style="overflow-x:auto;margin-bottom:1rem">
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;background:#fffdf5;border-radius:8px;overflow:hidden;border:1px solid #e8d88a;min-width:400px">
+            <thead>
+              <tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">
+                <th style="padding:0.55rem 0.7rem;text-align:left;font-size:0.8rem">#</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left">Alumno(a)</th>
+                <th id="ev-col-label" style="padding:0.55rem 0.7rem;text-align:center">Valor</th>
+                <th style="padding:0.55rem 0.7rem;text-align:center">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="ev-tbody"></tbody>
+          </table>
+        </div>
+        <div id="ev-msg" style="font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem;text-align:center"></div>
+        <div style="display:flex;gap:0.8rem;flex-wrap:wrap">
+          <button onclick="guardarEval()"
+            style="background:#1D7A4E;color:#fff;border:none;padding:0.6rem 1.4rem;border-radius:6px;font-size:0.87rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">
+            💾 Guardar Calificaciones
+          </button>
+          <button onclick="volverP1Eval()"
+            style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.6rem 1.1rem;border-radius:6px;font-size:0.87rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+            ← Cambiar Selección
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN CONSULTA -->
+  <div class="modal-overlay" id="modal-consulta-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🔍 Consulta y Modificación</h3>
+        <button class="modal-close" onclick="closeModal('consulta-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="cns-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="cns-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederConsulta()"/>
+            <span onclick="togglePass('cns-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-consulta-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('consulta-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-consulta-login" onclick="accederConsulta()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL CONSULTA Y MODIFICACIÓN -->
+  <div id="consulta-overlay" style="display:none;position:fixed;inset:0;z-index:99997;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">🔍</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Consulta y Modificación de Evaluaciones
+          </div>
+          <div id="cns-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarConsulta()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1100px;margin:0 auto;padding:1.5rem 1rem 3rem">
+
+      <!-- FILTROS -->
+      <div id="cns-filtros">
+        <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                   border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+          Seleccionar grupo a consultar
+        </h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.9rem;margin-bottom:1rem">
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="cns-grado" onchange="actualizarAsigCns()"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Grado</option>
+              <option value="2">2° Grado</option>
+              <option value="3">3° Grado</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="cns-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="A">Grupo A</option>
+              <option value="B">Grupo B</option>
+              <option value="C">Grupo C</option>
+              <option value="D">Grupo D</option>
+              <option value="E">Grupo E</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Asignatura</label>
+            <select id="cns-asig"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona grado --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Trimestre</label>
+            <select id="cns-trim"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Trimestre</option>
+              <option value="2">2° Trimestre</option>
+              <option value="3">3° Trimestre</option>
+            </select>
+          </div>
+        </div>
+        <div id="cns-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+        <button onclick="consultarEvaluaciones()"
+          style="background:#C8922A;color:#1a1408;border:none;padding:0.6rem 1.5rem;border-radius:6px;font-size:0.87rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.03em">
+          🔍 Consultar
+        </button>
+      </div>
+
+      <!-- TABLA RESULTADOS -->
+      <div id="cns-resultados" style="display:none;margin-top:1.5rem">
+
+        <!-- Resumen -->
+        <div id="cns-resumen" style="background:rgba(200,146,42,0.1);border:1px solid #C8922A;
+             border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:1rem;
+             display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center"></div>
+
+        <!-- Tabla scrollable -->
+        <div style="overflow-x:auto;margin-bottom:1rem">
+          <table id="cns-tabla" style="border-collapse:collapse;font-size:0.8rem;
+                 background:#fffdf5;white-space:nowrap;min-width:600px;
+                 border:1px solid #e8d88a">
+            <!-- thead y tbody se generan dinámicamente -->
+          </table>
+        </div>
+
+        <!-- Promedio info -->
+        <p style="color:#a08040;font-size:0.75rem;margin-bottom:1rem">
+          * <strong>Prom. Final</strong> = Promedio(Semanas + Examen) + Puntos Extras (máx 10). El Diagnóstico y los Puntos Extras no se promedian.
+        </p>
+
+        <div id="cns-save-msg" style="font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem;text-align:center"></div>
+        <div style="display:flex;gap:0.8rem;flex-wrap:wrap">
+          <button onclick="guardarCambiosCns()"
+            style="background:#1D7A4E;color:#fff;border:none;padding:0.6rem 1.4rem;border-radius:6px;font-size:0.87rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">
+            💾 Guardar Cambios
+          </button>
+          <button onclick="document.getElementById('cns-resultados').style.display='none';document.getElementById('cns-filtros').style.display='block'"
+            style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.6rem 1.1rem;border-radius:6px;font-size:0.87rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+            ← Nueva Consulta
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
+
 </html>
