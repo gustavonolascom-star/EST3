@@ -1,4 +1,4 @@
-<!-- Generado: 19/agosto/2026, 21:29 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 20/agosto/2026, 15:08 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -954,6 +954,11 @@
       margin-bottom: 0.6rem;
     }
 
+    @keyframes anuncioPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.18); }
+    }
+
     .anuncio-vacio {
       grid-column: 1 / -1;
       text-align: center;
@@ -1092,22 +1097,23 @@
           rgba(26,20,8,0.70) 100%
         );
       "></div>
-      <!-- Contenido -->
-      <div style="position:relative;z-index:1;max-width:700px;margin:0 auto">
-        <div style="font-family:'Cinzel',serif;color:#C8922A;font-size:0.8rem;
-                    letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem">
-          Bienvenido al Sistema Escolar
+      <!-- Contenido: Anuncios, visibles de inmediato al abrir la página -->
+      <div style="position:relative;z-index:1;max-width:900px;margin:0 auto;width:100%">
+        <div style="text-align:center;margin-bottom:1.6rem">
+          <div style="font-family:'Playfair Display',serif;font-size:clamp(1.9rem,5.5vw,2.8rem);
+                      font-weight:900;letter-spacing:0.07em;text-transform:uppercase;color:#F0C040;
+                      text-shadow:0 0 22px rgba(240,192,64,0.55),0 2px 12px rgba(0,0,0,0.85);
+                      display:inline-flex;align-items:center;gap:0.65rem">
+            <span style="display:inline-block;animation:anuncioPulse 2.2s ease-in-out infinite">📢</span>
+            Anuncios
+          </div>
+          <div style="width:90px;height:3px;background:linear-gradient(90deg,transparent,#C8922A,transparent);
+                      margin:0.8rem auto 0"></div>
         </div>
-        <h1 style="font-family:'Playfair Display',serif;color:#F0C040;font-size:2.2rem;
-                   line-height:1.25;margin:0 0 1rem;text-shadow:0 2px 12px rgba(0,0,0,0.7)">
-          Escuela Secundaria<br>Técnica No. 3
-        </h1>
-        <p style="color:#d4b878;font-size:1rem;margin:0 0 2rem;line-height:1.6;
-                  text-shadow:0 1px 6px rgba(0,0,0,0.8)">
-          González Ortega, Sombrerete, Zac.<br>
-          <span style="font-size:0.85rem;color:#b09050">Educación con calidad, valores y vocación técnica</span>
-        </p>
-
+        <div id="anuncios-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+             gap:1.2rem;text-align:left">
+          <div class="anuncio-vacio" style="color:#c9a96e">⏳ Cargando anuncios…</div>
+        </div>
       </div>
     </section>
 
@@ -1625,16 +1631,7 @@
     </div>
   </div>
 
-  <!-- ═══ HERO ═══ -->
-  
-
-  <!-- ═══ ANUNCIOS ═══ -->
-  <main class="section">
-    <h2 class="section-title">Anuncios</h2>
-    <div class="cards" id="anuncios-cards">
-      <div class="anuncio-vacio">⏳ Cargando anuncios…</div>
-    </div>
-  </main>
+  <!-- Los Anuncios ahora se muestran directo en el HERO (ver #anuncios-cards arriba) -->
 
   <!-- ═══ FOOTER ═══ -->
   <footer>
@@ -3396,23 +3393,29 @@
       if(!cont) return;
       const json = await jsonpCall({accion:'listarAnuncios'}, 15000);
       if(!json || !json.ok || !json.anuncios || !json.anuncios.length){
-        cont.innerHTML = '<div class="anuncio-vacio">📭 No hay anuncios publicados por el momento.</div>';
+        cont.innerHTML = '<div class="anuncio-vacio" style="color:#c9a96e">📭 No hay anuncios publicados por el momento.</div>';
         return;
       }
       const iconos = ['📢','📌','🔔','📅','📝'];
       cont.innerHTML = json.anuncios.map(function(a, idx){
-        const v       = a.valores || [];
-        const badge   = v[0] || '';
-        const titulo  = v[1] || '';
-        const cuerpo1 = v[2] || '';
-        const cuerpo2 = v[3] || '';
-        const icono   = iconos[idx % iconos.length];
-        let html = '<div class="card">';
-        html += '<div class="card-icon">'+icono+'</div>';
-        if (badge)   html += '<div class="anuncio-badge">'+badge+'</div>';
-        if (titulo)  html += '<div class="card-title">'+titulo+'</div>';
-        if (cuerpo1) html += '<p class="card-body">'+cuerpo1+'</p>';
-        if (cuerpo2) html += '<p class="card-body" style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed #e8d88a">'+cuerpo2+'</p>';
+        const v      = a.valores || [];
+        const badge  = v[0] || '';
+        const titulo = v[1] || '';
+        // v[2] en adelante son los "Cuerpo N" (Cuerpo 1 … Cuerpo 10, columnas D a M) —
+        // se muestran todos los que traigan texto, en el orden de la hoja.
+        const cuerpos = v.slice(2).filter(function(t){ return (t||'').toString().trim() !== ''; });
+        const icono  = iconos[idx % iconos.length];
+        let html = '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;' +
+          'border-top:3px solid #C8922A;border-radius:12px;padding:1.5rem 1.4rem;' +
+          'backdrop-filter:blur(4px);box-shadow:0 4px 18px rgba(0,0,0,0.35)">';
+        html += '<div style="font-size:1.6rem;margin-bottom:0.6rem">'+icono+'</div>';
+        if (badge)  html += '<div class="anuncio-badge">'+badge+'</div>';
+        if (titulo) html += '<div style="font-family:\'Playfair Display\',serif;font-size:1.02rem;' +
+          'font-weight:700;color:#F0C040;margin-bottom:0.5rem">'+titulo+'</div>';
+        cuerpos.forEach(function(texto, i){
+          const extra = i > 0 ? 'margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed rgba(200,146,42,0.35);' : '';
+          html += '<p style="'+extra+'font-size:0.86rem;color:#d4b878;line-height:1.6;margin:0">'+texto+'</p>';
+        });
         html += '</div>';
         return html;
       }).join('');
