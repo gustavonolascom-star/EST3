@@ -1,4 +1,4 @@
-<!-- Generado: 20/agosto/2026, 15:08 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 31/agosto/2026, 20:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1057,6 +1057,7 @@
       <div class="dropdown">
         <a href="#" onclick="openModal('eval-login');return false;">📝 Calificaciones (Captura y Consulta)</a>
         <a href="#" onclick="openModal('lista-asis-login');return false;">📋 Lista de Asistencia</a>
+        <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
       </div>
     </div>
     <div class="nav-item">
@@ -3573,11 +3574,31 @@
     // ══════════════════════════════════════════
     //  MÓDULO EVALUACIONES
     // ══════════════════════════════════════════
-    const ASIGNATURAS_EVAL = {
-      '1':['Español','Matemáticas','Biología','Geografía','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.'],
-      '2':['Español','Matemáticas','Física','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.'],
-      '3':['Español','Matemáticas','Química','Historia','F.C.y E.','Inglés','Ed. Física','Artes','Tecnología','A.C.']
-    };
+    // Catálogo de Asignaturas por grado para el módulo de Calificaciones.
+    // Se carga EN VIVO desde el libro Evaluaciones, hoja "Estructura"
+    // (columnas "Asig. 1", "Asig. 2", "Asig. 3" — una por grado), en vez de
+    // una lista fija en el código, para que baste editar esa hoja para
+    // agregar/quitar materias (incluye las técnicas: Tec CIA, Tec Apicultura,
+    // Tec Contabilidad, Tec Ganadería, Tec Informática, etc.).
+    let ASIGNATURAS_EVAL = { '1':[], '2':[], '3':[] };
+    let _catalogoAsigCargado = false;
+    async function cargarCatalogoAsignaturas(forzar){
+      if(_catalogoAsigCargado && !forzar) return;
+      try{
+        const json = await jsonpCall({accion:'estructuraCalificaciones'}, 15000);
+        if(json && json.ok && json.asignaturasPorGrado){
+          ASIGNATURAS_EVAL = {
+            '1': json.asignaturasPorGrado['1']||[],
+            '2': json.asignaturasPorGrado['2']||[],
+            '3': json.asignaturasPorGrado['3']||[]
+          };
+          _catalogoAsigCargado = true;
+        }
+      }catch(e){ /* si falla, se reintenta en el siguiente uso */ }
+    }
+    // Precarga apenas abre la página, para que ya esté lista cuando el
+    // docente/admin entre a Calificaciones (con reintento de respaldo abajo).
+    cargarCatalogoAsignaturas();
     function semanasT(t){
       if(t==='1'){
         const r=[{v:'D',l:'Diagnóstico'}];
@@ -3603,6 +3624,67 @@
       return [];
     }
     let _evalDoc='', _evalAlumnos=[];
+    let _evalNivel='', _evalGruposSet=[], _evalAsigSet=[];
+    let _evalGruposRaw='', _evalAsigRaw='';
+
+    function normTxt(s){
+      return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toUpperCase();
+    }
+    // "1A", "1-A", "1 A", "1°A" → {grado:'1', grupo:'A'}
+    function parsearGruposDocente(raw){
+      return (raw||'').split(',').map(function(t){
+        const m = t.trim().toUpperCase().match(/^(\d+)[^A-Z]*([A-Z])$/);
+        return m ? { grado: m[1], grupo: m[2] } : null;
+      }).filter(Boolean);
+    }
+    function parsearAsigDocente(raw){
+      return (raw||'').split(',').map(normTxt).filter(function(t){ return t!==''; });
+    }
+
+    const EV_GRADO_FULL = '<option value="">-- Selecciona --</option><option value="1">1° Grado</option><option value="2">2° Grado</option><option value="3">3° Grado</option>';
+    const EV_GRUPO_FULL = '<option value="">-- Selecciona --</option><option value="A">Grupo A</option><option value="B">Grupo B</option><option value="C">Grupo C</option><option value="D">Grupo D</option><option value="E">Grupo E</option>';
+
+    // Restringe (o restaura) los selects de Grado/Grupo del Paso 1 según el
+    // nivel de la cuenta que inició sesión — cuentas "docente" solo ven los
+    // grados/grupos de su hoja Usuarios (columna Grupos); admin ve todo, igual que antes.
+    function aplicarRestriccionDocente(){
+      const selGrado = document.getElementById('ev-grado');
+      const selGrupo = document.getElementById('ev-grupo');
+      const selAsig  = document.getElementById('ev-asig');
+      const msg = document.getElementById('ev-p1-msg');
+      msg.textContent = '';
+      selGrado.disabled = selGrupo.disabled = selAsig.disabled = false;
+
+      if(_evalNivel !== 'DOCENTE'){
+        selGrado.innerHTML = EV_GRADO_FULL;
+        selGrupo.innerHTML = EV_GRUPO_FULL;
+        selGrado.onchange = actualizarAsigEval;
+        return;
+      }
+      if(!_evalGruposSet.length || !_evalAsigSet.length){
+        selGrado.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selAsig.innerHTML  = '<option value="">-- Sin asignar --</option>';
+        selGrado.disabled = selGrupo.disabled = selAsig.disabled = true;
+        let detalle = '';
+        if((_evalGruposRaw||'').trim() || (_evalAsigRaw||'').trim()){
+          detalle = ' (Se recibió Grupos="'+_evalGruposRaw+'" y Asignatura="'+_evalAsigRaw+'"; revisa que el formato sea, por ejemplo, Grupos: "1A,1B,2C" y Asignatura: "Matemáticas".)';
+        }
+        msg.innerHTML = '⚠️ Tu cuenta de docente todavía no tiene grupo(s) ni asignatura asignados. Solicita al Director que los configure en el sistema.' + detalle;
+        return;
+      }
+      const gradosPermitidos = Array.from(new Set(_evalGruposSet.map(function(x){return x.grado;}))).sort();
+      selGrado.innerHTML = '<option value="">-- Selecciona --</option>' +
+        gradosPermitidos.map(function(g){return '<option value="'+g+'">'+g+'° Grado</option>';}).join('');
+      selGrupo.innerHTML = '<option value="">-- Selecciona grado --</option>';
+      selGrado.onchange = function(){
+        const g = selGrado.value;
+        const gruposDeEsteGrado = _evalGruposSet.filter(function(x){return x.grado===g;}).map(function(x){return x.grupo;});
+        selGrupo.innerHTML = '<option value="">-- Selecciona --</option>' +
+          gruposDeEsteGrado.map(function(gr){return '<option value="'+gr+'">Grupo '+gr+'</option>';}).join('');
+        actualizarAsigEval();
+      };
+    }
 
     async function accederEval(){
       const user=(document.getElementById('eval-user').value||'').trim().toUpperCase();
@@ -3612,16 +3694,23 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
+      if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas(); // respaldo si la precarga no alcanzó a terminar
       // Usar consultarUsuario — misma función que usa Actualización (que sí funciona)
       const json = await consultarUsuario(user, pass);
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
         _evalDoc=json.usuario.nombre||user;
+        _evalNivel=normTxt(json.usuario.nivel||'');
+        _evalGruposRaw=json.usuario.grupos||'';
+        _evalAsigRaw=json.usuario.asignatura||'';
+        _evalGruposSet=parsearGruposDocente(_evalGruposRaw);
+        _evalAsigSet=parsearAsigDocente(_evalAsigRaw);
         closeModal('eval-login');
         document.getElementById('eval-doc-label').textContent='Docente: '+_evalDoc;
         document.getElementById('eval-overlay').style.display='block';
         document.body.style.overflow='hidden';
+        aplicarRestriccionDocente();
         res.innerHTML='';
         document.getElementById('eval-user').value='';
         document.getElementById('eval-pass').value='';
@@ -3635,7 +3724,7 @@
       document.getElementById('eval-overlay').style.display='none';
       document.body.style.overflow='';
       volverP1Eval();
-      _evalDoc='';
+      _evalDoc=''; _evalNivel=''; _evalGruposSet=[]; _evalAsigSet=[]; _evalGruposRaw=''; _evalAsigRaw='';
     }
 
     /* ── Módulo Docentes: Lista de Asistencia (PDF para impresión) ── */
@@ -3673,6 +3762,210 @@
       document.getElementById('lista-asis-overlay').style.display='none';
       document.body.style.overflow='';
       _laDoc='';
+    }
+
+    /* ── Módulo Docentes: Control de Asistencia (reporte real del checador) ── */
+    let _rasisDoc='', _rasisTab='diaria';
+
+    async function accederReporteAsis(){
+      const user=(document.getElementById('rasis-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('rasis-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-rasis-login');
+      const btn=document.getElementById('btn-rasis-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _rasisDoc=json.usuario.nombre||user;
+        closeModal('rasis-login');
+        document.getElementById('rasis-doc-label').textContent='Docente: '+_rasisDoc;
+        document.getElementById('rasis-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('rasis-user').value='';
+        document.getElementById('rasis-pass').value='';
+        document.getElementById('rasis-grado').value='';
+        document.getElementById('rasis-grupo').value='';
+        document.getElementById('rasis-fecha').value='';
+        document.getElementById('res-rasis').innerHTML='';
+        document.getElementById('rasis-reporte').innerHTML='';
+        tabRasis('diaria');
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('rasis-pass').value='';
+        document.getElementById('rasis-pass').focus();
+      }
+    }
+
+    function cerrarReporteAsis(){
+      document.getElementById('rasis-overlay').style.display='none';
+      document.body.style.overflow='';
+      _rasisDoc='';
+    }
+
+    function tabRasis(tab){
+      _rasisTab=tab;
+      const btnD=document.getElementById('rasis-tab-diaria');
+      const btnF=document.getElementById('rasis-tab-fecha');
+      const wrapFecha=document.getElementById('rasis-fecha-wrap');
+      const desc=document.getElementById('rasis-tab-desc');
+      if(tab==='diaria'){
+        btnD.style.background='#F0C040'; btnD.style.color='#1A1208';
+        btnF.style.background='transparent'; btnF.style.color='#C8922A';
+        wrapFecha.style.display='none';
+        desc.textContent='Muestra la asistencia registrada el día de hoy para el grado y grupo que elijas.';
+      } else {
+        btnF.style.background='#F0C040'; btnF.style.color='#1A1208';
+        btnD.style.background='transparent'; btnD.style.color='#C8922A';
+        wrapFecha.style.display='';
+        desc.textContent='Elige el grado, grupo y la fecha que quieras consultar.';
+        const fi=document.getElementById('rasis-fecha');
+        if(!fi.value){
+          const hoy=new Date();
+          const iso=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+          fi.value=iso;
+        }
+      }
+      document.getElementById('res-rasis').innerHTML='';
+      document.getElementById('rasis-reporte').innerHTML='';
+    }
+
+    const RASIS_ESTATUS_ESTILO = {
+      'Presente':    {bg:'#e3f5e6', color:'#1c7a34', icono:'✅'},
+      'Incompleto':  {bg:'#fff3d6', color:'#8a6200', icono:'⚠️'},
+      'Justificada': {bg:'#e3ecf9', color:'#22528f', icono:'📄'},
+      'Falta':       {bg:'#fbe3e3', color:'#a11f1f', icono:'❌'}
+    };
+
+    async function generarReporteAsistencia(){
+      const grado=document.getElementById('rasis-grado').value;
+      const grupo=document.getElementById('rasis-grupo').value;
+      const fecha=_rasisTab==='fecha' ? (document.getElementById('rasis-fecha').value||'') : '';
+      const res=document.getElementById('res-rasis');
+      const repDiv=document.getElementById('rasis-reporte');
+      repDiv.innerHTML='';
+      if(!grado||!grupo){res.innerHTML='<div class="result-error">⚠️ Selecciona grado y grupo.</div>';return;}
+      if(_rasisTab==='fecha' && !fecha){res.innerHTML='<div class="result-error">⚠️ Selecciona la fecha a consultar.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Consultando…</div>';
+
+      const json = await jsonpCall({accion:'reporteAsistenciaGrupo', grado:grado, grupo:grupo, fecha:fecha}, 20000);
+      if(!json || json.timeout || json.networkError){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo generar el reporte.')+'</div>';return;}
+      res.innerHTML='';
+
+      const r=json.resumen||{};
+      const avisoDia = json.esDiaClase ? '' :
+        '<div style="background:#fff3d6;border:1px solid #e0c060;color:#8a6200;padding:0.6rem 0.9rem;' +
+        'border-radius:6px;font-size:0.78rem;margin-bottom:1rem">⚠️ El '+json.fecha+' no está registrado como día de clase en el calendario de Asistencias; revisa los resultados con ese contexto.</div>';
+
+      const chips = [
+        {l:'Alumnos', v:r.total, c:'#3D2B0A'},
+        {l:'Presentes', v:r.presentes, c:'#1c7a34'},
+        {l:'Incompletos', v:r.incompletos, c:'#8a6200'},
+        {l:'Justificadas', v:r.justificadas, c:'#22528f'},
+        {l:'Faltas', v:r.faltas, c:'#a11f1f'}
+      ].map(x=>'<div style="flex:1;min-width:90px;background:#fff;border:1px solid #e8d88a;border-radius:8px;'+
+        'padding:0.6rem;text-align:center">'+
+        '<div style="font-size:1.3rem;font-weight:900;color:'+x.c+'">'+(x.v!==undefined?x.v:'—')+'</div>'+
+        '<div style="font-size:0.68rem;color:#7a6030;text-transform:uppercase;letter-spacing:0.05em">'+x.l+'</div></div>'
+      ).join('');
+
+      const filas = (json.alumnos||[]).map(function(a,i){
+        const est = RASIS_ESTATUS_ESTILO[a.estatus] || {bg:'#eee',color:'#333',icono:''};
+        return '<tr>'+
+          '<td style="padding:0.45rem 0.5rem;color:#7a6030;font-size:0.78rem">'+(i+1)+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;font-size:0.85rem;color:#2d1f08">'+a.nombre+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center">'+
+            '<span style="background:'+est.bg+';color:'+est.color+';padding:0.25rem 0.6rem;border-radius:12px;'+
+            'font-size:0.75rem;font-weight:700;white-space:nowrap">'+est.icono+' '+a.estatus+'</span></td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">'+(a.horaEntrada||'—')+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">'+(a.horaSalida||'—')+'</td>'+
+        '</tr>';
+      }).join('');
+
+      repDiv.innerHTML =
+        '<div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem">'+
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.9rem">'+
+            '<h4 style="font-family:\'Cinzel\',serif;color:#3D2B0A;font-size:0.92rem;margin:0">'+
+              'Grupo '+json.grado+'° '+json.grupo+' — '+json.fecha+'</h4>'+
+            '<button onclick="imprimirReporteAsistencia()" '+
+              'style="background:#1A1208;color:#F0C040;border:1px solid #C8922A;padding:0.4rem 0.8rem;'+
+              'border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'+
+          '</div>'+
+          avisoDia+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.1rem">'+chips+'</div>'+
+          '<div style="overflow-x:auto">'+
+          '<table style="width:100%;border-collapse:collapse">'+
+            '<thead><tr style="border-bottom:2px solid #C8922A">'+
+              '<th style="padding:0.4rem 0.5rem;text-align:left;font-size:0.7rem;color:#7a6030;text-transform:uppercase">#</th>'+
+              '<th style="padding:0.4rem 0.5rem;text-align:left;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Alumno(a)</th>'+
+              '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Estatus</th>'+
+              '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Entrada</th>'+
+              '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Salida</th>'+
+            '</tr></thead>'+
+            '<tbody>'+filas+'</tbody>'+
+          '</table></div>'+
+        '</div>';
+
+      _rasisUltimoReporte = json; // para impresión
+    }
+
+    let _rasisUltimoReporte = null;
+    function imprimirReporteAsistencia(){
+      const json = _rasisUltimoReporte;
+      if(!json){ alert('Primero genera el reporte.'); return; }
+      const logoSrc = document.querySelector('.logo-wrap img').src;
+      const r = json.resumen||{};
+      const filas = (json.alumnos||[]).map((a,i)=>
+        '<tr>'+
+          '<td class="num">'+(i+1)+'</td>'+
+          '<td class="nom">'+a.nombre+'</td>'+
+          '<td class="cen">'+a.estatus+'</td>'+
+          '<td class="cen">'+(a.horaEntrada||'')+'</td>'+
+          '<td class="cen">'+(a.horaSalida||'')+'</td>'+
+        '</tr>'
+      ).join('');
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>'+
+        '<title>Asistencia '+json.grado+json.grupo+' — '+json.fecha+'</title><style>'+
+        '@page{ size: letter; margin: 12mm; }'+
+        '*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}'+
+        'body{margin:0;padding:0;color:#1a1a1a}'+
+        '.encabezado{display:flex;align-items:center;gap:14px;border-bottom:2px solid #7a1a1a;padding-bottom:8px;margin-bottom:10px}'+
+        '.encabezado img{width:56px;height:56px;object-fit:contain}'+
+        '.encabezado .titulos{flex:1}'+
+        '.encabezado h1{font-size:15px;margin:0 0 2px}'+
+        '.encabezado .sub{font-size:12px;color:#7a1a1a;font-weight:bold}'+
+        '.resumen{display:flex;gap:14px;margin-bottom:12px;font-size:11px}'+
+        '.resumen div{border:1px solid #999;border-radius:4px;padding:4px 10px}'+
+        'table{border-collapse:collapse;width:100%}'+
+        'th,td{border:1px solid #999;font-size:11px;padding:4px 6px}'+
+        'th{background:#f0e0c0;font-weight:bold;text-align:left}'+
+        'td.num{width:24px;text-align:center}'+
+        'td.cen{text-align:center}'+
+        '.btn-imprimir{position:fixed;top:10px;right:10px;background:#7a1a1a;color:#F0C040;border:none;'+
+          'padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px}'+
+        '@media print{ .btn-imprimir{display:none} }'+
+        '</style></head><body>'+
+        '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'+
+        '<div class="encabezado"><img src="'+logoSrc+'" alt="Logo"/>'+
+          '<div class="titulos"><h1>Escuela Secundaria Técnica No. 3 — Control de Asistencia</h1>'+
+          '<div class="sub">Grupo '+json.grado+'° '+json.grupo+' — '+json.fecha+'</div></div></div>'+
+        '<div class="resumen">'+
+          '<div>Alumnos: <strong>'+r.total+'</strong></div>'+
+          '<div>Presentes: <strong>'+r.presentes+'</strong></div>'+
+          '<div>Incompletos: <strong>'+r.incompletos+'</strong></div>'+
+          '<div>Justificadas: <strong>'+r.justificadas+'</strong></div>'+
+          '<div>Faltas: <strong>'+r.faltas+'</strong></div>'+
+        '</div>'+
+        '<table><thead><tr><th>#</th><th>Alumno(a)</th><th>Estatus</th><th>Entrada</th><th>Salida</th></tr></thead>'+
+        '<tbody>'+filas+'</tbody></table>'+
+        '</body></html>';
+      const w = window.open('', '_blank');
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
     }
 
     // ── CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) ──
@@ -3936,7 +4229,11 @@
       const g=document.getElementById('ev-grado').value;
       const s=document.getElementById('ev-asig');
       s.innerHTML='<option value="">-- Selecciona --</option>';
-      (ASIGNATURAS_EVAL[g]||[]).forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
+      let lista=ASIGNATURAS_EVAL[g]||[];
+      if(_evalNivel==='DOCENTE' && _evalAsigSet.length){
+        lista=lista.filter(a=>_evalAsigSet.indexOf(normTxt(a))!==-1);
+      }
+      lista.forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
     }
     function actualizarSemanasEval(){
       const t=document.getElementById('ev-trim').value;
@@ -3959,7 +4256,7 @@
       msg.textContent='⏳ Cargando lista…';
       // Trae el grupo YA cruzado con lo capturado para esta clave exacta
       // (Grado+Grupo+Asignatura+Trimestre+Semana): fusiona Captura y Consulta.
-      const json=await jsonpCall({accion:'cargarGrupoCalificaciones',grado:g,grupo:gr,asignatura:a,trimestre:t,semana:s},15000);
+      const json=await jsonpCall({accion:'cargarGrupoCalificaciones',grado:g,grupo:gr,asignatura:a,trimestre:t,semana:s,usuario:_evalDoc},15000);
       if(!json){msg.textContent='❌ Sin respuesta del servidor.';return;}
       if(json.timeout){msg.textContent='❌ Tiempo agotado. Verifica el Apps Script.';return;}
       if(!json.ok||!json.alumnos){
@@ -4509,6 +4806,39 @@
     </div>
   </div>
 
+  <!-- MODAL DOCENTES > CONTROL DE ASISTENCIA (login) -->
+  <div class="modal-overlay" id="modal-rasis-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📅 Acceso — Control de Asistencia</h3>
+        <button class="modal-close" onclick="closeModal('rasis-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="rasis-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="rasis-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederReporteAsis()"/>
+            <span onclick="togglePass('rasis-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-rasis-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('rasis-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-rasis-login" onclick="accederReporteAsis()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) -->
   <div class="modal-overlay" id="modal-usu-alu">
     <div class="modal modal-login">
@@ -4734,6 +5064,90 @@
           Evaluaciones ya traen las semanas reales del trimestre seleccionado.
         </p>
       </div>
+    </div>
+  </div>
+
+  <!-- PANEL CONTROL DE ASISTENCIA (reporte real, tomado del checador) -->
+  <div id="rasis-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">📅</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Control de Asistencia — EST No. 3
+          </div>
+          <div id="rasis-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarReporteAsis()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:820px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                 border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+        Reporte de Asistencia por Grupo (tomado en vivo del checador)
+      </h3>
+
+      <!-- Pestañas: Asistencia diaria / Consultar fecha -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.1rem">
+        <button id="rasis-tab-diaria" onclick="tabRasis('diaria')"
+          style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
+                 cursor:pointer;border:1px solid #C8922A;border-bottom:none;
+                 background:#F0C040;color:#1A1208">📅 Asistencia Diaria</button>
+        <button id="rasis-tab-fecha" onclick="tabRasis('fecha')"
+          style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
+                 cursor:pointer;border:1px solid #C8922A;border-bottom:none;
+                 background:transparent;color:#C8922A">🔎 Consultar Fecha</button>
+      </div>
+
+      <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:0 8px 8px 8px;padding:1.2rem">
+        <p id="rasis-tab-desc" style="font-size:0.8rem;color:#7a6030;margin:0 0 1rem">
+          Muestra la asistencia registrada el día de hoy para el grado y grupo que elijas.
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;margin-bottom:1rem">
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="rasis-grado"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Grado</option>
+              <option value="2">2° Grado</option>
+              <option value="3">3° Grado</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="rasis-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="A">Grupo A</option>
+              <option value="B">Grupo B</option>
+              <option value="C">Grupo C</option>
+              <option value="D">Grupo D</option>
+              <option value="E">Grupo E</option>
+            </select>
+          </div>
+          <div id="rasis-fecha-wrap" style="display:none">
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Fecha</label>
+            <input type="date" id="rasis-fecha"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer"/>
+          </div>
+        </div>
+        <div id="res-rasis" style="margin-bottom:1rem"></div>
+        <button onclick="generarReporteAsistencia()"
+          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                 font-size:0.92rem;cursor:pointer">🔎 Consultar</button>
+      </div>
+
+      <div id="rasis-reporte" style="margin-top:1.5rem"></div>
     </div>
   </div>
 
