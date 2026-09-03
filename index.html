@@ -1,4 +1,4 @@
-<!-- Generado: 02/septiembre/2026, 23:16 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 02/septiembre/2026, 23:53 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1059,6 +1059,7 @@
         <a href="#" onclick="openModal('eval-login');return false;">📝 Calificaciones (Captura y Consulta)</a>
         <a href="#" onclick="openModal('lista-asis-login');return false;">📋 Lista de Asistencia</a>
         <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
+        <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
       </div>
     </div>
     <div class="nav-item">
@@ -4284,6 +4285,340 @@
       w.document.open(); w.document.write(html); w.document.close();
     }
 
+    /* ── Módulo Docentes: Generar Listas de Evaluación en Excel (.xlsx) ──
+     * Descarga, para un Grado+Grupo+Asignatura+Trimestre, un libro con una
+     * columna por semana del trimestre (con su rango de fechas, iniciando
+     * la Semana 1 el lunes 14/septiembre/2026), más Diagnóstico/Examen/
+     * Puntos Rasgos Evaluados, con fórmulas reales de Excel para el
+     * Promedio, la Calificación Final (Promedio + Puntos Rasgos, tope 10 —
+     * misma regla que ya usa el sistema en promedioTrimestre_) y el
+     * promedio de cada columna. Reutiliza el mismo candado de acceso y el
+     * mismo filtro de "grupos que atiende" que Captura de Calificaciones. */
+    let _xlsDoc='', _xlsNivel='', _xlsGruposSet=[], _xlsAsigSet=[], _xlsGruposRaw='', _xlsAsigRaw='';
+
+    async function accederXls(){
+      const user=(document.getElementById('xls-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('xls-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-xls-login');
+      const btn=document.getElementById('btn-xls-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas();
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _xlsDoc=json.usuario.nombre||user;
+        _xlsNivel=normTxt(json.usuario.nivel||'');
+        _xlsGruposRaw=json.usuario.grupos||'';
+        _xlsAsigRaw=json.usuario.asignatura||'';
+        _xlsGruposSet=parsearGruposDocente(_xlsGruposRaw);
+        _xlsAsigSet=parsearAsigDocente(_xlsAsigRaw);
+        closeModal('xls-login');
+        document.getElementById('xls-doc-label').textContent='Docente: '+_xlsDoc;
+        document.getElementById('xls-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        aplicarRestriccionXls();
+        document.getElementById('xls-trim').value='';
+        document.getElementById('res-xls').innerHTML='';
+        res.innerHTML='';
+        document.getElementById('xls-user').value='';
+        document.getElementById('xls-pass').value='';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('xls-pass').value='';
+        document.getElementById('xls-pass').focus();
+      }
+    }
+
+    function cerrarXlsOverlay(){
+      document.getElementById('xls-overlay').style.display='none';
+      document.body.style.overflow='';
+      _xlsDoc=''; _xlsNivel=''; _xlsGruposSet=[]; _xlsAsigSet=[];
+    }
+
+    // Restringe Grado/Grupo/Asignatura a lo que el docente atiende (mismo
+    // patrón que aplicarRestriccionDocente() de Captura de Calificaciones).
+    function aplicarRestriccionXls(){
+      const selGrado = document.getElementById('xls-grado');
+      const selGrupo = document.getElementById('xls-grupo');
+      const selAsig  = document.getElementById('xls-asig');
+      const msg = document.getElementById('xls-p1-msg');
+      msg.textContent = '';
+      selGrado.disabled = selGrupo.disabled = selAsig.disabled = false;
+
+      if(_xlsNivel !== 'DOCENTE'){
+        selGrado.innerHTML = EV_GRADO_FULL;
+        selGrupo.innerHTML = EV_GRUPO_FULL;
+        selGrado.onchange = actualizarAsigXls;
+        return;
+      }
+      if(!_xlsGruposSet.length || !_xlsAsigSet.length){
+        selGrado.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selAsig.innerHTML  = '<option value="">-- Sin asignar --</option>';
+        selGrado.disabled = selGrupo.disabled = selAsig.disabled = true;
+        msg.innerHTML = '⚠️ Tu cuenta de docente todavía no tiene grupo(s) ni asignatura asignados. Solicita al Director que los configure en el sistema.';
+        return;
+      }
+      const gradosPermitidos = Array.from(new Set(_xlsGruposSet.map(function(x){return x.grado;}))).sort();
+      selGrado.innerHTML = '<option value="">-- Selecciona --</option>' +
+        gradosPermitidos.map(function(g){return '<option value="'+g+'">'+g+'° Grado</option>';}).join('');
+      selGrupo.innerHTML = '<option value="">-- Selecciona grado --</option>';
+      selGrado.onchange = function(){
+        const g = selGrado.value;
+        const gruposDeEsteGrado = _xlsGruposSet.filter(function(x){return x.grado===g;}).map(function(x){return x.grupo;});
+        selGrupo.innerHTML = '<option value="">-- Selecciona --</option>' +
+          gruposDeEsteGrado.map(function(gr){return '<option value="'+gr+'">Grupo '+gr+'</option>';}).join('');
+        actualizarAsigXls();
+      };
+    }
+
+    function actualizarAsigXls(){
+      const g=document.getElementById('xls-grado').value;
+      const s=document.getElementById('xls-asig');
+      s.innerHTML='<option value="">-- Selecciona --</option>';
+      let lista=ASIGNATURAS_EVAL[g]||[];
+      if(_xlsNivel==='DOCENTE' && _xlsAsigSet.length){
+        lista=lista.filter(a=>_xlsAsigSet.indexOf(normTxt(a))!==-1);
+      }
+      lista.forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
+    }
+
+    // Carga ExcelJS (CDN) una sola vez, solo cuando el docente realmente va
+    // a generar un archivo — así el resto del sitio no paga ese costo.
+    let _exceljsCargado = false;
+    function ensureExcelJS(){
+      if(window.ExcelJS && _exceljsCargado) return Promise.resolve();
+      return new Promise(function(resolve, reject){
+        if(window.ExcelJS){ _exceljsCargado=true; resolve(); return; }
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+        s.onload=function(){ _exceljsCargado=true; resolve(); };
+        s.onerror=function(){ reject(new Error('No se pudo cargar la librería de Excel. Revisa tu conexión a internet e intenta de nuevo.')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // Lunes de la Semana 1 del ciclo 26-27 (el resto de semanas, incluidas
+    // las de 2° y 3° Trimestre, se calculan sumando 7 días por semana,
+    // ya que la numeración de semana es continua 1-38 en todo el ciclo).
+    const XLS_SEM1_INICIO = new Date(2026,8,14); // 14 de septiembre de 2026
+    function xlsRangoSemana(n){
+      const lunes = new Date(XLS_SEM1_INICIO.getTime() + (n-1)*7*86400000);
+      const viernes = new Date(lunes.getTime() + 4*86400000);
+      const f = function(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+      return f(lunes)+' al '+f(viernes);
+    }
+
+    // Bandas de color por calificación (0-10), mismo criterio visual que ya
+    // usan los profesores en sus listas de Excel hechas a mano.
+    const XLS_BANDAS = [
+      {tope:6,        fill:'FFE06666', font:'FFFFFFFF'}, // <6  rojo
+      {tope:7,        fill:'FFF6B26B', font:'FF1A1A1A'}, // 6-6.9 naranja
+      {tope:8,        fill:'FFFFD966', font:'FF1A1A1A'}, // 7-7.9 amarillo/oro
+      {tope:9,        fill:'FF76A5AF', font:'FFFFFFFF'}, // 8-8.9 verde azulado
+      {tope:Infinity, fill:'FF6FA8DC', font:'FFFFFFFF'}  // 9-10 azul
+    ];
+    function xlsBanda(v){
+      if(v===null||v===undefined||v==='') return null;
+      for(let i=0;i<XLS_BANDAS.length;i++){ if(v<XLS_BANDAS[i].tope) return XLS_BANDAS[i]; }
+      return XLS_BANDAS[XLS_BANDAS.length-1];
+    }
+    function xlsColLetter(n){
+      let s='';
+      while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); }
+      return s;
+    }
+    function xlsBordeFino(){
+      const s={style:'thin', color:{argb:'FFBBBBBB'}};
+      return {top:s, left:s, bottom:s, right:s};
+    }
+
+    async function generarExcelCalificaciones(){
+      const g=document.getElementById('xls-grado').value;
+      const gr=document.getElementById('xls-grupo').value;
+      const a=document.getElementById('xls-asig').value;
+      const t=document.getElementById('xls-trim').value;
+      const res=document.getElementById('res-xls');
+      if(!g||!gr||!a||!t){res.innerHTML='<div class="result-error">⚠️ Selecciona grado, grupo, asignatura y trimestre.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Generando archivo…</div>';
+
+      const json = await jsonpCall({accion:'obtenerMatrizCalificaciones', grado:g, grupo:gr, asignatura:a, trimestre:t, usuario:_xlsDoc}, 20000);
+      if(!json || json.timeout || json.networkError){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo generar el archivo.')+'</div>';return;}
+      if(!json.alumnos || !json.alumnos.length){res.innerHTML='<div class="result-error">⚠️ No hay alumnos registrados en '+g+'°'+gr+'.</div>';return;}
+
+      try{
+        await ensureExcelJS();
+      }catch(e){
+        res.innerHTML='<div class="result-error">⚠️ '+e.message+'</div>';
+        return;
+      }
+
+      // Diagnóstico (solo T1) + semanas numéricas + Examen forman las
+      // columnas de captura; Puntos Rasgos Evaluados va en su propia
+      // columna aparte (es un bono, nunca una "semana" más).
+      const semCols = semanasT(t).filter(function(x){ return x.v!=='PE'; });
+      const nSem = semCols.length;
+
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'EST3 — ' + _xlsDoc;
+      wb.created = new Date();
+      const ws = wb.addWorksheet('Lista de Evaluación');
+
+      const GUINDA = 'FF7A1A1A';
+      const colNo=1, colNombre=2, colSemIni=3;
+      const colSemFin = colSemIni + nSem - 1;
+      const colProm = colSemFin + 1, colPE = colProm + 1, colFinal = colPE + 1, colCom = colFinal + 1;
+      const totalCols = colCom;
+
+      ws.mergeCells(1,1,1,totalCols);
+      const c1 = ws.getCell(1,1);
+      c1.value = 'ESCUELA SECUNDARIA TÉCNICA No. 3 — LISTA DE EVALUACIÓN';
+      c1.font = {bold:true, size:13, color:{argb:'FFFFFFFF'}};
+      c1.fill = {type:'pattern', pattern:'solid', fgColor:{argb:GUINDA}};
+      c1.alignment = {horizontal:'center', vertical:'middle'};
+      ws.getRow(1).height = 22;
+
+      ws.mergeCells(2,1,2,totalCols);
+      const c2 = ws.getCell(2,1);
+      c2.value = 'Ciclo 26-27   |   Asignatura: '+a+'   |   Grado: '+g+'°   Grupo: '+gr+'   |   Trimestre '+t+'   |   Generado por: '+_xlsDoc;
+      c2.font = {bold:true, size:10.5, color:{argb:GUINDA}};
+      c2.alignment = {horizontal:'center', vertical:'middle'};
+      ws.getRow(2).height = 18;
+
+      const filaHeader = 4;
+      ws.getCell(filaHeader,colNo).value = 'No.';
+      ws.getCell(filaHeader,colNombre).value = 'Nombre';
+      semCols.forEach(function(sc, i){
+        const col = colSemIni + i;
+        let label = sc.l;
+        if(typeof sc.v === 'number'){ label = sc.l+'\n'+xlsRangoSemana(sc.v); }
+        ws.getCell(filaHeader,col).value = label;
+      });
+      ws.getCell(filaHeader,colProm).value = 'Promedio';
+      ws.getCell(filaHeader,colPE).value = 'Puntos\nRasgos Evaluados';
+      ws.getCell(filaHeader,colFinal).value = 'Final\nTrimestre '+t;
+      ws.getCell(filaHeader,colCom).value = 'Comentarios';
+      for(let col=1; col<=totalCols; col++){
+        const c = ws.getCell(filaHeader,col);
+        c.font = {bold:true, size:8.5, color:{argb:'FFFFFFFF'}};
+        c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:GUINDA}};
+        c.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
+        c.border = xlsBordeFino();
+      }
+      ws.getRow(filaHeader).height = 30;
+
+      const filaIni = filaHeader + 1;
+      json.alumnos.forEach(function(al, idx){
+        const r = filaIni + idx;
+        const cNo = ws.getCell(r,colNo);
+        cNo.value = idx+1;
+        cNo.alignment = {horizontal:'center'};
+        const cNom = ws.getCell(r,colNombre);
+        cNom.value = al.nombre || '';
+        cNom.font = {size:9, bold:true};
+
+        semCols.forEach(function(sc, i){
+          const col = colSemIni + i;
+          const raw = al.semanas ? al.semanas[String(sc.v)] : undefined;
+          const cell = ws.getCell(r,col);
+          if(raw!==undefined && raw!==null && raw!==''){
+            const v = Number(raw);
+            if(!isNaN(v)){
+              cell.value = v;
+              const b = xlsBanda(v);
+              if(b){
+                cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:b.fill}};
+                cell.font = {bold:true, size:9, color:{argb:b.font}};
+              }
+            }
+          }
+          cell.alignment = {horizontal:'center'};
+          cell.border = xlsBordeFino();
+        });
+
+        // El Diagnóstico ("D") nunca entra al promedio (misma regla que ya
+        // valida promedioTrimestre_ en el backend): si el trimestre trae
+        // columna D (siempre la primera), el rango de AVERAGE arranca en
+        // la semana 1, saltándose esa primera columna.
+        const tieneD = semCols.length>0 && semCols[0].v==='D';
+        const colPromIni = tieneD ? colSemIni+1 : colSemIni;
+        const letraIni = xlsColLetter(colPromIni);
+        const letraFin = xlsColLetter(colSemFin);
+        const cProm = ws.getCell(r,colProm);
+        cProm.value = {formula: 'IFERROR(AVERAGE('+letraIni+r+':'+letraFin+r+'),"")'};
+        cProm.numFmt = '0.00';
+        cProm.alignment = {horizontal:'center'};
+        cProm.border = xlsBordeFino();
+
+        const rawPE = al.semanas ? al.semanas['PE'] : undefined;
+        const cPE = ws.getCell(r,colPE);
+        if(rawPE!==undefined && rawPE!==null && rawPE!==''){
+          const vPE = Number(rawPE);
+          if(!isNaN(vPE)) cPE.value = vPE;
+        }
+        cPE.alignment = {horizontal:'center'};
+        cPE.border = xlsBordeFino();
+
+        const letraProm = xlsColLetter(colProm);
+        const letraPE = xlsColLetter(colPE);
+        const cFinal = ws.getCell(r,colFinal);
+        cFinal.value = {formula: 'IF('+letraProm+r+'="","",MIN(10,'+letraProm+r+'+IF('+letraPE+r+'="",0,'+letraPE+r+')))'};
+        cFinal.numFmt = '0.00';
+        cFinal.font = {bold:true};
+        cFinal.alignment = {horizontal:'center'};
+        cFinal.border = xlsBordeFino();
+
+        ws.getCell(r,colCom).border = xlsBordeFino();
+      });
+
+      const filaFin = filaIni + json.alumnos.length - 1;
+      const filaPromGrupo = filaFin + 2;
+      const cEtq = ws.getCell(filaPromGrupo, colNombre);
+      cEtq.value = 'Promedio del grupo';
+      cEtq.font = {bold:true, italic:true, size:9};
+      for(let col=colSemIni; col<=colSemFin; col++){
+        const letra = xlsColLetter(col);
+        const cell = ws.getCell(filaPromGrupo, col);
+        cell.value = {formula: 'IFERROR(AVERAGE('+letra+filaIni+':'+letra+filaFin+'),"")'};
+        cell.numFmt = '0.00';
+        cell.font = {bold:true, italic:true, size:9};
+        cell.alignment = {horizontal:'center'};
+      }
+      [colProm, colFinal].forEach(function(col){
+        const letra = xlsColLetter(col);
+        const cell = ws.getCell(filaPromGrupo, col);
+        cell.value = {formula: 'IFERROR(AVERAGE('+letra+filaIni+':'+letra+filaFin+'),"")'};
+        cell.numFmt = '0.00';
+        cell.font = {bold:true, italic:true, size:9};
+        cell.alignment = {horizontal:'center'};
+      });
+
+      ws.getColumn(colNo).width = 4;
+      ws.getColumn(colNombre).width = 30;
+      for(let col=colSemIni; col<=colSemFin; col++){ ws.getColumn(col).width = 9; }
+      ws.getColumn(colProm).width = 9;
+      ws.getColumn(colPE).width = 9;
+      ws.getColumn(colFinal).width = 9;
+      ws.getColumn(colCom).width = 22;
+      ws.views = [{state:'frozen', xSplit:2, ySplit:filaIni-1}];
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url = URL.createObjectURL(blob);
+      const asigArchivo = a.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+      const nombreArchivo = 'Lista_Evaluacion_'+g+gr+'_'+asigArchivo+'_T'+t+'.xlsx';
+      const aEl = document.createElement('a');
+      aEl.href = url; aEl.download = nombreArchivo;
+      document.body.appendChild(aEl); aEl.click(); aEl.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+
+      res.innerHTML = '<div class="result-error" style="background:#eaf7ea;border-color:#a8d8a8;color:#1a5a1a">✅ Archivo generado: '+nombreArchivo+'</div>';
+    }
+
     // ── CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) ──
     let _usuAluCurp='';
 
@@ -5159,6 +5494,39 @@
     </div>
   </div>
 
+  <!-- MODAL DOCENTES > GENERAR LISTAS (EXCEL) (login) -->
+  <div class="modal-overlay" id="modal-xls-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📊 Acceso — Generar Listas (Excel)</h3>
+        <button class="modal-close" onclick="closeModal('xls-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="xls-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="xls-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederXls()"/>
+            <span onclick="togglePass('xls-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-xls-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('xls-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-xls-login" onclick="accederXls()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL ALUMNOS > CREDENCIALES (login) -->
   <div class="modal-overlay" id="modal-cred-login">
     <div class="modal modal-login">
@@ -5501,6 +5869,83 @@
       </div>
 
       <div id="rasis-reporte" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+
+  <!-- PANEL DOCENTES > GENERAR LISTAS (EXCEL) -->
+  <div id="xls-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">📊</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Generar Listas de Evaluación — EST No. 3
+          </div>
+          <div id="xls-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarXlsOverlay()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:820px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                 border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+        Descargar Lista de Evaluación del Trimestre en Excel
+      </h3>
+      <p style="font-size:0.8rem;color:#e8d8b0;margin:-0.5rem 0 1.2rem">
+        Genera un archivo .xlsx con todas las semanas del trimestre elegido, con fórmulas de
+        Promedio, Calificación Final y promedio de cada columna — listo para imprimir o continuar
+        capturando Comentarios en Excel.
+      </p>
+
+      <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.9rem;margin-bottom:1rem">
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="xls-grado"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="xls-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Asignatura</label>
+            <select id="xls-asig"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona grado --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Trimestre</label>
+            <select id="xls-trim"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Trimestre (Diag + Sem 1-12)</option>
+              <option value="2">2° Trimestre (Sem 13-26)</option>
+              <option value="3">3° Trimestre (Sem 27-38)</option>
+            </select>
+          </div>
+        </div>
+        <div id="xls-p1-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+        <div id="res-xls" style="margin-bottom:1rem"></div>
+        <button onclick="generarExcelCalificaciones()"
+          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                 font-size:0.92rem;cursor:pointer">📊 Generar Excel</button>
+      </div>
     </div>
   </div>
 
