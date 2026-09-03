@@ -1,4 +1,4 @@
-<!-- Generado: 31/agosto/2026, 20:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 02/septiembre/2026, 23:16 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1049,6 +1049,7 @@
         <a href="#" onclick="openModal('datos'); return false;">🔍 Consulta de Alumnos(as)</a>
         <a href="#" onclick="openModal('alta'); return false;">✏️ Actualización de Alumnos(as)</a>
         <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva</a>
+        <a href="#" onclick="openModal('cred-login'); return false;">🪪 Credenciales</a>
       </div>
     </div>
     <a href="#" onclick="mostrarPadres();return false;">Padres de Familia</a>
@@ -3968,6 +3969,321 @@
       w.document.open(); w.document.write(html); w.document.close();
     }
 
+    /* ── Módulo Alumnos: Credenciales (frente/reverso, formato aprobado) ── */
+    let _credDoc='', _credTab='individual', _credAlumnoActual=null;
+
+    async function accederCredenciales(){
+      const user=(document.getElementById('cred-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('cred-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-cred-login');
+      const btn=document.getElementById('btn-cred-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok && normTxt(json.usuario.facultades||'').indexOf('DIRECTOR')===-1){
+        res.innerHTML='<div class="result-error">⚠️ El acceso a Credenciales está reservado para el Director del Plantel.</div>';
+        document.getElementById('cred-pass').value='';
+        document.getElementById('cred-pass').focus();
+        return;
+      }
+      if(json.ok){
+        _credDoc=json.usuario.nombre||user;
+        closeModal('cred-login');
+        document.getElementById('cred-doc-label').textContent='Usuario: '+_credDoc;
+        document.getElementById('cred-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('cred-user').value='';
+        document.getElementById('cred-pass').value='';
+        document.getElementById('cred-curp').value='';
+        document.getElementById('res-cred-ind').innerHTML='';
+        document.getElementById('res-cred-grp').innerHTML='';
+        document.getElementById('cred-ind-preview').style.display='none';
+        document.getElementById('btn-cred-ind-generar').disabled=true;
+        document.getElementById('btn-cred-ind-generar').style.opacity='0.5';
+        _credAlumnoActual=null;
+        tabCred('individual');
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('cred-pass').value='';
+        document.getElementById('cred-pass').focus();
+      }
+    }
+
+    function cerrarCredenciales(){
+      document.getElementById('cred-overlay').style.display='none';
+      document.body.style.overflow='';
+      _credDoc='';
+    }
+
+    function tabCred(tab){
+      _credTab=tab;
+      const btnI=document.getElementById('cred-tab-ind');
+      const btnG=document.getElementById('cred-tab-grp');
+      if(tab==='individual'){
+        btnI.style.background='#F0C040'; btnI.style.color='#1A1208';
+        btnG.style.background='transparent'; btnG.style.color='#C8922A';
+        document.getElementById('cred-panel-ind').style.display='';
+        document.getElementById('cred-panel-grp').style.display='none';
+      } else {
+        btnG.style.background='#F0C040'; btnG.style.color='#1A1208';
+        btnI.style.background='transparent'; btnI.style.color='#C8922A';
+        document.getElementById('cred-panel-grp').style.display='';
+        document.getElementById('cred-panel-ind').style.display='none';
+      }
+    }
+
+    async function buscarAlumnoCred(){
+      const curp=(document.getElementById('cred-curp').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-cred-ind');
+      const preview=document.getElementById('cred-ind-preview');
+      const btnGen=document.getElementById('btn-cred-ind-generar');
+      preview.style.display='none'; btnGen.disabled=true; btnGen.style.opacity='0.5';
+      _credAlumnoActual=null;
+      if(!curp){res.innerHTML='<div class="result-error">⚠️ Ingresa el CURP del alumno(a).</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Buscando…</div>';
+      const json = await jsonpCall({accion:'credencialAlumno', curp:curp}, 15000);
+      if(!json || json.timeout || json.networkError){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Alumno(a) no encontrado.')+'</div>';return;}
+      res.innerHTML='';
+      _credAlumnoActual=json.alumno;
+      document.getElementById('cred-ind-foto').src=json.alumno.fotoUrl||FOTO_PLACEHOLDER;
+      document.getElementById('cred-ind-foto').onerror=function(){this.src=FOTO_PLACEHOLDER;};
+      document.getElementById('cred-ind-nombre').textContent=json.alumno.nombre;
+      document.getElementById('cred-ind-detalle').textContent=
+        'CURP '+json.alumno.curp+' — '+(json.alumno.grado?json.alumno.grado+'° · Grupo '+json.alumno.grupo:'Sin grado/grupo asignado');
+      preview.style.display='flex';
+      btnGen.disabled=false; btnGen.style.opacity='1';
+    }
+
+    function generarCredencialIndividual(){
+      if(!_credAlumnoActual) return;
+      // Abrir la ventana YA, dentro del mismo clic (sin await de por medio),
+      // para que el navegador no la trate como ventana emergente no solicitada.
+      const w = window.open('', '_blank');
+      abrirImpresionCredenciales([_credAlumnoActual], w, 'individual');
+    }
+
+    async function generarCredencialesGrupo(){
+      const grado=document.getElementById('cred-grado').value;
+      const grupo=document.getElementById('cred-grupo').value;
+      const res=document.getElementById('res-cred-grp');
+      if(!grado||!grupo){res.innerHTML='<div class="result-error">⚠️ Selecciona grado y grupo.</div>';return;}
+      // Abrir la ventana ANTES del await: si se abre después de esperar la
+      // respuesta del servidor, el navegador ya no lo considera parte del
+      // clic del usuario y bloquea la ventana emergente.
+      const w = window.open('', '_blank');
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Generando…</div>';
+      const json = await jsonpCall({accion:'credencialesGrupo', grado:grado, grupo:grupo}, 20000);
+      if(!json || json.timeout || json.networkError){if(w)w.close();res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){if(w)w.close();res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo generar.')+'</div>';return;}
+      res.innerHTML='';
+      abrirImpresionCredenciales(json.alumnos, w, 'grupo', {grado: grado, grupo: grupo});
+    }
+
+    const FOTO_PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+      '<rect width="100" height="100" fill="#e5e1da"/>' +
+      '<circle cx="50" cy="38" r="20" fill="#b8b2a6"/>' +
+      '<path d="M20 96 Q50 58 80 96 Z" fill="#b8b2a6"/></svg>');
+
+    function assetUrlCred(nombre){
+      return new URL(nombre, window.location.href).href;
+    }
+
+    function abrirImpresionCredenciales(alumnos, w, modo, meta){
+      if(!alumnos || !alumnos.length){ if(w) w.close(); alert('No hay alumnos para generar.'); return; }
+      modo = modo || 'individual';
+      meta = meta || {};
+      const escudoUrl = assetUrlCred('escudo_fondo.png');
+      const firmaUrl  = assetUrlCred('firma_director.png');
+      const selloUrl  = assetUrlCred('sello_gob_zac.png');
+
+      function cardFrenteHtml(a, i){
+        const foto = a.fotoUrl || FOTO_PLACEHOLDER;
+        const gradoGrupo = a.grado ? (a.grado+'° · GRUPO '+a.grupo) : 'SIN ASIGNAR';
+        return (
+          '<div class="card frente">' +
+            '<div class="cut"></div>' +
+            '<div class="escudo-wm"><img src="'+escudoUrl+'"/></div>' +
+            '<div class="top">' +
+              '<div class="gob">Gobierno de Zacatecas</div>' +
+              '<div class="dep">SECRETARÍA DE EDUCACIÓN</div>' +
+              '<div class="esc">ESCUELA SECUNDARIA<br/>TÉCNICA No. 3</div>' +
+            '</div>' +
+            '<div class="cuerpo">' +
+              '<div class="foto-wrap"><img src="'+foto+'" onerror="this.src=\''+FOTO_PLACEHOLDER+'\'"/></div>' +
+              '<div class="acredita">LA PRESENTE ACREDITA A</div>' +
+              '<div class="nombre">'+a.nombre+'</div>' +
+              '<div class="curp-row"><b>CURP</b> '+a.curp+'</div>' +
+              '<div class="pill">'+gradoGrupo+'</div>' +
+              '<div class="gold-line"></div>' +
+            '</div>' +
+            '<div class="foot">' +
+              '<div class="qr-box" id="qr-f-'+i+'"></div>' +
+              '<div class="vig">Vigencia '+(a.vigencia||'')+'</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+
+      function cardReversoHtml(a, i){
+        return (
+          '<div class="card reverso">' +
+            '<div class="cut"></div>' +
+            '<div class="topgold"></div>' +
+            '<div class="topline"></div>' +
+            '<div class="escudo-wm"><img src="'+escudoUrl+'"/></div>' +
+            '<div class="cuerpo">' +
+              '<div class="titulo">EN CASO DE EXTRAVÍO</div>' +
+              '<div class="txt">Favor de reportar esta credencial a la dirección del plantel.</div>' +
+              '<div class="titulo">USO OBLIGATORIO</div>' +
+              '<div class="txt">' +
+                '• Portar la credencial de forma visible.<br/>' +
+                '• Es intransferible; su mal uso será sancionado.<br/>' +
+                '• Requerida para trámites.' +
+              '</div>' +
+              '<div class="firma-wrap">' +
+                '<img class="sello-img" src="'+selloUrl+'"/>' +
+                '<img class="firma-img" src="'+firmaUrl+'"/>' +
+                '<div class="firma-linea"></div>' +
+                '<div class="firma-nombre">Gustavo Nolasco Moreno</div>' +
+                '<div class="firma-cargo">Director del Plantel</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="foot">' +
+              '<div class="dir">González Ortega, Sombrerete, Zac.</div>' +
+              '<div class="tel">Tel. 433 983 24 38</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+
+      let cuerpoHtml;
+      if (modo === 'grupo') {
+        // Impresión por lote: hojas tamaño carta, 3×3 (9 credenciales por hoja),
+        // primero todas las hojas con el lado frontal y luego, en hojas aparte
+        // y en el mismo orden, el lado posterior — para imprimir, recortar y
+        // emparejar frente/reverso de cada alumno con facilidad.
+        const CHUNK = 9;
+        const indexados = alumnos.map(function(a, i){ return {a: a, i: i}; });
+        const hojas = [];
+        for (let k = 0; k < indexados.length; k += CHUNK) { hojas.push(indexados.slice(k, k + CHUNK)); }
+        const totalHojas = hojas.length;
+        const grado = meta.grado || (alumnos[0] && alumnos[0].grado) || '';
+        const grupo = meta.grupo || (alumnos[0] && alumnos[0].grupo) || '';
+        const tituloBase = 'Credenciales — ' + (grado ? grado + '° ' : '') + grupo;
+
+        const hojasFrente = hojas.map(function(lote, c){
+          const cards = lote.map(function(o){ return cardFrenteHtml(o.a, o.i); }).join('');
+          return '<div class="hoja-page">' +
+            '<div class="hoja-titulo">' + tituloBase + ' — Lado frontal — Hoja ' + (c+1) + ' de ' + totalHojas + '</div>' +
+            '<div class="hoja">' + cards + '</div>' +
+          '</div>';
+        }).join('');
+
+        const hojasReverso = hojas.map(function(lote, c){
+          const cards = lote.map(function(o){ return cardReversoHtml(o.a, o.i); }).join('');
+          return '<div class="hoja-page">' +
+            '<div class="hoja-titulo">' + tituloBase + ' — Lado posterior — Hoja ' + (c+1) + ' de ' + totalHojas + '</div>' +
+            '<div class="hoja">' + cards + '</div>' +
+          '</div>';
+        }).join('');
+
+        cuerpoHtml = hojasFrente + hojasReverso;
+      } else {
+        cuerpoHtml = alumnos.map(function(a, i){
+          return '<div class="par">' + cardFrenteHtml(a, i) + cardReversoHtml(a, i) + '</div>';
+        }).join('');
+      }
+
+      const paginaMargen = modo === 'grupo' ? '0.2in' : '10mm';
+
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+        '<title>Credenciales EST3</title>' +
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' +
+        '<style>' +
+        '@page{ size: letter; margin: '+paginaMargen+'; }' +
+        '*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;' +
+          '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+        'html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+        'body{margin:0;padding:12px;background:#ddd}' +
+        '.btn-imprimir{position:fixed;top:10px;right:10px;background:#7a1a1a;color:#F0C040;border:none;' +
+          'padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;z-index:50}' +
+        '@media print{ .btn-imprimir{display:none} body{background:#fff;padding:0}' +
+          ' *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important} }' +
+        '.par{display:flex;gap:10px;margin:0 auto 10px;width:fit-content;page-break-inside:avoid}' +
+        '.hoja-page{page-break-after:always;break-after:page}' +
+        '.hoja-page:last-of-type{page-break-after:auto;break-after:auto}' +
+        '.hoja-titulo{font-size:10px;color:#666;text-align:center;margin:0 0 3px;letter-spacing:0.02em}' +
+        '.hoja{display:grid;grid-template-columns:repeat(3,2.125in);grid-template-rows:repeat(3,3.375in);' +
+          'gap:0.1in 0.2in;justify-content:center;justify-items:start;align-items:start}' +
+        '.hoja .card{page-break-inside:avoid;break-inside:avoid}' +
+        '.card{width:2.125in;height:3.375in;position:relative;overflow:hidden;border-radius:12px;' +
+          'background:#fff;box-shadow:0 0 0 1px #bbb;flex-shrink:0}' +
+        '.card .cut{position:absolute;inset:6px;border:1.6px dashed #d63384;border-radius:8px;pointer-events:none;z-index:6}' +
+        '.card .escudo-wm{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:70%;' +
+          'opacity:0.10;filter:grayscale(0.3) sepia(0.4);z-index:0;text-align:center}' +
+        '.card .escudo-wm img{width:100%}' +
+        '.frente .top{position:relative;z-index:1;background:linear-gradient(135deg,#8a1f1f,#6e1414);color:#fff;' +
+          'padding:9px 13px 20px;clip-path:polygon(0 0,100% 0,100% 76%,0 100%)}' +
+        '.frente .top .gob{font-size:7.6px;opacity:0.92;margin-bottom:3px}' +
+        '.frente .top .dep{font-weight:800;font-size:10.5px;letter-spacing:0.02em;line-height:1.15}' +
+        '.frente .top .esc{font-weight:800;font-size:12px;line-height:1.2;margin-top:5px}' +
+        '.frente .cuerpo{position:relative;z-index:1;padding:0 12px;text-align:center;margin-top:-4px}' +
+        '.frente .foto-wrap{width:88px;height:88px;margin:0 auto 4px;border:3.5px solid #1a1a1a;border-radius:12px;' +
+          'overflow:hidden;background:#e5e1da}' +
+        '.frente .foto-wrap img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}' +
+        '.frente .acredita{color:#7a1a1a;font-weight:800;font-size:8px;letter-spacing:0.03em;margin-bottom:1px}' +
+        '.frente .nombre{font-weight:800;font-size:11.5px;color:#1a1a1a;line-height:1.14;margin-bottom:3px;' +
+          'text-transform:uppercase}' +
+        '.frente .curp-row{font-size:8.3px;color:#333;margin-bottom:4px}' +
+        '.frente .curp-row b{color:#7a1a1a}' +
+        '.frente .pill{display:inline-block;background:#7a1a1a;color:#fff;font-weight:800;font-size:9px;' +
+          'padding:4px 13px;border-radius:20px;margin-bottom:3px}' +
+        '.frente .gold-line{height:2px;background:linear-gradient(90deg,transparent,#C8922A,transparent);margin:3px 20px}' +
+        '.frente .foot{position:absolute;left:0;right:0;bottom:0;background:#7a1a1a;padding:4px 10px 6px;' +
+          'text-align:center;z-index:1}' +
+        '.frente .qr-box{width:58px;height:58px;background:#fff;border-radius:4px;margin:0 auto 2px;padding:2px;' +
+          'display:flex;align-items:center;justify-content:center;overflow:hidden}' +
+        '.frente .vig{color:#fff;font-size:7.4px;font-weight:700}' +
+        '.reverso .topgold{height:12px;background:linear-gradient(90deg,#C8922A,#F0C040,#C8922A)}' +
+        '.reverso .topline{height:3.5px;background:#7a1a1a}' +
+        '.reverso .cuerpo{position:absolute;z-index:1;top:15.5px;left:0;right:0;bottom:0;padding:12px 14px 0}' +
+        '.reverso .titulo{color:#7a1a1a;font-weight:800;font-size:10.5px;margin-bottom:2px}' +
+        '.reverso .txt{color:#555;font-size:8px;line-height:1.35;margin-bottom:8px}' +
+        '.reverso .firma-wrap{text-align:center;position:absolute;left:0;right:0;bottom:56px;z-index:1}' +
+        '.reverso .sello-img{height:44px;display:block;margin:0 auto}' +
+        '.reverso .firma-img{height:30px;display:block;margin:-6px auto -4px}' +
+        '.reverso .firma-linea{border-top:1.3px solid #333;width:140px;margin:0 auto 3px}' +
+        '.reverso .firma-nombre{font-weight:800;font-size:9px;color:#1a1a1a}' +
+        '.reverso .firma-cargo{font-size:7.6px;color:#666}' +
+        '.reverso .foot{position:absolute;left:0;right:0;bottom:0;background:#7a1a1a;padding:7px 10px;' +
+          'text-align:center;z-index:1}' +
+        '.reverso .foot .dir{color:#fff;font-weight:800;font-size:8px}' +
+        '.reverso .foot .tel{color:#fff;font-size:7.2px}' +
+        '</style></head><body>' +
+        '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
+        cuerpoHtml +
+        '<script>' +
+        'window.addEventListener("load", function(){' +
+        '  var n = ' + alumnos.length + ';' +
+        '  var curps = ' + JSON.stringify(alumnos.map(function(a){return a.curp||'';})) + ';' +
+        '  for (var i=0;i<n;i++){' +
+        '    var el = document.getElementById("qr-f-"+i);' +
+        '    if(el && curps[i] && window.QRCode){ new QRCode(el, {text: curps[i], width:54, height:54, correctLevel: QRCode.CorrectLevel.M}); }' +
+        '  }' +
+        '});' +
+        '<\/script>' +
+        '</body></html>';
+
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+    }
+
     // ── CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) ──
     let _usuAluCurp='';
 
@@ -4122,20 +4438,25 @@
       }
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Generando lista…</div>';
 
+      // Abrir la ventana YA, antes del await: si se abre después de esperar
+      // la respuesta del servidor, el navegador la bloquea como emergente.
+      const wLA = window.open('', '_blank');
       const json = await jsonpCall({accion:'listarGrupo', grado:grado, grupo:grupo}, 20000);
       if(!json || !json.ok){
+        if(wLA) wLA.close();
         res.innerHTML='<div class="result-error">⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.')+'</div>';
         return;
       }
       if(!json.alumnos.length){
+        if(wLA) wLA.close();
         res.innerHTML='<div class="result-error">⚠️ No hay alumnos registrados en '+grado+'° '+grupo+'.</div>';
         return;
       }
       res.innerHTML='';
-      abrirImpresionListaAsistencia(json.alumnos, grado, grupo, ciclo, trimestre);
+      abrirImpresionListaAsistencia(json.alumnos, grado, grupo, ciclo, trimestre, wLA);
     }
 
-    function abrirImpresionListaAsistencia(alumnos, grado, grupo, ciclo, trimestre){
+    function abrirImpresionListaAsistencia(alumnos, grado, grupo, ciclo, trimestre, w){
       const logoSrc = document.querySelector('.logo-wrap img').src;
       const semanas = semanasT(trimestre); // catálogo real de semanas del trimestre
       const COLS_ASIS = 24; // columnas en blanco para asistencia diaria (llenado a mano)
@@ -4219,7 +4540,6 @@
         '</div>' +
         '</body></html>';
 
-      const w = window.open('', '_blank');
       if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
       w.document.open();
       w.document.write(html);
@@ -4839,6 +5159,39 @@
     </div>
   </div>
 
+  <!-- MODAL ALUMNOS > CREDENCIALES (login) -->
+  <div class="modal-overlay" id="modal-cred-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🪪 Acceso — Credenciales</h3>
+        <button class="modal-close" onclick="closeModal('cred-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">🔑</div>
+        <p class="modal-desc">Ingresa tus credenciales de acceso.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="cred-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="cred-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederCredenciales()"/>
+            <span onclick="togglePass('cred-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-cred-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('cred-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-cred-login" onclick="accederCredenciales()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) -->
   <div class="modal-overlay" id="modal-usu-alu">
     <div class="modal modal-login">
@@ -5148,6 +5501,116 @@
       </div>
 
       <div id="rasis-reporte" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+
+  <!-- PANEL ALUMNOS > CREDENCIALES -->
+  <div id="cred-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">🪪</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Credenciales — EST No. 3
+          </div>
+          <div id="cred-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarCredenciales()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:700px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                 border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+        Generar Credenciales (PDF/impresión, formato aprobado)
+      </h3>
+
+      <!-- Pestañas: Alumno individual / Por grupo -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.1rem">
+        <button id="cred-tab-ind" onclick="tabCred('individual')"
+          style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
+                 cursor:pointer;border:1px solid #C8922A;border-bottom:none;
+                 background:#F0C040;color:#1A1208">🎓 Alumno Individual</button>
+        <button id="cred-tab-grp" onclick="tabCred('grupo')"
+          style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
+                 cursor:pointer;border:1px solid #C8922A;border-bottom:none;
+                 background:transparent;color:#C8922A">👥 Por Grupo</button>
+      </div>
+
+      <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:0 8px 8px 8px;padding:1.2rem">
+
+        <!-- Alumno individual -->
+        <div id="cred-panel-ind">
+          <p style="font-size:0.8rem;color:#7a6030;margin:0 0 1rem">
+            Busca al alumno(a) por CURP para generar su credencial.
+          </p>
+          <div style="display:flex;gap:0.6rem;margin-bottom:1rem">
+            <input type="text" id="cred-curp" class="form-input" placeholder="CURP" maxlength="18"
+              oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')buscarAlumnoCred()"
+              style="flex:1;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;background:#fff;color:#2d1f08"/>
+            <button onclick="buscarAlumnoCred()"
+              style="background:#1A1208;color:#F0C040;border:1px solid #C8922A;padding:0.5rem 1rem;
+                     border-radius:6px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap">🔎 Buscar</button>
+          </div>
+          <div id="res-cred-ind" style="margin-bottom:1rem"></div>
+          <div id="cred-ind-preview" style="display:none;background:#fff;border:1px solid #e8d88a;border-radius:8px;
+               padding:0.9rem;margin-bottom:1rem;display:none;align-items:center;gap:0.8rem">
+            <img id="cred-ind-foto" src="" style="width:52px;height:52px;border-radius:8px;object-fit:cover;border:1px solid #ccc"/>
+            <div>
+              <div id="cred-ind-nombre" style="font-weight:700;color:#2d1f08;font-size:0.9rem"></div>
+              <div id="cred-ind-detalle" style="font-size:0.76rem;color:#7a6030"></div>
+            </div>
+          </div>
+          <button id="btn-cred-ind-generar" onclick="generarCredencialIndividual()" disabled
+            style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                   border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                   font-size:0.92rem;cursor:pointer;opacity:0.5">🖨️ Generar Credencial</button>
+        </div>
+
+        <!-- Por grupo -->
+        <div id="cred-panel-grp" style="display:none">
+          <p style="font-size:0.8rem;color:#7a6030;margin:0 0 1rem">
+            Elige grado y grupo para generar las credenciales de todo el grupo, listas para imprimir.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;margin-bottom:1rem">
+            <div>
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+              <select id="cred-grado"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;background:#fff;color:#2d1f08;cursor:pointer">
+                <option value="">-- Selecciona --</option>
+                <option value="1">1° Grado</option>
+                <option value="2">2° Grado</option>
+                <option value="3">3° Grado</option>
+              </select>
+            </div>
+            <div>
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+              <select id="cred-grupo"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;background:#fff;color:#2d1f08;cursor:pointer">
+                <option value="">-- Selecciona --</option>
+                <option value="A">Grupo A</option>
+                <option value="B">Grupo B</option>
+                <option value="C">Grupo C</option>
+                <option value="D">Grupo D</option>
+                <option value="E">Grupo E</option>
+              </select>
+            </div>
+          </div>
+          <div id="res-cred-grp" style="margin-bottom:1rem"></div>
+          <button onclick="generarCredencialesGrupo()"
+            style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                   border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                   font-size:0.92rem;cursor:pointer">🖨️ Generar Credenciales del Grupo</button>
+        </div>
+
+      </div>
     </div>
   </div>
 
