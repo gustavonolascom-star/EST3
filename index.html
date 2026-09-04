@@ -1,4 +1,4 @@
-<!-- Generado: 03/septiembre/2026, 19:42 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 04/septiembre/2026, 09:56 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1041,7 +1041,7 @@
 
   <!-- ═══ NAV ═══ -->
   <nav>
-    <a href="#" onclick="ocultarInformacion();ocultarPadres();ocultarEventos();return false;">Inicio</a>
+    <a href="#" onclick="ocultarInformacion();ocultarPadres();ocultarEventos();ocultarEstilo();return false;">Inicio</a>
     <a href="#" onclick="mostrarInformacion();return false;">Información</a>
     <div class="nav-item">
       <a href="#" onclick="return false;">Alumnos ▾</a>
@@ -1050,6 +1050,7 @@
         <a href="#" onclick="openModal('alta'); return false;">✏️ Actualización de Alumnos(as)</a>
         <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva</a>
         <a href="#" onclick="openModal('cred-login'); return false;">🪪 Credenciales</a>
+        <a href="#" onclick="mostrarEstilo();return false;">🧠 Estilo de Aprendizaje</a>
       </div>
     </div>
     <a href="#" onclick="mostrarPadres();return false;">Padres de Familia</a>
@@ -1607,6 +1608,42 @@
     </div>
   </div>
 
+  <!-- ═══ INSTRUMENTO DE ESTILO DE APRENDIZAJE (VAK) — acceso con CURP ═══ -->
+  <div id="sec-estilo" style="display:none;
+    position:fixed;inset:0;z-index:99999;
+    background:linear-gradient(160deg,#1a1408 0%,#2d1f08 50%,#1a1408 100%);
+    overflow-y:auto;font-family:'Inter',sans-serif;">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);
+         padding:0.9rem 1.5rem;display:flex;align-items:center;
+         justify-content:space-between;position:sticky;top:0;z-index:10;
+         border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.8rem">
+        <span style="font-size:1.5rem">🧠</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.95rem">
+            Estilo de Aprendizaje
+          </div>
+          <div style="font-size:0.7rem;color:#C8922A">
+            EST No. 3 · González Ortega, Sombrerete, Zac.
+          </div>
+        </div>
+      </div>
+      <button onclick="ocultarEstilo()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;
+               padding:0.4rem 1rem;border-radius:6px;font-size:0.8rem;
+               font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+        ✕ Cerrar
+      </button>
+    </div>
+
+    <!-- Contenido -->
+    <div style="max-width:680px;margin:0 auto;padding:2.5rem 1.5rem 4rem">
+      <div id="est-contenido"></div>
+    </div>
+  </div>
+
   </main>
 
 
@@ -1799,6 +1836,7 @@
       document.getElementById('sec-hero').style.display='none';
       document.getElementById('sec-informacion').style.display='none';
       document.getElementById('sec-padres').style.display='none';
+      document.getElementById('sec-estilo').style.display='none';
       document.getElementById('sec-eventos').style.display='block';
       window.scrollTo({top:0,behavior:'smooth'});
       const sel = document.getElementById('ev2-ciclo');
@@ -1913,6 +1951,211 @@
           '</div>'+
         '</div>');
       }).join('');
+    }
+
+    /* ── Instrumento de Estilo de Aprendizaje (VAK) — acceso público,
+     * solo con CURP del alumno (sin contraseña). 15 afirmaciones en
+     * escala de 3 (Rara vez / Algunas veces / Casi siempre); el cálculo
+     * del resultado se hace SIEMPRE en el servidor (ver
+     * guardarEstiloAprendizaje en el Apps Script) — aquí solo se
+     * muestran las preguntas y se mandan las respuestas.
+     * El texto de cada afirmación debe coincidir, EN EL MISMO ORDEN, con
+     * ESTILO_PREGUNTAS_VAK_ del Apps Script. */
+    const PREGUNTAS_ESTILO_APRENDIZAJE = [
+      'Puedo recordar algo un poco mejor si lo digo en voz alta.',
+      'Prefiero seguir instrucciones escritas y no orales.',
+      'Me gusta masticar chicle o comer algo mientras estudio.',
+      'Recuerdo mejor las cosas cuando las veo escritas.',
+      'Prefiero aprender por medio de simulacros, juegos, dinámicas.',
+      'Disfruto aprender cuando alguien me explica las cosas.',
+      'Aprendo mejor con dibujos, diagramas y mapas.',
+      'Disfruto de trabajar con las manos.',
+      'Me gusta la lectura y leo rápidamente.',
+      'Prefiero escuchar noticias en el radio.',
+      'Disfruto estar cerca de otros. Me gustan los abrazos.',
+      'Escucho el radio, grabaciones, archivos sonoros.',
+      'Si deletreo una palabra puedo "verla" en mi memoria visual.',
+      'Cuando aprendo cosas nuevas actúo, dibujo y hago garabatos.',
+      'Cuando leo en silencio, me digo cada palabra a mí mismo.'
+    ];
+    const ESCALA_ESTILO_APRENDIZAJE = [
+      { v: 1, l: 'Rara vez' },
+      { v: 2, l: 'Algunas veces' },
+      { v: 3, l: 'Casi siempre' }
+    ];
+    const DESCRIPCION_ESTILO_APRENDIZAJE = {
+      'Visual': 'Aprendes mejor VIENDO la información: con dibujos, diagramas, mapas mentales, colores y subrayados. Al estudiar, trata de convertir tus apuntes en esquemas o dibujos, y usa colores para resaltar lo importante.',
+      'Auditivo': 'Aprendes mejor ESCUCHANDO: explicaciones, lecturas en voz alta, grabaciones o repitiendo la información. Al estudiar, trata de leer tus apuntes en voz alta, explicárselos a alguien más, o grabarte y volver a escucharte.',
+      'Kinestésico': 'Aprendes mejor HACIENDO y MOVIÉNDOTE: con actividades prácticas, experimentos, manualidades o representaciones. Al estudiar, trata de escribir tus propios resúmenes a mano, hacer maquetas o ejercicios prácticos, y tomar pequeños descansos para moverte.'
+    };
+
+    let _estCurpActual   = '';
+    let _estAlumnoActual = null;
+
+    function mostrarEstilo(){
+      document.getElementById('sec-hero').style.display='none';
+      document.getElementById('sec-informacion').style.display='none';
+      document.getElementById('sec-padres').style.display='none';
+      document.getElementById('sec-eventos').style.display='none';
+      document.getElementById('sec-estilo').style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      _estCurpActual   = '';
+      _estAlumnoActual = null;
+      pintarEstiloPasoCurp();
+    }
+
+    function ocultarEstilo(){
+      document.getElementById('sec-estilo').style.display='none';
+      document.getElementById('sec-hero').style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function pintarEstiloPasoCurp(errorMsg){
+      const cont = document.getElementById('est-contenido');
+      cont.innerHTML =
+        '<div style="text-align:center;margin-bottom:1.8rem">'+
+          '<div style="font-family:\'Cinzel\',serif;color:#C8922A;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.6rem">Instrumento para Alumnos(as)</div>'+
+          '<h2 style="font-family:\'Playfair Display\',serif;color:#F0C040;font-size:1.6rem;margin:0 0 0.5rem;line-height:1.3">¿Cuál es tu Estilo de Aprendizaje?</h2>'+
+          '<div style="width:60px;height:2px;background:#9B1C1C;margin:0.8rem auto"></div>'+
+          '<p style="color:#c9a96e;font-size:0.85rem;max-width:520px;margin:0 auto;line-height:1.6">Contesta 15 afirmaciones cortas para saber si aprendes mejor de forma Visual, Auditiva o Kinestésica. Solo necesitas tu CURP para comenzar.</p>'+
+        '</div>'+
+        '<div style="max-width:360px;margin:0 auto;text-align:center">'+
+          '<label style="display:block;color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;color:#C8922A">Tu CURP</label>'+
+          '<input type="text" id="est-curp" placeholder="Ej. GOML020315HZSNPR01" maxlength="18" '+
+            'style="width:100%;padding:0.6rem 0.8rem;border:1.5px solid #C8922A;border-radius:6px;font-size:0.95rem;'+
+            'background:#fffdf5;color:#1a1408;text-transform:uppercase;text-align:center;letter-spacing:0.05em;margin-bottom:0.9rem;box-sizing:border-box"/>'+
+          (errorMsg ? '<div style="background:rgba(155,28,28,0.15);border:1px solid #9B1C1C;color:#ff9a9a;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;margin-bottom:0.9rem">⚠️ '+errorMsg+'</div>' : '')+
+          '<button id="est-btn-curp" onclick="accederEstilo()" '+
+            'style="background:#C8922A;color:#1a1408;border:none;padding:0.65rem 1.7rem;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer">Continuar</button>'+
+        '</div>';
+      document.getElementById('est-curp').focus();
+      document.getElementById('est-curp').addEventListener('keydown', function(e){ if (e.key === 'Enter') accederEstilo(); });
+    }
+
+    async function accederEstilo(){
+      const curp = document.getElementById('est-curp').value.trim().toUpperCase();
+      if (!curp) { pintarEstiloPasoCurp('Ingresa tu CURP para continuar.'); return; }
+      const btn = document.getElementById('est-btn-curp');
+      btn.textContent = 'Verificando…';
+      btn.disabled = true;
+      const json = await jsonpCall({ accion: 'buscarAlumnoInstrumento', curp: curp }, 15000);
+      if (!json || json.timeout || json.networkError) { pintarEstiloPasoCurp('Sin respuesta del servidor. Intenta de nuevo.'); return; }
+      if (!json.ok) { pintarEstiloPasoCurp(json.mensaje || 'CURP no encontrada.'); return; }
+      _estCurpActual   = json.curp;
+      _estAlumnoActual = json;
+      pintarEstiloConfirmacion(json);
+    }
+
+    function pintarEstiloConfirmacion(json){
+      const cont = document.getElementById('est-contenido');
+      const previoHtml = json.previo
+        ? '<div style="background:rgba(200,146,42,0.12);border:1px solid #C8922A;border-radius:8px;padding:0.9rem 1.1rem;margin-bottom:1.4rem;font-size:0.84rem;color:#e8d8b0;line-height:1.6">'+
+            '⚠️ Ya tienes un resultado registrado'+(json.previo.fecha ? ' ('+fmtFecha(json.previo.fecha)+')' : '')+': <strong>'+json.previo.estilo+'</strong>. '+
+            'Si contestas de nuevo, este resultado lo va a reemplazar.'+
+          '</div>'
+        : '';
+      cont.innerHTML =
+        '<div style="text-align:center;margin-bottom:1.6rem">'+
+          '<div style="font-family:\'Cinzel\',serif;color:#C8922A;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.6rem">Confirma tus datos</div>'+
+          '<h2 style="font-family:\'Playfair Display\',serif;color:#F0C040;font-size:1.4rem;margin:0 0 0.3rem;line-height:1.3">'+(json.nombre||'')+'</h2>'+
+          '<div style="color:#c9a96e;font-size:0.9rem">'+(json.grado?json.grado+'° ':'')+(json.grupo||'')+'</div>'+
+        '</div>'+
+        previoHtml+
+        '<div style="text-align:center">'+
+          '<button onclick="pintarEstiloPreguntas()" '+
+            'style="background:#C8922A;color:#1a1408;border:none;padding:0.65rem 1.7rem;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-right:0.6rem">Comenzar</button>'+
+          '<button onclick="pintarEstiloPasoCurp()" '+
+            'style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.6rem 1.4rem;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer">No soy yo</button>'+
+        '</div>';
+    }
+
+    function pintarEstiloPreguntas(){
+      const cont = document.getElementById('est-contenido');
+      const preguntasHtml = PREGUNTAS_ESTILO_APRENDIZAJE.map(function(texto, i){
+        const opciones = ESCALA_ESTILO_APRENDIZAJE.map(function(op){
+          return '<label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:#c9a96e">'+
+            '<input type="radio" name="est-p'+i+'" value="'+op.v+'" style="accent-color:#C8922A"/> '+op.l+
+          '</label>';
+        }).join('');
+        return '<div style="background:rgba(26,20,8,0.6);border:1px solid #e8d88a33;border-radius:8px;padding:1rem 1.2rem;margin-bottom:0.9rem">'+
+          '<div style="color:#e8d8b0;font-size:0.88rem;font-weight:600;margin-bottom:0.7rem">'+(i+1)+'. '+texto+'</div>'+
+          '<div style="display:flex;gap:1.4rem;flex-wrap:wrap">'+opciones+'</div>'+
+        '</div>';
+      }).join('');
+
+      cont.innerHTML =
+        '<div style="text-align:center;margin-bottom:1.6rem">'+
+          '<h2 style="font-family:\'Playfair Display\',serif;color:#F0C040;font-size:1.3rem;margin:0 0 0.4rem">Contesta cada afirmación</h2>'+
+          '<p style="color:#c9a96e;font-size:0.82rem">Piensa en cómo te comportas normalmente, no como te gustaría ser.</p>'+
+        '</div>'+
+        preguntasHtml+
+        '<div id="est-error" style="display:none;background:rgba(155,28,28,0.15);border:1px solid #9B1C1C;color:#ff9a9a;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;margin-bottom:0.9rem;text-align:center"></div>'+
+        '<div style="text-align:center;margin-top:0.6rem">'+
+          '<button id="est-btn-enviar" onclick="enviarEstilo()" '+
+            'style="background:#C8922A;color:#1a1408;border:none;padding:0.7rem 2rem;border-radius:6px;font-size:0.95rem;font-weight:700;cursor:pointer">Ver mi resultado</button>'+
+        '</div>';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    async function enviarEstilo(){
+      const respuestas = [];
+      for (let i = 0; i < PREGUNTAS_ESTILO_APRENDIZAJE.length; i++){
+        const sel = document.querySelector('input[name="est-p'+i+'"]:checked');
+        if (!sel){
+          const err = document.getElementById('est-error');
+          err.textContent = '⚠️ Falta contestar la afirmación '+(i+1)+'.';
+          err.style.display = 'block';
+          err.scrollIntoView({behavior:'smooth', block:'center'});
+          return;
+        }
+        respuestas.push(Number(sel.value));
+      }
+      const btn = document.getElementById('est-btn-enviar');
+      btn.textContent = 'Guardando…';
+      btn.disabled = true;
+      const json = await jsonpCall({ accion: 'guardarEstiloAprendizaje', curp: _estCurpActual, respuestas: JSON.stringify(respuestas) }, 20000);
+      if (!json || json.timeout || json.networkError){
+        const err = document.getElementById('est-error');
+        err.textContent = '⚠️ Sin respuesta del servidor. Intenta de nuevo.';
+        err.style.display = 'block';
+        btn.textContent = 'Ver mi resultado';
+        btn.disabled = false;
+        return;
+      }
+      if (!json.ok){
+        const err = document.getElementById('est-error');
+        err.textContent = '⚠️ '+(json.mensaje || 'No se pudo guardar tu resultado.');
+        err.style.display = 'block';
+        btn.textContent = 'Ver mi resultado';
+        btn.disabled = false;
+        return;
+      }
+      pintarEstiloResultado(json);
+    }
+
+    function pintarEstiloResultado(json){
+      const cont = document.getElementById('est-contenido');
+      const estilos = json.estilo.split(' / ');
+      const tipsHtml = estilos.map(function(e){
+        const desc = DESCRIPCION_ESTILO_APRENDIZAJE[e] || '';
+        return '<div style="background:rgba(200,146,42,0.1);border:1px solid #C8922A;border-radius:8px;padding:1rem 1.2rem;margin-bottom:0.9rem;text-align:left">'+
+          '<div style="color:#F0C040;font-weight:700;font-size:0.95rem;margin-bottom:0.4rem">'+e+'</div>'+
+          '<div style="color:#c9a96e;font-size:0.85rem;line-height:1.6">'+desc+'</div>'+
+        '</div>';
+      }).join('');
+
+      cont.innerHTML =
+        '<div style="text-align:center;margin-bottom:1.4rem">'+
+          '<div style="font-size:2.5rem;margin-bottom:0.6rem">🎉</div>'+
+          '<div style="font-family:\'Cinzel\',serif;color:#C8922A;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.6rem">Tu resultado</div>'+
+          '<h2 style="font-family:\'Playfair Display\',serif;color:#F0C040;font-size:1.7rem;margin:0 0 0.3rem">'+json.estilo+'</h2>'+
+        '</div>'+
+        tipsHtml+
+        '<div style="text-align:center;margin-top:1.2rem">'+
+          '<button onclick="ocultarEstilo()" '+
+            'style="background:#C8922A;color:#1a1408;border:none;padding:0.65rem 1.7rem;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer">Cerrar</button>'+
+        '</div>';
+      window.scrollTo({top:0,behavior:'smooth'});
     }
 
     function toggleCap(card) {
