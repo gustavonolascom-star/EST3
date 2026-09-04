@@ -1,4 +1,4 @@
-<!-- Generado: 03/septiembre/2026, 16:50 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 03/septiembre/2026, 19:42 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2034,17 +2034,58 @@
     const CAMPOS_EXCLUIR = ['Foto','QRalu'];
 
     function fotoUrl(ruta) {
-      // Convierte ruta de Drive a URL pública de thumbnail
-      // Si ya es URL completa la devuelve tal cual
-      if (!ruta) return null;
-      if (ruta.startsWith('http')) return ruta;
-      // Formato: DatAlu_Images/NOMBRE.Foto.ID.jpg
-      // Extraer ID numérico al final antes del .jpg
-      const match = ruta.match(/\.([A-Za-z0-9_-]{10,})\.jpg$/i) || ruta.match(/\.([0-9]+)\.jpg$/i);
-      if (match) {
-        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w300`;
+      // Convierte ruta de Drive a URL pública de thumbnail.
+      // Envuelto en try/catch y con conversión explícita a texto porque
+      // en la hoja DatAlu estas columnas a veces traen, por captura
+      // manual, un valor que no es texto (número, fecha, booleano) — sin
+      // esto una celda así rompía toda la Ficha Descriptiva.
+      try {
+        if (!ruta) return null;
+        ruta = ruta.toString().trim();
+        if (!ruta) return null;
+        // Si ya es URL completa la devuelve tal cual
+        if (ruta.startsWith('http')) return ruta;
+        // Formato: DatAlu_Images/NOMBRE.Foto.ID.jpg
+        // Extraer ID numérico al final antes del .jpg
+        const match = ruta.match(/\.([A-Za-z0-9_-]{10,})\.jpg$/i) || ruta.match(/\.([0-9]+)\.jpg$/i);
+        if (match) {
+          return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w300`;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
+    }
+
+    // Resuelve las URLs candidatas para la foto de un alumno: primero el
+    // campo "Foto" y, si no se puede resolver, "FotoImg" como respaldo
+    // (algunos alumnos solo tienen la imagen cargada en esa columna).
+    // Devuelve { principal, respaldo } — "respaldo" solo se llena si
+    // existe y es distinto de "principal", para poder intentarlo cuando
+    // el primero falle al cargar (enlace roto) o no exista. Nunca lanza
+    // error: si algo falla, simplemente no hay foto (no debe impedir que
+    // se abra la Ficha).
+    function fotosAlumno(alumno) {
+      try {
+        const principal = fotoUrl((alumno && alumno['Foto']) || '');
+        const respaldo  = fotoUrl((alumno && alumno['FotoImg']) || '');
+        return { principal: principal, respaldo: (respaldo && respaldo !== principal) ? respaldo : null };
+      } catch (e) {
+        return { principal: null, respaldo: null };
+      }
+    }
+
+    // Handler compartido de onerror para <img> de foto de alumno: si hay
+    // una URL de respaldo pendiente (data-foto-alt) la intenta antes de
+    // darse por vencido; si no, ejecuta finalizar() (ocultar/mostrar avatar).
+    function fotoOnError(img, finalizar) {
+      const alt = img.getAttribute('data-foto-alt');
+      if (alt) {
+        img.removeAttribute('data-foto-alt');
+        img.src = alt;
+      } else if (finalizar) {
+        finalizar();
+      }
     }
 
     function formatearValor(k, v) {
@@ -2069,14 +2110,14 @@
       const emoji   = genero === 'FEMENINO' || genero === 'F' ? '👩‍🎓' : '👨‍🎓';
       const tituloSeccion = tipo === 'ficha' ? 'Ficha Descriptiva' : 'Expediente del Alumno(a)';
 
-      // Foto del alumno
-      const fotoRuta = a['Foto'] || '';
-      const fotoSrc  = fotoUrl(fotoRuta);
-      const fotoHtml = fotoSrc
+      // Foto del alumno (con respaldo en FotoImg si "Foto" no se puede resolver)
+      const { principal: fotoSrc, respaldo: fotoAlt } = fotosAlumno(a);
+      const fotoHtml = (fotoSrc || fotoAlt)
         ? `<div class="ficha-foto-wrap">
-             <img src="${fotoSrc}" alt="Foto ${nombre}"
+             <img src="${fotoSrc || fotoAlt}" alt="Foto ${nombre}"
                class="ficha-foto"
-               onerror="this.style.display='none';document.getElementById('avatar-emoji').style.display='flex'"/>
+               ${fotoSrc && fotoAlt ? `data-foto-alt="${fotoAlt}"` : ''}
+               onerror="fotoOnError(this, () => { this.style.display='none'; document.getElementById('avatar-emoji').style.display='flex'; })"/>
            </div>
            <div class="ficha-avatar" id="avatar-emoji" style="display:none">${emoji}</div>`
         : `<div class="ficha-avatar" id="avatar-emoji">${emoji}</div>`;
@@ -2376,6 +2417,7 @@
     let _fichaCicloActual       = '';
     let _fichaDetalleCache      = {};
     let _fichaIntervenciones    = [];
+    let _fichaBitacoraDocentes  = [];
     let _fichaConductaRegistros = [];
     let _fichaAsistDetalle      = [];
     let _fichaFaltasDetalle     = [];
@@ -2386,9 +2428,11 @@
       const nombre  = alumno['Nombre'] || '';
       const genero  = (alumno['Genero'] || '').toUpperCase();
       const emoji   = (genero === 'FEMENINO' || genero === 'F') ? '👩‍🎓' : '👨‍🎓';
-      const fotoSrc = fotoUrl(alumno['Foto'] || '');
-      const fotoHtml = fotoSrc
-        ? `<div class="ficha-foto-wrap"><img src="${fotoSrc}" class="ficha-foto" onerror="this.style.display='none'"/></div>`
+      const { principal: fotoSrc, respaldo: fotoAlt } = fotosAlumno(alumno);
+      const fotoHtml = (fotoSrc || fotoAlt)
+        ? `<div class="ficha-foto-wrap"><img src="${fotoSrc || fotoAlt}" class="ficha-foto"
+             ${fotoSrc && fotoAlt ? `data-foto-alt="${fotoAlt}"` : ''}
+             onerror="fotoOnError(this, () => { this.style.display='none'; })"/></div>`
         : `<div class="ficha-avatar">${emoji}</div>`;
 
       _fichaAlumnoActual = alumno;
@@ -2456,9 +2500,11 @@
       const curp    = alumno['CURP']   || '';
       const genero  = (alumno['Genero'] || '').toUpperCase();
       const emoji   = (genero === 'FEMENINO' || genero === 'F') ? '👩‍🎓' : '👨‍🎓';
-      const fotoSrc = fotoUrl(alumno['Foto'] || '');
-      const fotoHtml = fotoSrc
-        ? `<div class="ficha-foto-wrap"><img src="${fotoSrc}" class="ficha-foto" onerror="this.style.display='none'"/></div>`
+      const { principal: fotoSrc, respaldo: fotoAlt } = fotosAlumno(alumno);
+      const fotoHtml = (fotoSrc || fotoAlt)
+        ? `<div class="ficha-foto-wrap"><img src="${fotoSrc || fotoAlt}" class="ficha-foto"
+             ${fotoSrc && fotoAlt ? `data-foto-alt="${fotoAlt}"` : ''}
+             onerror="fotoOnError(this, () => { this.style.display='none'; })"/></div>`
         : `<div class="ficha-avatar">${emoji}</div>`;
 
       body.innerHTML = `
@@ -2475,12 +2521,13 @@
           <small>Esto puede tardar unos segundos.</small>
         </div>`;
 
-      const [json, resumenCal, resumenAsis, datosTS, datosConducta] = await Promise.all([
+      const [json, resumenCal, resumenAsis, datosTS, datosConducta, datosBitDoc] = await Promise.all([
         leerFichaMenu(nombre),
         jsonpCall({ accion: 'resumenCalificacionesFicha', curp: curp, ciclo: ciclo }, 20000),
         jsonpCall({ accion: 'resumenAsistenciaFicha', curp: curp, nombre: nombre, ciclo: ciclo }, 20000),
         jsonpCall({ accion: 'datosTrabajoSocialFicha', nombre: nombre }, 20000),
-        jsonpCall({ accion: 'puntosConductaFicha', nombre: nombre }, 20000)
+        jsonpCall({ accion: 'puntosConductaFicha', nombre: nombre }, 20000),
+        jsonpCall({ accion: 'bitacoraDocentesFicha', nombre: nombre }, 20000)
       ]);
 
       if (!json || !json.ok) {
@@ -2511,6 +2558,12 @@
       const puntosPerdidos = condOk ? datosConducta.puntosPerdidos : 0;
       const totalPuntos    = condOk ? datosConducta.totalPuntos : (puntosConducta - puntosPerdidos);
       _fichaConductaRegistros = condOk ? datosConducta.registros : [];
+
+      // Bitácora de Docentes: EN VIVO desde bitacoraDocentesFicha (libro
+      // "Registros Bitacora", hojas "Registros" y "Copia de Registros").
+      const bitOk = !!(datosBitDoc && datosBitDoc.ok);
+      _fichaBitacoraDocentes = bitOk ? datosBitDoc.intervenciones : [];
+      const totalBitDoc = bitOk ? datosBitDoc.total : 0;
 
       const val = (k) => (d[k] !== null && d[k] !== undefined && d[k] !== '') ? d[k] : '—';
       const fmt = (k) => {
@@ -2702,6 +2755,20 @@
             <div class="ficha-field-label">Total de Puntos</div>
             <div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:${colorPuntos(totalPuntos)}">
               ${totalPuntos}</div>
+          </div>
+        </div>
+
+        <!-- BITÁCORA DE DOCENTES -->
+        <div class="ficha-section-title">👨‍🏫 Bitácora de Docentes</div>
+        <div class="ficha-grid">
+          <div class="ficha-field">
+            <div class="ficha-field-label">Intervenciones Registradas</div>
+            ${totalBitDoc > 0
+              ? `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#C0181A;
+                     cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+                   onclick="abrirBitacoraDocentes()" title="Ver detalle de la bitácora de docentes">
+                   ${totalBitDoc}</div>`
+              : `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#1D7A4E">0</div>`}
           </div>
         </div>
 
@@ -2909,6 +2976,62 @@
       document.getElementById('interv-ts-overlay').style.display = 'none';
     }
 
+    /* ── Ventana de Bitácora de Docentes (Ficha Descriptiva) ── */
+    function renderBitacoraDocenteCard_(iv) {
+      const campos = [];
+      if (iv.antecedentes) campos.push(['Antecedentes', iv.antecedentes]);
+      if (iv.descripcion)  campos.push(['Descripción', iv.descripcion]);
+      if (iv.accion)       campos.push(['Acción de intervención', iv.accion]);
+      if (iv.acuerdos)     campos.push(['Acuerdos', iv.acuerdos]);
+
+      const detalleHtml = campos.map(function(c){
+        return '<div style="margin-top:0.6rem">'+
+          '<div style="font-size:0.7rem;color:#a08040;font-weight:700;text-transform:uppercase;letter-spacing:0.04em">'+c[0]+'</div>'+
+          '<div style="font-size:0.85rem;color:#3a2c10;line-height:1.6;margin-top:0.15rem">'+c[1]+'</div>'+
+        '</div>';
+      }).join('');
+
+      const evidHtml = (iv.evidencias && iv.evidencias.length)
+        ? '<div style="margin-top:0.8rem;display:flex;flex-direction:column;gap:0.7rem">'+
+            iv.evidencias.map(function(url, j){ return evidenciaHtml(url, j); }).join('')+
+          '</div>'
+        : '';
+
+      const grupoTxt = (iv.grado || iv.grupo) ? ' · '+(iv.grado||'')+'° '+(iv.grupo||'') : '';
+
+      return '<div style="background:#fffdf5;border:1px solid #e8d88a;border-left:4px solid #9B1C1C;'+
+                  'border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem">'+
+        '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.6rem;align-items:baseline">'+
+          '<div style="font-weight:700;color:#3a2c10;font-size:0.9rem">'+(iv.situacion || 'Sin motivo especificado')+'</div>'+
+          '<div style="font-size:0.75rem;color:#a08040;white-space:nowrap">'+fmtFecha(iv.fecha)+(iv.hora ? ' · '+iv.hora : '')+'</div>'+
+        '</div>'+
+        '<div style="font-size:0.78rem;color:#7a6030;margin-top:0.2rem">'+
+          '👨‍🏫 '+(iv.docente || '—')+grupoTxt+' · <span style="opacity:0.7">'+iv.origen+'</span>'+
+        '</div>'+
+        detalleHtml+
+        evidHtml+
+      '</div>';
+    }
+
+    function abrirBitacoraDocentes() {
+      const overlay = document.getElementById('bitdoc-overlay');
+      const body    = document.getElementById('bitdoc-body');
+      const lista   = _fichaBitacoraDocentes || [];
+
+      body.innerHTML = lista.length
+        ? lista.map(renderBitacoraDocenteCard_).join('')
+        : '<p style="text-align:center;padding:1.5rem 0;color:#aaa">Sin registros.</p>';
+
+      document.getElementById('bitdoc-titulo').textContent =
+        `👨‍🏫 Bitácora de Docentes — ${lista.length} intervención${lista.length === 1 ? '' : 'es'}`;
+
+      overlay.style.display = 'flex';
+    }
+
+    function cerrarBitacoraDocentes() {
+      document.getElementById('bitdoc-overlay').style.display = 'none';
+    }
+
     /* ── Ventana de detalle de Puntos Perdidos (Conducta) ── */
     function abrirDetalleConducta() {
       const overlay = document.getElementById('detalle-cond-overlay');
@@ -3023,6 +3146,7 @@
       _fichaCicloActual        = '';
       _fichaDetalleCache       = {};
       _fichaIntervenciones     = [];
+      _fichaBitacoraDocentes   = [];
       _fichaConductaRegistros  = [];
       _fichaAsistDetalle       = [];
       _fichaFaltasDetalle      = [];
@@ -5543,6 +5667,22 @@
                  border-radius:6px;cursor:pointer;font-weight:600">✕</button>
       </div>
       <div id="interv-ts-body" style="padding:1.3rem"></div>
+    </div>
+  </div>
+
+  <!-- BITÁCORA DE DOCENTES (Ficha Descriptiva — clic en el conteo) -->
+  <div id="bitdoc-overlay" style="display:none;position:fixed;inset:0;z-index:999996;
+       background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#fffdf5;border-top:4px solid #9B1C1C;border-radius:8px;
+         max-width:900px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.4)">
+      <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:1rem 1.3rem;
+           display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1">
+        <h3 id="bitdoc-titulo" style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;margin:0"></h3>
+        <button onclick="cerrarBitacoraDocentes()"
+          style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.8rem;
+                 border-radius:6px;cursor:pointer;font-weight:600">✕</button>
+      </div>
+      <div id="bitdoc-body" style="padding:1.3rem"></div>
     </div>
   </div>
 
