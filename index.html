@@ -1,4 +1,4 @@
-<!-- Generado: 04/septiembre/2026, 09:56 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 05/septiembre/2026, 08:56 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1076,6 +1076,33 @@
 
 <main>
 
+    <!-- ═══ CUMPLEAÑOS DEL DÍA — sección festiva de portada, solo visible
+         cuando hay alumnos o personal que cumplen años en la fecha actual ═══ -->
+    <section id="sec-cumple" style="display:none;
+      position:relative; overflow:hidden;
+      padding: 2.2rem 1.5rem 2.6rem;
+      background: linear-gradient(160deg, #2d1f08 0%, #1a1408 100%);
+      border-bottom: 2px solid #C8922A;
+    ">
+      <div style="position:absolute; inset:0;
+        background: radial-gradient(ellipse at 50% -10%, rgba(240,192,64,0.18), transparent 60%);
+        pointer-events:none;"></div>
+      <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;text-align:center">
+        <div style="font-family:'Playfair Display',serif;font-size:clamp(1.5rem,4.4vw,2.2rem);
+                    font-weight:900;letter-spacing:0.04em;color:#F0C040;
+                    text-shadow:0 0 22px rgba(240,192,64,0.5),0 2px 12px rgba(0,0,0,0.85);
+                    display:inline-flex;align-items:center;gap:0.6rem">
+          <span style="display:inline-block;animation:anuncioPulse 2.2s ease-in-out infinite">🎉</span>
+          <span id="cumple-titulo">Hoy celebramos</span>
+        </div>
+        <div style="width:90px;height:3px;background:linear-gradient(90deg,transparent,#C8922A,transparent);
+                    margin:0.7rem auto 1.1rem"></div>
+        <p id="cumple-mensaje" style="color:#e8d8b0;font-size:0.92rem;line-height:1.7;
+                    max-width:640px;margin:0 auto 1.5rem"></p>
+        <div id="cumple-contenido" style="display:grid;gap:0.9rem;text-align:left;max-width:720px;margin:0 auto"></div>
+      </div>
+    </section>
+
     <!-- ═══ HERO — página inicial ═══ -->
     <section id="sec-hero" style="
       text-align:center;
@@ -1757,6 +1784,7 @@
         if (al) al.src = logoSrc;
       } catch(e) {}
       cargarAnuncios();
+      cargarCumpleanosHoy();
 
       // ── Registrar y mostrar visita ──
       registrarYMostrarVisita();
@@ -3992,6 +4020,84 @@
         html += '</div>';
         return html;
       }).join('');
+    }
+
+    // ── CUMPLEAÑOS DEL DÍA (portada) ──────────────────────────
+    // Mensajes institucionales, con calidez pero sin perder la seriedad propia
+    // de la escuela; se elige uno al azar cada vez que carga la página.
+    const MENSAJES_CUMPLE_ALUMNOS = [
+      'Toda la comunidad de la Escuela Secundaria Técnica No. 3 se une para desearte un muy feliz cumpleaños, lleno de logros y bendiciones.',
+      'En este día tan especial, te deseamos un feliz cumpleaños; que sigas creciendo con salud, alegría y éxito en tus estudios.',
+      'Con mucho cariño, la Dirección y el personal docente de la escuela te desean un feliz cumpleaños y muchos éxitos por venir.',
+      'Que tengas un excelente cumpleaños, acompañado de tu familia y con muchos motivos para celebrar. ¡Felicidades!'
+    ];
+    const MENSAJES_CUMPLE_PERSONAL = [
+      'La Dirección de la Escuela Secundaria Técnica No. 3 extiende una cordial felicitación en su día, agradeciendo su valiosa labor a favor de nuestros alumnos.',
+      'Con aprecio y reconocimiento, deseamos un muy feliz cumpleaños y muchos éxitos, tanto personales como profesionales.',
+      'Que este nuevo año de vida esté lleno de salud, satisfacciones y momentos gratos junto a su familia. ¡Feliz cumpleaños!'
+    ];
+
+    function toggleCumpleBloque(id){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+    }
+
+    async function cargarCumpleanosHoy(){
+      const sec = document.getElementById('sec-cumple');
+      if(!sec) return;
+      let json;
+      try { json = await jsonpCall({accion:'cumpleanosHoy'}, 15000); } catch(e) { sec.style.display='none'; return; }
+      if(!json || !json.ok || !json.hay){ sec.style.display='none'; return; }
+
+      const tituloEl = document.getElementById('cumple-titulo');
+      if(tituloEl) tituloEl.textContent = 'Hoy, ' + (json.fechaTexto || '') + ', celebramos';
+
+      let html = '';
+      ['1','2','3'].forEach(function(g){
+        const lista = (json.alumnosPorGrado && json.alumnosPorGrado[g]) || [];
+        if(!lista.length) return;
+        const idc = 'cumple-grado-' + g;
+        const nombres = lista.map(function(a){
+          const extra = a.grupo ? ('  <span style="color:#c9a96e;font-size:0.8rem">(' + g + '°' + a.grupo + ')</span>') : '';
+          return '<div style="padding:0.35rem 0;border-bottom:1px dashed rgba(200,146,42,0.25)">🎂 ' + a.nombre + extra + '</div>';
+        }).join('');
+        html += '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;border-radius:10px;overflow:hidden">' +
+          '<button onclick="toggleCumpleBloque(\'' + idc + '\')" style="width:100%;text-align:left;' +
+          'background:rgba(200,146,42,0.14);border:none;color:#F0C040;padding:0.7rem 1rem;' +
+          'font-family:\'Cinzel\',serif;font-size:0.9rem;letter-spacing:0.05em;cursor:pointer;' +
+          'display:flex;justify-content:space-between;align-items:center">' +
+          '<span>🎓 ' + g + '° Grado — ' + lista.length + ' festejado' + (lista.length > 1 ? 's' : '') + '</span><span>▾</span></button>' +
+          '<div id="' + idc + '" style="display:none;padding:0.8rem 1rem;color:#e8d8b0;font-size:0.88rem">' + nombres + '</div>' +
+          '</div>';
+      });
+
+      const personal = json.personal || [];
+      if(personal.length){
+        const nombresP = personal.map(function(p){
+          const extra = p.funcion ? ('  <span style="color:#c9a96e;font-size:0.8rem">(' + p.funcion + ')</span>') : '';
+          return '<div style="padding:0.35rem 0;border-bottom:1px dashed rgba(200,146,42,0.25)">🎂 ' + p.nombre + extra + '</div>';
+        }).join('');
+        html += '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;border-radius:10px;overflow:hidden">' +
+          '<button onclick="toggleCumpleBloque(\'cumple-personal\')" style="width:100%;text-align:left;' +
+          'background:rgba(200,146,42,0.14);border:none;color:#F0C040;padding:0.7rem 1rem;' +
+          'font-family:\'Cinzel\',serif;font-size:0.9rem;letter-spacing:0.05em;cursor:pointer;' +
+          'display:flex;justify-content:space-between;align-items:center">' +
+          '<span>👥 Personal Activo — ' + personal.length + ' festejado' + (personal.length > 1 ? 's' : '') + '</span><span>▾</span></button>' +
+          '<div id="cumple-personal" style="display:none;padding:0.8rem 1rem;color:#e8d8b0;font-size:0.88rem">' + nombresP + '</div>' +
+          '</div>';
+      }
+
+      const cont = document.getElementById('cumple-contenido');
+      if(cont) cont.innerHTML = html;
+
+      const msjs = [];
+      if((json.totalAlumnos || 0) > 0) msjs.push(MENSAJES_CUMPLE_ALUMNOS[Math.floor(Math.random() * MENSAJES_CUMPLE_ALUMNOS.length)]);
+      if((json.totalPersonal || 0) > 0) msjs.push(MENSAJES_CUMPLE_PERSONAL[Math.floor(Math.random() * MENSAJES_CUMPLE_PERSONAL.length)]);
+      const msjEl = document.getElementById('cumple-mensaje');
+      if(msjEl) msjEl.textContent = msjs.join('  ');
+
+      sec.style.display = 'block';
     }
 
     function abrirFormularioAlta(a, esNuevo) {
