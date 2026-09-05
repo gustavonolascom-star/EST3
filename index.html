@@ -1,4 +1,4 @@
-<!-- Generado: 05/septiembre/2026, 08:56 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 05/septiembre/2026, 10:32 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4841,10 +4841,9 @@
 
       let cuerpoHtml;
       if (modo === 'grupo') {
-        // Impresión por lote: hojas tamaño carta, 3×3 (9 credenciales por hoja),
-        // primero todas las hojas con el lado frontal y luego, en hojas aparte
-        // y en el mismo orden, el lado posterior — para imprimir, recortar y
-        // emparejar frente/reverso de cada alumno con facilidad.
+        // Impresión por lote: hojas tamaño carta, 3×3 (9 credenciales por hoja).
+        // Solo se genera el lado frontal (por indicación de Dirección, ya no
+        // se emite el lado posterior/reverso).
         const CHUNK = 9;
         const indexados = alumnos.map(function(a, i){ return {a: a, i: i}; });
         const hojas = [];
@@ -4854,26 +4853,18 @@
         const grupo = meta.grupo || (alumnos[0] && alumnos[0].grupo) || '';
         const tituloBase = 'Credenciales — ' + (grado ? grado + '° ' : '') + grupo;
 
-        const hojasFrente = hojas.map(function(lote, c){
+        cuerpoHtml = hojas.map(function(lote, c){
           const cards = lote.map(function(o){ return cardFrenteHtml(o.a, o.i); }).join('');
           return '<div class="hoja-page">' +
-            '<div class="hoja-titulo">' + tituloBase + ' — Lado frontal — Hoja ' + (c+1) + ' de ' + totalHojas + '</div>' +
+            '<div class="hoja-titulo">' + tituloBase + ' — Hoja ' + (c+1) + ' de ' + totalHojas + '</div>' +
             '<div class="hoja">' + cards + '</div>' +
           '</div>';
         }).join('');
-
-        const hojasReverso = hojas.map(function(lote, c){
-          const cards = lote.map(function(o){ return cardReversoHtml(o.a, o.i); }).join('');
-          return '<div class="hoja-page">' +
-            '<div class="hoja-titulo">' + tituloBase + ' — Lado posterior — Hoja ' + (c+1) + ' de ' + totalHojas + '</div>' +
-            '<div class="hoja">' + cards + '</div>' +
-          '</div>';
-        }).join('');
-
-        cuerpoHtml = hojasFrente + hojasReverso;
       } else {
+        // Solo se genera el lado frontal (por indicación de Dirección, ya no
+        // se emite el lado posterior/reverso).
         cuerpoHtml = alumnos.map(function(a, i){
-          return '<div class="par">' + cardFrenteHtml(a, i) + cardReversoHtml(a, i) + '</div>';
+          return '<div class="par">' + cardFrenteHtml(a, i) + '</div>';
         }).join('');
       }
 
