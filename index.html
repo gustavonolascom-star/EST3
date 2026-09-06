@@ -1,4 +1,4 @@
-<!-- Generado: 05/septiembre/2026, 16:14 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 05/septiembre/2026, 23:23 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -748,22 +748,26 @@
       margin-bottom: 1rem;
     }
 
-    /* ── FOTO ALUMNO ─────────────────────────── */
+    /* ── FOTO ALUMNO — mismo recorte/proporción que en la Credencial
+         (ver .frente .foto-wrap / .frente .foto-wrap img en
+         abrirImpresionCredenciales): cuadrada, con object-position
+         "center top" para que no se corte la cabeza. ─────────────────── */
     .ficha-foto-wrap {
-      width: 90px;
-      height: 110px;
+      width: 96px;
+      height: 96px;
       flex-shrink: 0;
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
-      border: 3px solid var(--gold-light);
+      border: 3.5px solid #1a1a1a;
       box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-      background: #f0e8c8;
+      background: #e5e1da;
     }
 
     .ficha-foto {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center top;
       display: block;
     }
 
@@ -2339,9 +2343,18 @@
     // se abra la Ficha).
     function fotosAlumno(alumno) {
       try {
-        const principal = fotoUrl((alumno && alumno['Foto']) || '');
-        const respaldo  = fotoUrl((alumno && alumno['FotoImg']) || '');
-        return { principal: principal, respaldo: (respaldo && respaldo !== principal) ? respaldo : null };
+        // "FotoURL" viene resuelta desde el servidor con resolverFotoUrl()
+        // — la MISMA función que usa la Credencial para mostrar la foto —
+        // que es más robusta que este regex del navegador (entiende
+        // cualquier link de Drive, no solo uno que termine en ".jpg", y
+        // hasta busca el archivo por nombre si hace falta). Se usa como
+        // primera opción; si no vino (alumno de un flujo que no la calcula),
+        // se cae al intento anterior sobre el texto crudo de "Foto".
+        const servidor = (alumno && alumno['FotoURL']) ? alumno['FotoURL'].toString().trim() : '';
+        const principal = servidor || fotoUrl((alumno && alumno['Foto']) || '');
+        const respaldoBruto = fotoUrl((alumno && alumno['FotoImg']) || '');
+        const respaldo = (respaldoBruto && respaldoBruto !== principal) ? respaldoBruto : null;
+        return { principal: principal || null, respaldo: respaldo };
       } catch (e) {
         return { principal: null, respaldo: null };
       }
