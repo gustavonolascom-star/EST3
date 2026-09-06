@@ -1,4 +1,4 @@
-<!-- Generado: 05/septiembre/2026, 10:32 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 05/septiembre/2026, 16:14 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1062,6 +1062,7 @@
         <a href="#" onclick="openModal('lista-asis-login');return false;">📋 Lista de Asistencia</a>
         <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
+        <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
       </div>
     </div>
     <div class="nav-item">
@@ -4952,6 +4953,371 @@
       w.document.open(); w.document.write(html); w.document.close();
     }
 
+    /* ── Módulo Docentes: Ficha Descriptiva de Grupo ──
+     * Concentra, para un Grado+Grupo completo, los mismos indicadores que
+     * ya se ven por alumno en la Ficha Descriptiva individual (Calificaciones,
+     * Asistencia, Conducta, Bitácora de Docentes, Trabajo Social y Estilo de
+     * Aprendizaje). Reutiliza el mismo candado docente y el mismo patrón de
+     * Paso 1 (selector restringido a los grupos del docente) / Paso 2 que
+     * ya usan Calificaciones y Generar Listas (Excel). Al hacer clic en un
+     * alumno se abre su Ficha Descriptiva individual ya existente, sin
+     * duplicar esa pantalla. */
+    let _gfDoc='', _gfNivel='', _gfGruposSet=[], _gfGruposRaw='';
+    let _gfDatos = null;
+    let _gfOrden = { campo: null, asc: true };
+
+    async function accederGrupoFicha(){
+      const user=(document.getElementById('gf-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('gf-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-grupo-ficha-login');
+      const btn=document.getElementById('btn-grupo-ficha-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _gfDoc=json.usuario.nombre||user;
+        _gfNivel=normTxt(json.usuario.nivel||'');
+        _gfGruposRaw=json.usuario.grupos||'';
+        _gfGruposSet=parsearGruposDocente(_gfGruposRaw);
+        closeModal('grupo-ficha-login');
+        document.getElementById('gf-doc-label').textContent='Docente: '+_gfDoc;
+        document.getElementById('grupo-ficha-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        aplicarRestriccionGrupoFicha();
+        document.getElementById('gf-paso1').style.display='block';
+        document.getElementById('gf-paso2').style.display='none';
+        res.innerHTML='';
+        document.getElementById('gf-user').value='';
+        document.getElementById('gf-pass').value='';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('gf-pass').value='';
+        document.getElementById('gf-pass').focus();
+      }
+    }
+
+    function cerrarGrupoFicha(){
+      document.getElementById('grupo-ficha-overlay').style.display='none';
+      document.getElementById('gf-celda-overlay').style.display='none';
+      document.body.style.overflow='';
+      _gfDoc=''; _gfNivel=''; _gfGruposSet=[]; _gfDatos=null;
+    }
+
+    // Restringe Grado/Grupo del Paso 1 según el nivel de la cuenta (mismo
+    // patrón que aplicarRestriccionDocente()/aplicarRestriccionXls() —
+    // admin ve todos los grados/grupos, docente solo los suyos).
+    function aplicarRestriccionGrupoFicha(){
+      const selGrado = document.getElementById('gf-grado');
+      const selGrupo = document.getElementById('gf-grupo');
+      const msg = document.getElementById('gf-p1-msg');
+      msg.textContent = '';
+      selGrado.disabled = selGrupo.disabled = false;
+
+      if(_gfNivel !== 'DOCENTE'){
+        selGrado.innerHTML = EV_GRADO_FULL;
+        selGrupo.innerHTML = EV_GRUPO_FULL;
+        selGrado.onchange = actualizarGrupoGrupoFicha;
+        return;
+      }
+      if(!_gfGruposSet.length){
+        selGrado.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selGrado.disabled = selGrupo.disabled = true;
+        msg.innerHTML = '⚠️ Tu cuenta de docente todavía no tiene grupo(s) asignados. Solicita al Director que los configure en el sistema.';
+        return;
+      }
+      const gradosPermitidos = Array.from(new Set(_gfGruposSet.map(function(x){return x.grado;}))).sort();
+      selGrado.innerHTML = '<option value="">-- Selecciona --</option>' +
+        gradosPermitidos.map(function(g){return '<option value="'+g+'">'+g+'° Grado</option>';}).join('');
+      selGrupo.innerHTML = '<option value="">-- Selecciona grado --</option>';
+      selGrado.onchange = actualizarGrupoGrupoFicha;
+    }
+
+    function actualizarGrupoGrupoFicha(){
+      const selGrado = document.getElementById('gf-grado');
+      const selGrupo = document.getElementById('gf-grupo');
+      const g = selGrado.value;
+      if(_gfNivel !== 'DOCENTE'){
+        selGrupo.innerHTML = EV_GRUPO_FULL;
+        return;
+      }
+      const gruposDeEsteGrado = _gfGruposSet.filter(function(x){return x.grado===g;}).map(function(x){return x.grupo;});
+      selGrupo.innerHTML = '<option value="">-- Selecciona --</option>' +
+        gruposDeEsteGrado.map(function(gr){return '<option value="'+gr+'">Grupo '+gr+'</option>';}).join('');
+    }
+
+    function volverP1GrupoFicha(){
+      document.getElementById('gf-paso1').style.display='block';
+      document.getElementById('gf-paso2').style.display='none';
+      _gfDatos = null;
+    }
+
+    // Semáforo — criterio estándar (ver conversación con Dirección):
+    // Promedio: rojo <6, ámbar 6-7.9, verde ≥8.
+    // Asistencia: rojo <85%, ámbar 85-94%, verde ≥95%.
+    // Conducta:  rojo <80, ámbar 80-94, verde ≥95.
+    function colorGF_(valor, tipo){
+      if(valor === null || valor === undefined) return '#aaa';
+      const v = Number(valor);
+      if(isNaN(v)) return '#aaa';
+      if(tipo === 'prom')  return v >= 8  ? '#1D7A4E' : v >= 6  ? '#C07A00' : '#C0181A';
+      if(tipo === 'asis')  return v >= 95 ? '#1D7A4E' : v >= 85 ? '#C07A00' : '#C0181A';
+      if(tipo === 'cond')  return v >= 95 ? '#1D7A4E' : v >= 80 ? '#C07A00' : '#C0181A';
+      return '#2d1f08';
+    }
+
+    function tarjetaGF_(label, valor, color){
+      return '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;border-radius:10px;'+
+        'padding:0.9rem 0.7rem;text-align:center">'+
+        '<div style="font-size:1.35rem;font-weight:800;color:'+(color||'#F0C040')+'">'+valor+'</div>'+
+        '<div style="font-size:0.68rem;color:#c9a96e;text-transform:uppercase;letter-spacing:0.05em;margin-top:0.2rem">'+label+'</div>'+
+        '</div>';
+    }
+
+    async function cargarFichaGrupo(){
+      const grado = document.getElementById('gf-grado').value;
+      const grupo = document.getElementById('gf-grupo').value;
+      const msg = document.getElementById('gf-p1-msg');
+      if(!grado || !grupo){ msg.textContent = '⚠️ Selecciona Grado y Grupo.'; return; }
+      msg.textContent = '⏳ Cargando ficha del grupo…';
+
+      const json = await jsonpCall({accion:'fichaDescriptivaGrupo', usuario:_gfDoc, grado:grado, grupo:grupo}, 30000);
+      if(!json || !json.ok){
+        msg.textContent = '⚠️ ' + (json ? json.mensaje : 'Sin respuesta del servidor.');
+        return;
+      }
+      msg.textContent = '';
+      _gfDatos = json;
+      _gfOrden = { campo: null, asc: true };
+      document.getElementById('gf-paso1').style.display='none';
+      document.getElementById('gf-paso2').style.display='block';
+      document.getElementById('gf-titulo-grupo').textContent =
+        '📊 ' + json.grado + '° Grupo ' + json.grupo + ' — Ciclo ' + json.ciclo + ' (' + json.resumenGrupo.totalAlumnos + ' alumnos)';
+      // El Resumen Académico va al inicio (primero lo que pidió Dirección).
+      renderMatrizAcademicaGF_();
+      renderTableroGF_();
+      renderEstiloGF_();
+      renderTablaGF_();
+    }
+
+    function renderTableroGF_(){
+      const r = _gfDatos.resumenGrupo;
+      const cont = document.getElementById('gf-tablero');
+      cont.innerHTML = [
+        tarjetaGF_('Alumnos', r.totalAlumnos, '#F0C040'),
+        tarjetaGF_('Promedio General', r.promedioGeneral !== null ? r.promedioGeneral.toFixed(2) : '—', colorGF_(r.promedioGeneral,'prom')),
+        tarjetaGF_('% Asistencia', r.asistenciaPromedio !== null ? r.asistenciaPromedio.toFixed(1)+'%' : '—', colorGF_(r.asistenciaPromedio,'asis')),
+        tarjetaGF_('Conducta', r.conductaPromedio !== null ? r.conductaPromedio.toFixed(1) : '—', colorGF_(r.conductaPromedio,'cond')),
+        tarjetaGF_('Bitácora Docentes', r.totalBitacora, r.totalBitacora>0 ? '#C07A00' : '#1D7A4E'),
+        tarjetaGF_('Trabajo Social', r.totalTrabajoSocial, r.totalTrabajoSocial>0 ? '#C07A00' : '#1D7A4E')
+      ].join('');
+    }
+
+    function renderEstiloGF_(){
+      const r = _gfDatos.resumenGrupo;
+      const d = r.estiloDistribucion || {};
+      const cont = document.getElementById('gf-estilo-wrap');
+      const total = (d['Visual']||0) + (d['Auditivo']||0) + (d['Kinestésico']||0);
+      const barra = function(label, icono, val){
+        const pct = total>0 ? Math.round((val/total)*100) : 0;
+        return '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">'+
+          '<div style="width:110px;font-size:0.8rem;color:#e8d8b0">'+icono+' '+label+'</div>'+
+          '<div style="flex:1;background:rgba(255,255,255,0.08);border-radius:6px;overflow:hidden;height:14px">'+
+            '<div style="width:'+pct+'%;height:100%;background:#C8922A"></div>'+
+          '</div>'+
+          '<div style="width:34px;text-align:right;font-size:0.8rem;color:#F0C040;font-weight:700">'+val+'</div>'+
+        '</div>';
+      };
+      cont.innerHTML = '<div style="background:rgba(26,20,8,0.6);border:1px solid #C8922A;border-radius:10px;padding:0.9rem 1.1rem">'+
+        '<div style="font-family:\'Cinzel\',serif;color:#F0C040;font-size:0.85rem;margin-bottom:0.6rem">'+
+          '🧠 Estilo de Aprendizaje del Grupo'+
+          (r.estiloDominante ? ' — Dominante: <span style="color:#fff">'+r.estiloDominante+'</span>' : '')+
+        '</div>'+
+        barra('Visual','👁️', d['Visual']||0) + barra('Auditivo','👂', d['Auditivo']||0) + barra('Kinestésico','✋', d['Kinestésico']||0) +
+        (total===0 ? '<div style="font-size:0.78rem;color:#c9a96e;margin-top:0.4rem">Ningún alumno del grupo ha contestado el instrumento todavía.</div>' : '') +
+        '</div>';
+    }
+
+    // ── Resumen Académico del Grupo: matriz Diagnóstico/T1/T2/T3/Promedio ×
+    //    materia (equivalente al antiguo "Menu" en Excel), con la columna y
+    //    fila "Promedio" a la derecha/abajo. Cada celda "liga" con el
+    //    detalle por alumno de esa materia+periodo (ver detalleCeldaAcademicaGF). ──
+    const GF_PERIODOS = [
+      { key: 'diag', label: 'Diagnóstico' },
+      { key: 't1',   label: 'Trimestre 1' },
+      { key: 't2',   label: 'Trimestre 2' },
+      { key: 't3',   label: 'Trimestre 3' },
+      { key: 'promedio', label: 'Promedio', destacada: true }
+    ];
+
+    function celdaMatrizGF_(valor, asignatura, periodoKey, periodoLabel, destacada){
+      const txt = (valor !== null && valor !== undefined) ? Number(valor).toFixed(2) : '—';
+      const color = colorGF_(valor, 'prom');
+      const asigEsc = (asignatura===null) ? 'null' : "'"+asignatura.replace(/'/g,"\\'")+"'";
+      const clickable = (valor !== null && valor !== undefined);
+      const estilo = 'padding:0.5rem 0.4rem;text-align:center;font-weight:'+(destacada?'800':'700')+
+        ';color:'+color+(destacada?';background:#fdf6e0':'')+(clickable?';cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px':'');
+      const onclick = clickable ? ' onclick="detalleCeldaAcademicaGF('+asigEsc+',\''+periodoKey+'\',\''+periodoLabel.replace(/'/g,"\\'")+"'"+')"' : '';
+      const titulo = clickable ? ' title="Ver detalle por alumno"' : '';
+      return '<td style="'+estilo+'"'+onclick+titulo+'>'+txt+'</td>';
+    }
+
+    function renderMatrizAcademicaGF_(){
+      const materias = _gfDatos.materiasGrupo || [];
+      const rp = _gfDatos.resumenPeriodos || {};
+      const cont = document.getElementById('gf-matriz-wrap');
+      if(!materias.length){
+        cont.innerHTML = '<div style="color:#c9a96e;font-size:0.82rem;padding:0.6rem 0">Sin calificaciones registradas en el ciclo '+_gfDatos.ciclo+'.</div>';
+        return;
+      }
+      const encabezado = '<th style="padding:0.55rem 0.5rem;text-align:left;font-size:0.78rem;min-width:90px">Periodo</th>' +
+        materias.map(function(m){ return '<th style="padding:0.55rem 0.4rem;text-align:center;font-size:0.74rem">'+m.asignatura+'</th>'; }).join('') +
+        '<th style="padding:0.55rem 0.5rem;text-align:center;font-size:0.78rem;background:rgba(200,146,42,0.25)">Promedio</th>';
+
+      const filas = GF_PERIODOS.map(function(p){
+        const celdas = materias.map(function(m){ return celdaMatrizGF_(m[p.key], m.asignatura, p.key, p.label, p.destacada); }).join('');
+        const celdaProm = celdaMatrizGF_(rp[p.key], null, p.key, p.label, true);
+        return '<tr style="border-bottom:1px solid #f0e8c0'+(p.destacada?';background:#fdf6e0':'')+'">'+
+          '<td style="padding:0.5rem 0.6rem;font-weight:'+(p.destacada?'800':'600')+';font-size:0.8rem;white-space:nowrap">'+p.label+'</td>'+
+          celdas + celdaProm +
+        '</tr>';
+      }).join('');
+
+      cont.innerHTML = '<div style="background:rgba(26,20,8,0.15);border:1px solid #C8922A;border-radius:10px;padding:0.9rem 1rem 1.1rem">'+
+        '<div style="font-family:\'Cinzel\',serif;color:#F0C040;font-size:0.9rem;margin-bottom:0.7rem">📚 Resumen Académico del Grupo</div>'+
+        '<div style="overflow-x:auto">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:0.83rem;background:#fffdf5;border-radius:8px;overflow:hidden;min-width:520px">'+
+        '<thead><tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">'+encabezado+'</tr></thead>'+
+        '<tbody>'+filas+'</tbody>'+
+        '</table></div>'+
+        '<div style="font-size:0.74rem;color:#8a7550;margin-top:0.5rem">Haz clic en un valor para ver qué alumnos lo componen.</div>'+
+        '</div>';
+    }
+
+    // Detalle por alumno de una celda de la matriz (asignatura=null => la
+    // columna/fila "Promedio", que promedia entre materias).
+    function detalleCeldaAcademicaGF(asignatura, periodoKey, periodoLabel){
+      const alumnos = (_gfDatos.alumnos || []).map(function(a){
+        let valor;
+        if(asignatura === null){
+          if(periodoKey === 'promedio'){
+            valor = a.promedioGeneral;
+          } else {
+            const vals = Object.keys(a.porMateria||{}).map(function(k){ return a.porMateria[k][periodoKey]; }).filter(function(v){ return v!==null && v!==undefined; });
+            valor = vals.length ? vals.reduce(function(x,y){return x+y;},0)/vals.length : null;
+          }
+        } else {
+          const pm = (a.porMateria||{})[asignatura];
+          valor = pm ? pm[periodoKey] : null;
+        }
+        return { nombre: a.nombre, curp: a.curp, valor: valor };
+      }).filter(function(x){ return x.valor !== null && x.valor !== undefined; })
+        .sort(function(a,b){ return b.valor - a.valor; });
+
+      const titulo = document.getElementById('gf-celda-titulo');
+      titulo.textContent = (asignatura===null ? 'Promedio' : asignatura) + ' — ' + periodoLabel;
+
+      const cuerpo = document.getElementById('gf-celda-cuerpo');
+      if(!alumnos.length){
+        cuerpo.innerHTML = '<div style="padding:1rem 0;text-align:center;color:#aaa;font-size:0.85rem">Sin calificaciones para mostrar.</div>';
+      } else {
+        cuerpo.innerHTML = alumnos.map(function(a){
+          const curpEsc = (a.curp||'').replace(/'/g,"\\'");
+          return '<div onclick="cerrarCeldaAcademicaGF();abrirAlumnoDesdeGrupo(\''+curpEsc+'\')" '+
+            'style="display:flex;justify-content:space-between;align-items:center;padding:0.45rem 0.2rem;'+
+            'border-bottom:1px solid #f0e8c0;cursor:pointer">'+
+            '<span style="font-size:0.85rem;color:#2d1f08">'+a.nombre+'</span>'+
+            '<span style="font-weight:800;color:'+colorGF_(a.valor,'prom')+'">'+Number(a.valor).toFixed(2)+'</span>'+
+          '</div>';
+        }).join('');
+      }
+      document.getElementById('gf-celda-overlay').style.display = 'flex';
+    }
+
+    function cerrarCeldaAcademicaGF(){
+      document.getElementById('gf-celda-overlay').style.display = 'none';
+    }
+
+    const GF_COLUMNAS = [
+      { campo: 'nombre', label: 'Alumno(a)', align: 'left' },
+      { campo: 'promedioGeneral', label: 'Promedio', align: 'center', tipo: 'prom' },
+      { campo: 'asistenciaPct', label: '% Asistencia', align: 'center', tipo: 'asis' },
+      { campo: 'conductaTotal', label: 'Conducta', align: 'center', tipo: 'cond' },
+      { campo: 'estiloAprendizaje', label: 'Estilo Aprendizaje', align: 'center' },
+      { campo: 'bitacoraCount', label: 'Bitácora', align: 'center' },
+      { campo: 'trabajoSocialCount', label: 'Trab. Social', align: 'center' }
+    ];
+
+    function ordenarGF(campo){
+      if(_gfOrden.campo === campo) _gfOrden.asc = !_gfOrden.asc;
+      else _gfOrden = { campo: campo, asc: true };
+      renderTablaGF_();
+    }
+
+    function renderTablaGF_(){
+      const thead = document.getElementById('gf-thead-row');
+      thead.innerHTML = '<th style="padding:0.55rem 0.7rem;text-align:left;font-size:0.8rem">#</th>' +
+        GF_COLUMNAS.map(function(c){
+          const activo = _gfOrden.campo === c.campo;
+          const flecha = activo ? (_gfOrden.asc ? ' ▲' : ' ▼') : '';
+          return '<th onclick="ordenarGF(\''+c.campo+'\')" style="padding:0.55rem 0.7rem;text-align:'+c.align+';'+
+            'cursor:pointer;user-select:none'+(activo?';text-decoration:underline':'')+'">'+c.label+flecha+'</th>';
+        }).join('');
+
+      let alumnos = (_gfDatos.alumnos || []).slice();
+      if(_gfOrden.campo){
+        const campo = _gfOrden.campo;
+        alumnos.sort(function(a,b){
+          const va = a[campo], vb = b[campo];
+          if(va === null || va === undefined) return 1;
+          if(vb === null || vb === undefined) return -1;
+          if(typeof va === 'string') return _gfOrden.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+          return _gfOrden.asc ? va - vb : vb - va;
+        });
+      }
+
+      const tbody = document.getElementById('gf-tbody');
+      tbody.innerHTML = alumnos.map(function(a, i){
+        const curpEsc = (a.curp||'').replace(/'/g, "\\'");
+        const celdas = GF_COLUMNAS.map(function(c){
+          let val = a[c.campo];
+          let txt, color = '#2d1f08';
+          if(c.campo === 'nombre'){
+            txt = val || '—';
+          } else if(c.campo === 'promedioGeneral'){
+            txt = val !== null && val !== undefined ? Number(val).toFixed(2) : '—';
+            color = colorGF_(val, c.tipo);
+          } else if(c.campo === 'asistenciaPct'){
+            txt = val !== null && val !== undefined ? Number(val).toFixed(1)+'%' : '—';
+            color = colorGF_(val, c.tipo);
+          } else if(c.campo === 'conductaTotal'){
+            txt = val !== null && val !== undefined ? val : '—';
+            color = colorGF_(val, c.tipo);
+          } else if(c.campo === 'estiloAprendizaje'){
+            txt = val || '—';
+          } else {
+            txt = (val !== null && val !== undefined) ? val : 0;
+            if(Number(txt) > 0) color = '#C07A00';
+          }
+          return '<td style="padding:0.5rem 0.7rem;text-align:'+c.align+';font-weight:'+(c.campo==='nombre'?600:700)+';color:'+color+'">'+txt+'</td>';
+        }).join('');
+        return '<tr onclick="abrirAlumnoDesdeGrupo(\''+curpEsc+'\')" style="border-bottom:1px solid #f0e8c0;cursor:pointer" '+
+          'onmouseover="this.style.background=\'#fdf6e0\'" onmouseout="this.style.background=\'\'">'+
+          '<td style="padding:0.5rem 0.7rem;color:#999">'+(i+1)+'</td>'+celdas+'</tr>';
+      }).join('') || '<tr><td colspan="'+(GF_COLUMNAS.length+1)+'" style="text-align:center;padding:1.2rem;color:#aaa">Sin alumnos.</td></tr>';
+    }
+
+    async function abrirAlumnoDesdeGrupo(curp){
+      const grado = document.getElementById('gf-grado').value;
+      const grupo = document.getElementById('gf-grupo').value;
+      const json = await jsonpCall({accion:'buscarAlumnoParaFichaDocente', usuario:_gfDoc, grado:grado, grupo:grupo, curp:curp}, 15000);
+      if(!json || !json.ok){ alert(json ? json.mensaje : 'Sin respuesta del servidor.'); return; }
+      abrirFichaDescriptiva(json.alumno);
+    }
+
     /* ── Módulo Docentes: Generar Listas de Evaluación en Excel (.xlsx) ──
      * Descarga, para un Grado+Grupo+Asignatura+Trimestre, un libro con una
      * columna por semana del trimestre (con su rango de fechas, iniciando
@@ -6111,6 +6477,39 @@
     </div>
   </div>
 
+  <!-- MODAL LOGIN FICHA DESCRIPTIVA DE GRUPO -->
+  <div class="modal-overlay" id="modal-grupo-ficha-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📊 Acceso — Ficha Descriptiva de Grupo</h3>
+        <button class="modal-close" onclick="closeModal('grupo-ficha-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="gf-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="gf-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederGrupoFicha()"/>
+            <span onclick="togglePass('gf-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-grupo-ficha-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('grupo-ficha-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-grupo-ficha-login" onclick="accederGrupoFicha()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL LOGIN LISTA DE ASISTENCIA -->
   <div class="modal-overlay" id="modal-lista-asis-login">
     <div class="modal modal-login">
@@ -6860,6 +7259,119 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ═══ FICHA DESCRIPTIVA DE GRUPO (Docentes) ═══ -->
+  <div id="grupo-ficha-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">📊</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Ficha Descriptiva de Grupo — EST No. 3
+          </div>
+          <div id="gf-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarGrupoFicha()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1100px;margin:0 auto;padding:1.5rem 1rem 3rem">
+
+      <!-- PASO 1: selector de grupo -->
+      <div id="gf-paso1">
+        <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                   border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+          Selecciona el Grupo
+        </h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.9rem;margin-bottom:1rem;max-width:460px">
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="gf-grado" onchange="actualizarGrupoGrupoFicha()"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Grado</option>
+              <option value="2">2° Grado</option>
+              <option value="3">3° Grado</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="gf-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fffdf5;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona grado --</option>
+            </select>
+          </div>
+        </div>
+        <div id="gf-p1-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+        <button onclick="cargarFichaGrupo()"
+          style="background:#C8922A;color:#1a1408;border:none;padding:0.6rem 1.5rem;border-radius:6px;font-size:0.87rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.03em">
+          📊 Ver Ficha del Grupo
+        </button>
+      </div>
+
+      <!-- PASO 2: tablero + tabla -->
+      <div id="gf-paso2" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem">
+          <h3 id="gf-titulo-grupo" style="font-family:'Cinzel',serif;color:#F0C040;font-size:1rem;margin:0"></h3>
+          <button onclick="volverP1GrupoFicha()"
+            style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+            ← Cambiar Grupo
+          </button>
+        </div>
+
+        <div id="gf-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+
+        <!-- Resumen Académico del Grupo — matriz Diagnóstico/Trimestre 1-2-3/
+             Promedio × materia (equivalente al antiguo "Menu"), al inicio de
+             la ficha. Cada celda liga con el detalle por alumno. -->
+        <div id="gf-matriz-wrap" style="margin-bottom:1.4rem"></div>
+
+        <!-- Tablero de indicadores del grupo -->
+        <div id="gf-tablero" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+             gap:0.8rem;margin-bottom:1.4rem"></div>
+
+        <!-- Estilo de Aprendizaje del grupo (colapsable) -->
+        <div id="gf-estilo-wrap" style="margin-bottom:1.4rem"></div>
+
+        <!-- Tabla de alumnos, ordenable -->
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:0.83rem;background:#fffdf5;border-radius:8px;overflow:hidden;border:1px solid #e8d88a;min-width:760px">
+            <thead>
+              <tr id="gf-thead-row" style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040"></tr>
+            </thead>
+            <tbody id="gf-tbody"></tbody>
+          </table>
+        </div>
+        <div style="font-size:0.75rem;color:#c9a96e;margin-top:0.6rem">
+          Haz clic en el encabezado de una columna para ordenar. Haz clic en un alumno para abrir su Ficha Descriptiva completa.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Detalle de una celda del Resumen Académico del Grupo (liga al detalle
+       por alumno de esa materia+periodo) -->
+  <div id="gf-celda-overlay" style="display:none;position:fixed;inset:0;z-index:99999;
+       background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#fffdf5;border-radius:10px;max-width:420px;width:100%;max-height:80vh;
+         overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.4)">
+      <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;padding:0.8rem 1.1rem;
+           border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <div id="gf-celda-titulo" style="font-family:'Cinzel',serif;font-size:0.88rem"></div>
+        <button onclick="cerrarCeldaAcademicaGF()" style="background:rgba(155,28,28,0.8);border:none;color:#fff;
+             padding:0.25rem 0.7rem;border-radius:6px;font-size:0.78rem;cursor:pointer">✕</button>
+      </div>
+      <div id="gf-celda-cuerpo" style="padding:0.6rem 1rem"></div>
     </div>
   </div>
 
