@@ -1,4 +1,4 @@
-<!-- Generado: 05/septiembre/2026, 23:23 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 07/septiembre/2026, 19:16 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2303,7 +2303,7 @@
     const GRUPOS = {
       '📋 Datos Personales': ['Nombre','CURP','FecNac','Genero'],
       '🏫 Datos Escolares':  ['Clave','Grado','Grupo','GenReg','Status','Jefe Grupo','ClaNum'],
-      '👨‍👩‍👧 Familia':           ['Padre','Madre','Cel Padre','Cel Madre'],
+      '👨‍👩‍👧 Familia':           ['Padre','Madre','Cel Padre','Cel Madre','Correo Padre','Correo Madre'],
       '📍 Domicilio':        ['Domicilio','Localidad','Municipio'],
       '📝 Otros':            ['Club','Comentario','Status'],
     };
@@ -2968,6 +2968,30 @@
       _fichaAsistDetalle = asisOk ? (resumenAsis.detalleAsistencia || []) : [];
       _fichaFaltasDetalle = asisOk ? (resumenAsis.detalleFaltas || []) : [];
 
+      // Registro de HOY (entrada / salida en tiempo real, aunque el día
+      // aún no tenga las 2 checadas completas — a diferencia del historial
+      // de "Total de Asistencia", que solo cuenta días ya completos).
+      const regHoy = asisOk ? resumenAsis.registroHoy : null;
+      const registroHoyHtml = (() => {
+        if (!regHoy) return '';
+        if (!regHoy.esDiaClase) {
+          return `<div style="background:#f7f7f2;border:1px solid #e0e0d0;border-radius:8px;
+               padding:0.8rem 1.2rem;margin:-0.4rem 0 1.2rem;font-size:0.82rem;color:var(--muted)">
+               📌 Hoy no está registrado como día de clase en el calendario escolar.</div>`;
+        }
+        const filaEntrada = regHoy.horaEntrada
+          ? `<div>🟢 Alumno(a) <strong>en la escuela</strong> a partir de las <strong>${regHoy.horaEntrada}</strong> hrs.</div>`
+          : `<div style="color:var(--muted)">Aún sin registro de entrada el día de hoy.</div>`;
+        const filaSalida = regHoy.horaSalida
+          ? `<div style="margin-top:0.3rem">🔴 Alumno(a) <strong>fuera de la escuela</strong> a partir de las <strong>${regHoy.horaSalida}</strong> hrs.</div>`
+          : (regHoy.horaEntrada ? `<div style="margin-top:0.3rem;color:var(--muted)">Aún sin registro de salida el día de hoy.</div>` : '');
+        return `<div style="background:#fffbf0;border:1px solid #e8d88a;border-radius:8px;
+             padding:0.9rem 1.2rem;margin:-0.4rem 0 1.2rem;font-size:0.85rem;line-height:1.6">
+             <div style="font-weight:700;margin-bottom:0.4rem;color:#5c4400">📌 Registro de Hoy</div>
+             ${filaEntrada}${filaSalida}
+             </div>`;
+      })();
+
       body.innerHTML = `
         <!-- ENCABEZADO -->
         <div class="ficha-hero">
@@ -3092,6 +3116,7 @@
             ? `${av('totalUnRegistro')} día(s) con un solo registro (entrada o salida) · ${av('justificadas')} falta(s) justificada(s) descontada(s) del total.`
             : `⚠️ ${resumenAsis ? (resumenAsis.mensaje || 'No se pudo calcular la asistencia.') : 'Sin respuesta del servidor.'}`}
         </div>
+        ${registroHoyHtml}
 
         <!-- GRÁFICA DE CALIFICACIONES -->
         <div class="ficha-section-title">📊 Gráfica de Calificaciones</div>
@@ -3803,6 +3828,8 @@
         { id:'f_madre',     label:'Nombre de la Madre', col:'Madre',     full:false },
         { id:'f_celpadre',  label:'Cel Padre',          col:'Cel Padre', full:false, tipo:'tel' },
         { id:'f_celmadre',  label:'Cel Madre',          col:'Cel Madre', full:false, tipo:'tel' },
+        { id:'f_correopadre', label:'Correo Padre',     col:'Correo Padre', full:false, tipo:'email' },
+        { id:'f_correomadre', label:'Correo Madre',     col:'Correo Madre', full:false, tipo:'email' },
         { id:'f_domicilio', label:'Domicilio',          col:'Domicilio', full:true },
         { id:'f_localidad', label:'Localidad',          col:'Localidad', full:false },
         { id:'f_municipio', label:'Municipio',          col:'Municipio', full:false },
@@ -4138,6 +4165,8 @@
         { id:'f_madre',     label:'Nombre de la Madre',col:'Madre',     full:false },
         { id:'f_celpadre',  label:'Cel Padre',         col:'Cel Padre',  full:false, tipo:'tel' },
         { id:'f_celmadre',  label:'Cel Madre',         col:'Cel Madre',  full:false, tipo:'tel' },
+        { id:'f_correopadre', label:'Correo Padre',    col:'Correo Padre', full:false, tipo:'email' },
+        { id:'f_correomadre', label:'Correo Madre',    col:'Correo Madre', full:false, tipo:'email' },
         { id:'f_domicilio', label:'Domicilio',         col:'Domicilio',  full:true },
         { id:'f_localidad', label:'Localidad',         col:'Localidad',  full:false },
         { id:'f_municipio', label:'Municipio',         col:'Municipio',  full:false },
@@ -4207,6 +4236,8 @@
         Madre:       document.getElementById('f_madre').value.trim(),
         'Cel Padre': document.getElementById('f_celpadre').value.trim(),
         'Cel Madre': document.getElementById('f_celmadre').value.trim(),
+        'Correo Padre': document.getElementById('f_correopadre').value.trim(),
+        'Correo Madre': document.getElementById('f_correomadre').value.trim(),
         Domicilio:   document.getElementById('f_domicilio').value.trim(),
         Localidad:   document.getElementById('f_localidad').value.trim(),
         Municipio:   document.getElementById('f_municipio').value.trim(),
@@ -5326,8 +5357,32 @@
     async function abrirAlumnoDesdeGrupo(curp){
       const grado = document.getElementById('gf-grado').value;
       const grupo = document.getElementById('gf-grupo').value;
+
+      // Feedback inmediato al hacer clic: antes no había ninguna señal
+      // visual durante los segundos que tarda la consulta al servidor, así
+      // que el docente no sabía si su clic se había registrado. Abrimos la
+      // ficha de una vez (mismo overlay que usa abrirFichaDescriptiva) con
+      // un mensaje de espera, y ya que llega la respuesta se sustituye por
+      // el contenido real (o por el mensaje de error, si algo falla).
+      const overlay = document.getElementById('ficha-overlay');
+      const body    = document.getElementById('ficha-body');
+      overlay.classList.add('active');
+      overlay.scrollTop = 0;
+      body.innerHTML = `
+        <div style="text-align:center;padding:3.5rem 1rem;color:var(--muted)">
+          <div style="font-size:2rem;margin-bottom:1rem">⏳</div>
+          Abriendo ficha del Alumno(a)… espera un momento.
+        </div>`;
+
       const json = await jsonpCall({accion:'buscarAlumnoParaFichaDocente', usuario:_gfDoc, grado:grado, grupo:grupo, curp:curp}, 15000);
-      if(!json || !json.ok){ alert(json ? json.mensaje : 'Sin respuesta del servidor.'); return; }
+      if(!json || !json.ok){
+        body.innerHTML = `
+          <div style="background:#fff0f0;border:1px solid #C0181A;border-radius:8px;
+               padding:1rem 1.2rem;margin:1.5rem;color:#C0181A;font-size:0.88rem">
+            ⚠️ ${json ? json.mensaje : 'Sin respuesta del servidor.'}
+          </div>`;
+        return;
+      }
       abrirFichaDescriptiva(json.alumno);
     }
 
@@ -5673,6 +5728,8 @@
       document.getElementById('usu-alu-curp').value='';
       document.getElementById('usu-alu-clave1').value='';
       document.getElementById('usu-alu-clave2').value='';
+      document.getElementById('usu-alu-correopadre').value='';
+      document.getElementById('usu-alu-correomadre').value='';
       document.getElementById('usu-alu-nombre').textContent='';
       document.getElementById('res-usu-alu-1').innerHTML='';
       document.getElementById('res-usu-alu-2').innerHTML='';
@@ -5695,6 +5752,8 @@
       if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'CURP no encontrada.')+'</div>';return;}
       _usuAluCurp=curp;
       document.getElementById('usu-alu-nombre').textContent=json.nombre||'';
+      document.getElementById('usu-alu-correopadre').value=json.correoPadre||'';
+      document.getElementById('usu-alu-correomadre').value=json.correoMadre||'';
       res.innerHTML='';
       document.getElementById('usu-alu-paso1').style.display='none';
       document.getElementById('usu-alu-paso2').style.display='';
@@ -5705,13 +5764,23 @@
     async function guardarUsuAlumno(){
       const c1=document.getElementById('usu-alu-clave1').value||'';
       const c2=document.getElementById('usu-alu-clave2').value||'';
+      const correoPadre=(document.getElementById('usu-alu-correopadre').value||'').trim();
+      const correoMadre=(document.getElementById('usu-alu-correomadre').value||'').trim();
       const res=document.getElementById('res-usu-alu-2');
-      if(!c1||!c2){res.innerHTML='<div class="result-error">⚠️ Ingresa y confirma la nueva contraseña.</div>';return;}
-      if(c1!==c2){res.innerHTML='<div class="result-error">⚠️ Las contraseñas no coinciden.</div>';return;}
+
+      const cambiaClave = !!(c1 || c2);
+      if(cambiaClave){
+        if(!c1||!c2){res.innerHTML='<div class="result-error">⚠️ Ingresa y confirma la nueva contraseña (o deja ambos campos en blanco si solo vas a registrar el correo).</div>';return;}
+        if(c1!==c2){res.innerHTML='<div class="result-error">⚠️ Las contraseñas no coinciden.</div>';return;}
+      }
+      if(!cambiaClave && !correoPadre && !correoMadre){
+        res.innerHTML='<div class="result-error">⚠️ Ingresa una nueva contraseña o al menos un correo (Padre/Madre) para guardar.</div>';return;
+      }
+
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Guardando…</div>';
-      const json = await jsonpCall({accion:'cambiarClaveAlumnoUsuarios', curp:_usuAluCurp, clave1:c1, clave2:c2}, 15000);
+      const json = await jsonpCall({accion:'cambiarClaveAlumnoUsuarios', curp:_usuAluCurp, clave1:c1, clave2:c2, correoPadre:correoPadre, correoMadre:correoMadre}, 15000);
       if(!json || json.timeout || json.networkError){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
-      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo actualizar la contraseña.')+'</div>';return;}
+      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo guardar.')+'</div>';return;}
       document.getElementById('usu-alu-paso2').style.display='none';
       document.getElementById('usu-alu-paso3').style.display='';
       document.getElementById('usu-alu-footer-2').style.display='none';
@@ -6666,7 +6735,7 @@
 
         <div id="usu-alu-paso1">
           <div class="modal-icon">🔑</div>
-          <p class="modal-desc">Ingresa tu CURP como usuario para cambiar tu contraseña.</p>
+          <p class="modal-desc">Ingresa tu CURP como usuario para cambiar tu contraseña o registrar el correo de los padres.</p>
           <div class="form-group">
             <label class="form-label">CURP (Usuario)</label>
             <input type="text" id="usu-alu-curp" class="form-input" placeholder="CURP" maxlength="18"
@@ -6681,7 +6750,7 @@
           <div class="form-group">
             <label class="form-label">NUEVA CONTRASEÑA</label>
             <div style="position:relative">
-              <input type="password" id="usu-alu-clave1" class="form-input" placeholder="Nueva contraseña"/>
+              <input type="password" id="usu-alu-clave1" class="form-input" placeholder="Dejar en blanco para no cambiarla"/>
               <span onclick="togglePass('usu-alu-clave1',this)"
                 style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
             </div>
@@ -6689,18 +6758,31 @@
           <div class="form-group">
             <label class="form-label">CONFIRMAR CONTRASEÑA</label>
             <div style="position:relative">
-              <input type="password" id="usu-alu-clave2" class="form-input" placeholder="Confirma la contraseña"
-                onkeydown="if(event.key==='Enter')guardarUsuAlumno()"/>
+              <input type="password" id="usu-alu-clave2" class="form-input" placeholder="Confirma la contraseña nueva"/>
               <span onclick="togglePass('usu-alu-clave2',this)"
                 style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
             </div>
+          </div>
+
+          <div style="border-top:1px dashed #d4c07a;margin:1rem 0 0.9rem"></div>
+          <p class="modal-desc" style="margin-bottom:0.7rem">
+            ✉️ Correo de los padres — para recibir los avisos automáticos del sistema (asistencia, conducta, trabajo social, bitácora de docentes).
+          </p>
+          <div class="form-group">
+            <label class="form-label">Correo del Padre</label>
+            <input type="email" id="usu-alu-correopadre" class="form-input" placeholder="correo@ejemplo.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correo de la Madre</label>
+            <input type="email" id="usu-alu-correomadre" class="form-input" placeholder="correo@ejemplo.com"
+              onkeydown="if(event.key==='Enter')guardarUsuAlumno()"/>
           </div>
           <div id="res-usu-alu-2"></div>
         </div>
 
         <div id="usu-alu-paso3" style="display:none">
           <div class="modal-icon">🎉</div>
-          <div class="msg-exito">¡Bienvenido(a) al Sistema de la Escuela Secundaria Técnica 3! Tu contraseña se actualizó correctamente.</div>
+          <div class="msg-exito">¡Listo! Tus datos se actualizaron correctamente.</div>
         </div>
 
       </div>
