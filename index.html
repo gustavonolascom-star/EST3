@@ -1,4 +1,4 @@
-<!-- Generado: 07/septiembre/2026, 21:44 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 07/septiembre/2026, 22:13 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3462,6 +3462,87 @@
       _fichaFaltasDetalle      = [];
     }
 
+    /* ── Impresión de la Ficha Descriptiva individual ──
+     * Reutiliza tal cual el HTML ya renderizado en #ficha-body (misma
+     * fuente de verdad que se ve en pantalla, para no duplicar toda la
+     * lógica de cálculo) y lo coloca dentro de una ventana de impresión
+     * independiente con su propio encabezado institucional, tamaño carta
+     * y márgenes reales. La gráfica de calificaciones es un <canvas>, que
+     * no viaja al clonar el HTML (el dibujo no forma parte del DOM), así
+     * que se convierte primero a imagen (toDataURL) antes de imprimir. */
+    function imprimirFichaDescriptiva(){
+      const body = document.getElementById('ficha-body');
+      if(!body || !body.innerHTML.trim()){
+        alert('No hay una Ficha Descriptiva cargada para imprimir.');
+        return;
+      }
+      let contenido = body.innerHTML;
+      const canvas = document.getElementById('grafica-cal');
+      if(canvas){
+        try{
+          const dataUrl = canvas.toDataURL('image/png');
+          contenido = contenido.replace(/<canvas[^>]*id="grafica-cal"[^>]*>\s*<\/canvas>/,
+            '<img src="'+dataUrl+'" style="width:100%;max-width:700px;display:block;margin:0 auto"/>');
+        } catch(e){ /* si falla la conversión, se imprime sin la gráfica */ }
+      }
+
+      const w = window.open('', '_blank');
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+
+      const fechaImpresion = new Date().toLocaleString('es-MX', {dateStyle:'long', timeStyle:'short'});
+
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+        '<title>Ficha Descriptiva</title>' +
+        '<style>' +
+        ':root{--dark:#1A1208;--mid:#3D2B0A;--gold-deep:#8B6914;--gold-mid:#C49A28;--gold-light:#F0C040;--crimson:#C0121A;--muted:#7A6030}' +
+        '@page{ size: letter; margin: 14mm 12mm; }' +
+        '*{box-sizing:border-box}' +
+        'body{font-family:Arial,Helvetica,sans-serif;color:#2d1f08;margin:0;padding:16px;background:#fff}' +
+        '.btn-imprimir{position:fixed;top:10px;right:10px;background:#7a1a1a;color:#F0C040;border:none;' +
+          'padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;z-index:50}' +
+        '@media print{ .btn-imprimir{display:none} }' +
+        '.masthead{text-align:center;border-bottom:2px solid #7a1a1a;padding-bottom:10px;margin-bottom:18px}' +
+        '.masthead .gob{font-size:11px;color:#666}' +
+        '.masthead .esc{font-weight:800;font-size:15px;color:#1a1a1a;margin-top:2px}' +
+        '.masthead .lug{font-size:11px;color:#666;margin-top:1px}' +
+        '.masthead .doc{font-weight:700;font-size:12px;color:#7a1a1a;margin-top:8px;letter-spacing:0.03em;text-transform:uppercase}' +
+        '.ficha-hero{background:linear-gradient(135deg,#fff8e8,#fdf3d0);border:1px solid #e8d88a;border-radius:10px;' +
+          'padding:1rem 1.3rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem}' +
+        '.ficha-foto-wrap{width:72px;height:72px;flex-shrink:0;border-radius:12px;overflow:hidden;' +
+          'border:3px solid #1a1a1a;background:#e5e1da}' +
+        '.ficha-foto{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}' +
+        '.ficha-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--gold-mid),var(--gold-deep));' +
+          'display:flex;align-items:center;justify-content:center;font-size:1.9rem;flex-shrink:0;border:3px solid var(--gold-light)}' +
+        '.ficha-nombre{font-size:16px;font-weight:900;color:var(--dark);line-height:1.2}' +
+        '.ficha-badge{display:inline-block;background:var(--crimson);color:#fff;font-size:10px;font-weight:700;' +
+          'padding:2px 9px;border-radius:20px;margin-top:5px;letter-spacing:0.05em;text-transform:uppercase}' +
+        '.ficha-section-title{font-size:12.5px;font-weight:800;color:var(--mid);border-bottom:2px solid var(--gold-light);' +
+          'padding-bottom:4px;margin:16px 0 8px;break-inside:avoid;page-break-inside:avoid}' +
+        '.ficha-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}' +
+        '.ficha-field{background:#fff;border:1px solid #e8d88a;border-radius:6px;padding:6px 10px;break-inside:avoid}' +
+        '.ficha-field-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:2px}' +
+        '.ficha-field-value{font-size:12px;color:var(--dark);font-weight:500;word-break:break-word}' +
+        'table{page-break-inside:auto}' +
+        'tr{page-break-inside:avoid;break-inside:avoid}' +
+        '.footer-firma{margin-top:36px;text-align:center;font-size:10.5px;color:#555}' +
+        '.footer-firma .linea{border-top:1px solid #333;width:220px;margin:26px auto 4px}' +
+        '.footer-fecha{margin-top:18px;text-align:right;font-size:9px;color:#999}' +
+        '</style></head><body>' +
+        '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
+        '<div class="masthead">' +
+          '<div class="gob">Gobierno de Zacatecas · Secretaría de Educación</div>' +
+          '<div class="esc">Escuela Secundaria Técnica No. 3</div>' +
+          '<div class="lug">González Ortega, Sombrerete, Zac.</div>' +
+          '<div class="doc">Ficha Descriptiva del Alumno(a)</div>' +
+        '</div>' +
+        contenido +
+        '<div class="footer-firma"><div class="linea"></div>Gustavo Nolasco Moreno<br>Director del Plantel</div>' +
+        '<div class="footer-fecha">Documento generado el ' + fechaImpresion + ' hrs.</div>' +
+        '</body></html>';
+
+      w.document.open(); w.document.write(html); w.document.close();
+    }
+
     /* ══════════════════════════════════════════
        ALTA / ACTUALIZACIÓN DE ALUMNOS
     ══════════════════════════════════════════ */
@@ -5123,6 +5204,73 @@
       _gfDoc=''; _gfNivel=''; _gfGruposSet=[]; _gfDatos=null;
     }
 
+    /* ── Impresión de la Ficha Descriptiva de Grupo ──
+     * Igual que imprimirFichaDescriptiva(): reutiliza el HTML ya renderizado
+     * (matriz académica, tablero de indicadores, estilo de aprendizaje y
+     * tabla de alumnos) en lugar de recalcular todo de nuevo, y lo coloca
+     * en una ventana de impresión independiente con encabezado institucional
+     * y tamaño carta apaisado (más ancho para que la tabla de alumnos quepa
+     * completa sin recortarse). */
+    function imprimirFichaGrupo(){
+      if(!_gfDatos){
+        alert('Primero selecciona y carga un grupo para poder imprimir su Ficha Descriptiva.');
+        return;
+      }
+      const matriz  = document.getElementById('gf-matriz-wrap').innerHTML;
+      const tablero = document.getElementById('gf-tablero').innerHTML;
+      const estilo  = document.getElementById('gf-estilo-wrap').innerHTML;
+      const tabla   = document.getElementById('gf-tabla-wrap').innerHTML;
+
+      const w = window.open('', '_blank');
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+
+      const r = _gfDatos.resumenGrupo || {};
+      const fechaImpresion = new Date().toLocaleString('es-MX', {dateStyle:'long', timeStyle:'short'});
+      const tituloGrupo = _gfDatos.grado + '° Grupo ' + _gfDatos.grupo + ' — Ciclo ' + _gfDatos.ciclo +
+        ' (' + (r.totalAlumnos || 0) + ' alumnos)';
+
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+        '<title>Ficha Descriptiva de Grupo</title>' +
+        '<style>' +
+        '@page{ size: letter landscape; margin: 12mm; }' +
+        '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+        'body{font-family:Arial,Helvetica,sans-serif;color:#2d1f08;margin:0;padding:16px;background:#fff}' +
+        '.btn-imprimir{position:fixed;top:10px;right:10px;background:#7a1a1a;color:#F0C040;border:none;' +
+          'padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;z-index:50}' +
+        '@media print{ .btn-imprimir{display:none} ' +
+          '*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important} }' +
+        '.masthead{text-align:center;border-bottom:2px solid #7a1a1a;padding-bottom:10px;margin-bottom:16px}' +
+        '.masthead .gob{font-size:11px;color:#666}' +
+        '.masthead .esc{font-weight:800;font-size:15px;color:#1a1a1a;margin-top:2px}' +
+        '.masthead .lug{font-size:11px;color:#666;margin-top:1px}' +
+        '.masthead .doc{font-weight:700;font-size:12px;color:#7a1a1a;margin-top:6px;letter-spacing:0.03em;text-transform:uppercase}' +
+        '.masthead .grp{font-weight:700;font-size:13px;color:#2d1f08;margin-top:4px}' +
+        'section{margin-bottom:16px;break-inside:avoid;page-break-inside:avoid}' +
+        'table{page-break-inside:auto}' +
+        'tr{page-break-inside:avoid;break-inside:avoid}' +
+        '.footer-firma{margin-top:32px;text-align:center;font-size:10.5px;color:#555}' +
+        '.footer-firma .linea{border-top:1px solid #333;width:220px;margin:24px auto 4px}' +
+        '.footer-fecha{margin-top:14px;text-align:right;font-size:9px;color:#999}' +
+        '</style></head><body>' +
+        '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
+        '<div class="masthead">' +
+          '<div class="gob">Gobierno de Zacatecas · Secretaría de Educación</div>' +
+          '<div class="esc">Escuela Secundaria Técnica No. 3</div>' +
+          '<div class="lug">González Ortega, Sombrerete, Zac.</div>' +
+          '<div class="doc">Ficha Descriptiva de Grupo</div>' +
+          '<div class="grp">' + tituloGrupo + '</div>' +
+        '</div>' +
+        '<section>' + matriz + '</section>' +
+        '<section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.8rem">' + tablero + '</section>' +
+        '<section>' + estilo + '</section>' +
+        '<section>' + tabla + '</section>' +
+        '<div class="footer-firma"><div class="linea"></div>Gustavo Nolasco Moreno<br>Director del Plantel</div>' +
+        '<div class="footer-fecha">Documento generado el ' + fechaImpresion + ' hrs.</div>' +
+        '</body></html>';
+
+      w.document.open(); w.document.write(html); w.document.close();
+    }
+
     // Restringe Grado/Grupo del Paso 1 según el nivel de la cuenta (mismo
     // patrón que aplicarRestriccionDocente()/aplicarRestriccionXls() —
     // admin ve todos los grados/grupos, docente solo los suyos).
@@ -6510,7 +6658,11 @@
             <div class="ficha-lugar">González Ortega, Sombrerete, Zac.</div>
           </div>
         </div>
-        <button class="ficha-close" onclick="cerrarFicha()">✕ Cerrar</button>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <button class="ficha-close" onclick="imprimirFichaDescriptiva()"
+            style="background:rgba(200,146,42,0.85)">🖨️ Imprimir</button>
+          <button class="ficha-close" onclick="cerrarFicha()">✕ Cerrar</button>
+        </div>
       </div>
       <div class="ficha-body" id="ficha-body"></div>
     </div>
@@ -7529,10 +7681,16 @@
       <div id="gf-paso2" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.6rem">
           <h3 id="gf-titulo-grupo" style="font-family:'Cinzel',serif;color:#F0C040;font-size:1rem;margin:0"></h3>
-          <button onclick="volverP1GrupoFicha()"
-            style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
-            ← Cambiar Grupo
-          </button>
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <button onclick="imprimirFichaGrupo()"
+              style="background:#C8922A;color:#1a1408;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">
+              🖨️ Imprimir
+            </button>
+            <button onclick="volverP1GrupoFicha()"
+              style="background:transparent;color:#C8922A;border:1.5px solid #C8922A;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+              ← Cambiar Grupo
+            </button>
+          </div>
         </div>
 
         <div id="gf-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
@@ -7550,7 +7708,7 @@
         <div id="gf-estilo-wrap" style="margin-bottom:1.4rem"></div>
 
         <!-- Tabla de alumnos, ordenable -->
-        <div style="overflow-x:auto">
+        <div id="gf-tabla-wrap" style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:0.83rem;background:#fffdf5;border-radius:8px;overflow:hidden;border:1px solid #e8d88a;min-width:760px">
             <thead>
               <tr id="gf-thead-row" style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040"></tr>
