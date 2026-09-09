@@ -1,4 +1,4 @@
-<!-- Generado: 07/septiembre/2026, 22:13 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 08/septiembre/2026, 20:07 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4444,6 +4444,21 @@
     function parsearAsigDocente(raw){
       return (raw||'').split(',').map(normTxt).filter(function(t){ return t!==''; });
     }
+    // Mensaje de "grupo(s)/asignatura no asignados" — distingue cuál de los
+    // dos campos falta en vez de siempre decir que faltan ambos (antes esto
+    // confundía: si al docente ya se le asignaron Grupos pero le faltaba
+    // Asignatura, el mensaje decía igual "no tiene grupo(s) ni asignatura").
+    function mensajeSinGrupoAsig_(faltaGrupos, faltaAsig, gruposRaw, asigRaw){
+      let campo;
+      if(faltaGrupos && faltaAsig) campo = 'grupo(s) ni asignatura asignados';
+      else if(faltaGrupos) campo = 'grupo(s) asignados (sí tiene asignatura)';
+      else campo = 'asignatura asignada (sí tiene grupo(s))';
+      let detalle = '';
+      if((gruposRaw||'').trim() || (asigRaw||'').trim()){
+        detalle = ' (Se recibió Grupos="'+gruposRaw+'" y Asignatura="'+asigRaw+'"; revisa que el formato sea, por ejemplo, Grupos: "1A,1B,2C" y Asignatura: "Matemáticas".)';
+      }
+      return '⚠️ Tu cuenta de docente todavía no tiene '+campo+'. Solicita al Director que los configure en el sistema.' + detalle;
+    }
 
     const EV_GRADO_FULL = '<option value="">-- Selecciona --</option><option value="1">1° Grado</option><option value="2">2° Grado</option><option value="3">3° Grado</option>';
     const EV_GRUPO_FULL = '<option value="">-- Selecciona --</option><option value="A">Grupo A</option><option value="B">Grupo B</option><option value="C">Grupo C</option><option value="D">Grupo D</option><option value="E">Grupo E</option>';
@@ -4470,11 +4485,7 @@
         selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
         selAsig.innerHTML  = '<option value="">-- Sin asignar --</option>';
         selGrado.disabled = selGrupo.disabled = selAsig.disabled = true;
-        let detalle = '';
-        if((_evalGruposRaw||'').trim() || (_evalAsigRaw||'').trim()){
-          detalle = ' (Se recibió Grupos="'+_evalGruposRaw+'" y Asignatura="'+_evalAsigRaw+'"; revisa que el formato sea, por ejemplo, Grupos: "1A,1B,2C" y Asignatura: "Matemáticas".)';
-        }
-        msg.innerHTML = '⚠️ Tu cuenta de docente todavía no tiene grupo(s) ni asignatura asignados. Solicita al Director que los configure en el sistema.' + detalle;
+        msg.innerHTML = mensajeSinGrupoAsig_(!_evalGruposSet.length, !_evalAsigSet.length, _evalGruposRaw, _evalAsigRaw);
         return;
       }
       const gradosPermitidos = Array.from(new Set(_evalGruposSet.map(function(x){return x.grado;}))).sort();
@@ -4807,6 +4818,8 @@
         document.getElementById('cred-ind-preview').style.display='none';
         document.getElementById('btn-cred-ind-generar').disabled=true;
         document.getElementById('btn-cred-ind-generar').style.opacity='0.5';
+        document.getElementById('btn-cred-ind-png').disabled=true;
+        document.getElementById('btn-cred-ind-png').style.opacity='0.5';
         _credAlumnoActual=null;
         tabCred('individual');
       } else {
@@ -4869,6 +4882,7 @@
       const contador = document.getElementById('cred-sel-contador');
       const btnGen = document.getElementById('btn-cred-ind-generar');
       const btnVaciar = document.getElementById('btn-cred-sel-vaciar');
+      const btnPng = document.getElementById('btn-cred-ind-png');
       contador.textContent = _credSeleccion.length + ' / 9';
       if(!_credSeleccion.length){
         lista.innerHTML = '<div style="font-size:0.78rem;color:#b8a878;text-align:center;padding:0.3rem">'+
@@ -4888,6 +4902,7 @@
       const hay = _credSeleccion.length > 0;
       btnGen.disabled = !hay; btnGen.style.opacity = hay ? '1' : '0.5';
       btnVaciar.disabled = !hay; btnVaciar.style.opacity = hay ? '1' : '0.5';
+      btnPng.disabled = !hay; btnPng.style.opacity = hay ? '1' : '0.5';
     }
 
     function agregarACredSeleccion(){
@@ -4920,6 +4935,136 @@
     function vaciarCredSeleccion(){
       _credSeleccion = [];
       renderCredSeleccion();
+    }
+
+    /* ── Descarga en PNG de la selección individual (hasta 9 credenciales) ──
+     * Genera UN ARCHIVO .png POR CADA credencial seleccionada (no una sola
+     * imagen con todas juntas), a calidad de impresión. Se arma en un
+     * <iframe> oculto (mismo documento/CSS que ya se usa para imprimir, para
+     * no duplicar esos estilos) y cada tarjeta se rasteriza por separado con
+     * html2canvas a alta resolución (escala 3× ≈ 288 ppp).
+     *
+     * Fotos: la URL de la foto (thumbnail de Drive) no trae encabezados
+     * CORS, así que un <canvas> no puede leer sus píxeles aunque esa misma
+     * imagen se vea perfecto como <img> normal (por eso antes la foto salía
+     * en blanco en el PNG). Se resuelve primero descargándola en el
+     * servidor (accion=fotoBase64) y convirtiéndola a data URI — eso sí es
+     * seguro para canvas — antes de generar el documento a rasterizar. */
+    function nombreArchivoPngUnaCredencial_(alumno, fecha){
+      const slug = (alumno.nombre||'alumno').toString().trim()
+        .normalize('NFD').replace(/[̀-ͯ]/g,'')
+        .replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+      return 'Credencial_' + (slug || 'alumno') + '_' + fecha + '.png';
+    }
+
+    // Regresa {alumnos, fallidas} — alumnos es una COPIA con fotoUrl
+    // reemplazada por un data URI base64 cuando es posible. Si falla la
+    // descarga de alguna (por ejemplo porque el Apps Script todavía no se
+    // redesplegó con la acción "fotoBase64"), esa tarjeta se queda con la
+    // URL original de Drive — que se ve bien como <img> normal, pero un
+    // <canvas> no puede leer sus píxeles por CORS, así que en el PNG esa
+    // foto en particular saldría en blanco — y se cuenta en "fallidas"
+    // para poder avisarle al usuario en vez de fallar en silencio.
+    async function resolverFotosParaPng_(alumnos){
+      let fallidas = 0;
+      const resultado = await Promise.all(alumnos.map(async function(a){
+        const url = (a.fotoUrl || '').toString().trim();
+        if(!url || url.indexOf('http') !== 0) return Object.assign({}, a);
+        try{
+          const json = await jsonpCall({accion:'fotoBase64', url: url}, 15000);
+          if(json && json.ok && json.dataUrl) return Object.assign({}, a, { fotoUrl: json.dataUrl });
+          console.warn('fotoBase64 no pudo resolver la foto de', a.nombre, '—', json && json.mensaje);
+        } catch(e){ console.warn('fotoBase64 lanzó un error para', a.nombre, '—', e); }
+        fallidas++;
+        return Object.assign({}, a);
+      }));
+      return { alumnos: resultado, fallidas: fallidas };
+    }
+
+    async function generarPngCredencialesSeleccion(){
+      if(!_credSeleccion.length) return;
+      const alumnosOriginal = _credSeleccion.slice();
+      const msg = document.getElementById('cred-sel-png-msg');
+      const btnPng = document.getElementById('btn-cred-ind-png');
+      msg.textContent = '⏳ Descargando fotos…';
+      btnPng.disabled = true; btnPng.style.opacity = '0.5';
+
+      let iframe = null;
+      let fallidasFotos = 0;
+      try {
+        const resFotos = await resolverFotosParaPng_(alumnosOriginal);
+        const alumnos = resFotos.alumnos;
+        fallidasFotos = resFotos.fallidas;
+
+        msg.textContent = '⏳ Generando imagen(es)…';
+
+        // El propio documento de las credenciales trae, además del script
+        // de QR, la librería html2canvas (incluirHtml2Canvas=true) para
+        // rasterizar dentro de ese mismo contexto (mismas fuentes/estilos
+        // ya calculados, sin depender de que el documento principal cargue
+        // esa librería aparte).
+        const html = construirHtmlCredenciales_(alumnos, 'individual', {}, true);
+
+        iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:1400px;height:1400px;border:0';
+        iframe.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(iframe);
+
+        await new Promise(function(resolve, reject){
+          iframe.onload = function(){ resolve(); };
+          iframe.onerror = function(){ reject(new Error('No se pudo preparar la credencial para exportar.')); };
+          iframe.srcdoc = html;
+        });
+
+        // Margen de seguridad: el listener "load" interno del documento (que
+        // dibuja los códigos QR) corre como parte del mismo evento load que
+        // dispara este iframe.onload, pero se deja un pequeño respiro para
+        // que cualquier dibujo async (canvas del QR, decodificación de las
+        // fotos base64) termine de pintarse.
+        await new Promise(function(r){ setTimeout(r, 300); });
+
+        const iwin = iframe.contentWindow;
+        const idoc = iframe.contentDocument;
+        if(!iwin || !idoc || !iwin.html2canvas){
+          throw new Error('No se pudo cargar la librería de exportación a imagen.');
+        }
+        const tarjetas = idoc.querySelectorAll('.hoja .card');
+        if(!tarjetas || !tarjetas.length) throw new Error('No se encontró el contenido de la credencial a exportar.');
+
+        const fecha = new Date().toISOString().slice(0,10);
+        let generadas = 0;
+        for (let i = 0; i < tarjetas.length; i++){
+          msg.textContent = '⏳ Generando ' + (i+1) + ' de ' + tarjetas.length + '…';
+          const canvas = await iwin.html2canvas(tarjetas[i], {
+            scale: 3,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+          });
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = nombreArchivoPngUnaCredencial_(alumnos[i] || {nombre:'alumno_'+(i+1)}, fecha);
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          generadas++;
+          // Pequeña pausa entre descargas: algunos navegadores muestran un
+          // aviso de "este sitio quiere descargar varios archivos" si se
+          // disparan muchas descargas seguidas sin ninguna pausa.
+          if(i < tarjetas.length - 1) await new Promise(function(r){ setTimeout(r, 400); });
+        }
+
+        const avisoFotos = fallidasFotos > 0
+          ? ' ⚠️ ' + fallidasFotos + ' foto' + (fallidasFotos===1?'':'s') + ' no se pudo' + (fallidasFotos===1?'':'ieron') + ' descargar y ' +
+            (fallidasFotos===1?'salió':'salieron') + ' en blanco — revisa que el Apps Script esté redesplegado como "Nueva versión" con la acción fotoBase64.'
+          : '';
+        msg.textContent = '✅ ' + generadas + (generadas===1 ? ' imagen descargada' : ' imágenes descargadas') + ' (un archivo por credencial).' + avisoFotos;
+      } catch(e){
+        msg.textContent = '⚠️ ' + (e && e.message ? e.message : 'No se pudo generar la imagen. Intenta de nuevo.');
+      } finally {
+        if(iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        btnPng.disabled = false; btnPng.style.opacity = '1';
+      }
     }
 
     function generarCredencialesSeleccion(){
@@ -4959,6 +5104,18 @@
 
     function abrirImpresionCredenciales(alumnos, w, modo, meta){
       if(!alumnos || !alumnos.length){ if(w) w.close(); alert('No hay alumnos para generar.'); return; }
+      const html = construirHtmlCredenciales_(alumnos, modo, meta, false);
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+    }
+
+    /* ── Construye el documento HTML autocontenido de las credenciales ──
+     * (tarjetas + CSS + script de QR) que usan tanto la impresión en
+     * ventana emergente (abrirImpresionCredenciales) como la exportación a
+     * PNG (generarPngCredencialesSeleccion), para no duplicar el CSS/HTML
+     * de la tarjeta en dos lugares. incluirHtml2Canvas agrega además la
+     * librería de captura a imagen (solo se necesita para la exportación PNG). */
+    function construirHtmlCredenciales_(alumnos, modo, meta, incluirHtml2Canvas){
       modo = modo || 'individual';
       meta = meta || {};
       const escudoUrl = assetUrlCred('escudo_fondo.png');
@@ -5066,6 +5223,7 @@
       const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
         '<title>Credenciales EST3</title>' +
         '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' +
+        (incluirHtml2Canvas ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>' : '') +
         '<style>' +
         '@page{ size: letter; margin: '+paginaMargen+'; }' +
         '*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;' +
@@ -5147,8 +5305,7 @@
         '<\/script>' +
         '</body></html>';
 
-      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
-      w.document.open(); w.document.write(html); w.document.close();
+      return html;
     }
 
     /* ── Módulo Docentes: Ficha Descriptiva de Grupo ──
@@ -5681,7 +5838,7 @@
         selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
         selAsig.innerHTML  = '<option value="">-- Sin asignar --</option>';
         selGrado.disabled = selGrupo.disabled = selAsig.disabled = true;
-        msg.innerHTML = '⚠️ Tu cuenta de docente todavía no tiene grupo(s) ni asignatura asignados. Solicita al Director que los configure en el sistema.';
+        msg.innerHTML = mensajeSinGrupoAsig_(!_xlsGruposSet.length, !_xlsAsigSet.length, _xlsGruposRaw, _xlsAsigRaw);
         return;
       }
       const gradosPermitidos = Array.from(new Set(_xlsGruposSet.map(function(x){return x.grado;}))).sort();
@@ -7449,15 +7606,20 @@
               (Vacío — busca un alumno arriba y da clic en "Agregar")
             </div>
           </div>
-          <div style="display:flex;gap:0.6rem">
+          <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
             <button id="btn-cred-sel-vaciar" onclick="vaciarCredSeleccion()" disabled
               style="background:transparent;color:#7a6030;border:1px solid #e8d88a;padding:0.8rem 1rem;
                      border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;opacity:0.5">🗑️ Vaciar</button>
             <button id="btn-cred-ind-generar" onclick="generarCredencialesSeleccion()" disabled
-              style="flex:1;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+              style="flex:1;min-width:180px;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
                      border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
                      font-size:0.92rem;cursor:pointer;opacity:0.5">🖨️ Generar Credencial(es)</button>
+            <button id="btn-cred-ind-png" onclick="generarPngCredencialesSeleccion()" disabled
+              style="flex:1;min-width:180px;background:#C8922A;color:#1a1408;
+                     border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                     font-size:0.92rem;cursor:pointer;opacity:0.5">🖼️ Descargar PNG</button>
           </div>
+          <div id="cred-sel-png-msg" style="font-size:0.78rem;color:#7a6030;margin-top:0.5rem;min-height:1.1rem"></div>
         </div>
 
         <!-- Por grupo -->
