@@ -1,4 +1,4 @@
-<!-- Generado: 08/septiembre/2026, 20:07 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 12/septiembre/2026, 20:34 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4111,6 +4111,11 @@
     }
 
     // ── ANUNCIOS (portada) — Alumnos EST3 / hoja Anuncios ──
+    // "Encabezado 1"/"Encabezado 2" y la columna opcional "Imagen" se ubican
+    // por nombre de encabezado (no por posición fija), para que Dirección
+    // pueda insertar la columna Imagen en cualquier parte de la hoja sin
+    // descuadrar las demás columnas. Todo lo demás (los "Cuerpo N") se
+    // muestra en el orden en que aparezca, excluyendo esas tres.
     async function cargarAnuncios(){
       const cont = document.getElementById('anuncios-cards');
       if(!cont) return;
@@ -4119,26 +4124,64 @@
         cont.innerHTML = '<div class="anuncio-vacio" style="color:#c9a96e">📭 No hay anuncios publicados por el momento.</div>';
         return;
       }
+      const columnas = json.columnas || [];
+      const idxPorNombre = function(nombre){
+        for (let j = 0; j < columnas.length; j++){ if (normTxt(columnas[j]) === normTxt(nombre)) return j; }
+        return -1;
+      };
+      const iBadge  = (function(){ const j = idxPorNombre('Encabezado 1'); return j >= 0 ? j : 0; })();
+      const iTitulo = (function(){ const j = idxPorNombre('Encabezado 2'); return j >= 0 ? j : 1; })();
+      const iImagen = (typeof json.imagenCol === 'number' && json.imagenCol >= 0) ? json.imagenCol : idxPorNombre('Imagen');
+      const excluidos = [iBadge, iTitulo, iImagen].filter(function(n){ return n >= 0; });
+
       const iconos = ['📢','📌','🔔','📅','📝'];
       cont.innerHTML = json.anuncios.map(function(a, idx){
         const v      = a.valores || [];
-        const badge  = v[0] || '';
-        const titulo = v[1] || '';
-        // v[2] en adelante son los "Cuerpo N" (Cuerpo 1 … Cuerpo 10, columnas D a M) —
-        // se muestran todos los que traigan texto, en el orden de la hoja.
-        const cuerpos = v.slice(2).filter(function(t){ return (t||'').toString().trim() !== ''; });
+        const badge  = v[iBadge] || '';
+        const titulo = v[iTitulo] || '';
+        // Todas las demás columnas (menos Encabezado 1/2 e Imagen) son los
+        // "Cuerpo N" — se muestran todos los que traigan texto, en el orden
+        // de la hoja.
+        const cuerpos = v
+          .filter(function(_, i){ return excluidos.indexOf(i) === -1; })
+          .filter(function(t){ return (t||'').toString().trim() !== ''; });
         const icono  = iconos[idx % iconos.length];
-        let html = '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;' +
-          'border-top:3px solid #C8922A;border-radius:12px;padding:1.5rem 1.4rem;' +
-          'backdrop-filter:blur(4px);box-shadow:0 4px 18px rgba(0,0,0,0.35)">';
-        html += '<div style="font-size:1.6rem;margin-bottom:0.6rem">'+icono+'</div>';
-        if (badge)  html += '<div class="anuncio-badge">'+badge+'</div>';
-        if (titulo) html += '<div style="font-family:\'Playfair Display\',serif;font-size:1.02rem;' +
+        const tieneImagen = !!(a.imagenUrl && a.imagenUrl.trim());
+        // Imagen a la IZQUIERDA de la tarjeta, con un tamaño FIJO (mismo
+        // ancho y alto siempre, sin importar cuánto texto traiga el
+        // anuncio) para que no se estire a lo alto de la tarjeta ni deje
+        // huecos vacíos cuando el texto es corto. El texto se centra
+        // verticalmente junto a ella, en proporción a ese tamaño fijo.
+        const IMG_LADO = '132px';
+        const imagenHtml = tieneImagen
+          ? '<div style="flex:0 0 '+IMG_LADO+';width:'+IMG_LADO+';height:'+IMG_LADO+';' +
+              'margin-right:1.1rem;border-radius:10px;overflow:hidden;background:#0000001a">' +
+              '<img src="'+a.imagenUrl+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block" ' +
+              'onerror="this.closest(\'div\').style.display=\'none\'"/>' +
+            '</div>'
+          : '';
+        let contenido = '';
+        // Con foto, el emoji genérico ya no aporta — se omite para que la
+        // imagen sea lo primero que llame la atención en la tarjeta.
+        if (!tieneImagen) contenido += '<div style="font-size:1.6rem;margin-bottom:0.6rem">'+icono+'</div>';
+        if (badge)  contenido += '<div class="anuncio-badge">'+badge+'</div>';
+        if (titulo) contenido += '<div style="font-family:\'Playfair Display\',serif;font-size:1.02rem;' +
           'font-weight:700;color:#F0C040;margin-bottom:0.5rem">'+titulo+'</div>';
         cuerpos.forEach(function(texto, i){
           const extra = i > 0 ? 'margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed rgba(200,146,42,0.35);' : '';
-          html += '<p style="'+extra+'font-size:0.86rem;color:#d4b878;line-height:1.6;margin:0">'+texto+'</p>';
+          contenido += '<p style="'+extra+'font-size:0.86rem;color:#d4b878;line-height:1.6;margin:0">'+texto+'</p>';
         });
+        // align-items:center → si el texto es más corto que la imagen, se
+        // centra verticalmente junto a ella (la tarjeta queda tan alta como
+        // la imagen); si el texto es más largo, la imagen se centra junto
+        // al texto (la tarjeta crece según el texto). Nunca se estira la
+        // imagen para "rellenar" el espacio.
+        let html = '<div style="background:rgba(26,20,8,0.82);border:1px solid #C8922A;' +
+          'border-top:3px solid #C8922A;border-radius:12px;padding:1.2rem 1.4rem;' +
+          'backdrop-filter:blur(4px);box-shadow:0 4px 18px rgba(0,0,0,0.35);overflow:hidden;' +
+          'display:flex;align-items:center">';
+        html += imagenHtml;
+        html += '<div style="flex:1;min-width:0">' + contenido + '</div>';
         html += '</div>';
         return html;
       }).join('');
