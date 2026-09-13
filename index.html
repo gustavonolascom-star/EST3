@@ -1,4 +1,4 @@
-<!-- Generado: 12/septiembre/2026, 20:34 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 13/septiembre/2026, 12:58 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -451,6 +451,19 @@
       margin-top: 0.4rem;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+    }
+
+    /* ── Alusión especial: alumno(a) con apoyo USAER (Unidad de Servicios
+         de Apoyo a la Educación Regular) — ver usaerAlumnoFicha en el .gs.
+         Un color propio (violeta), distinto del dorado/carmesí del resto
+         del sistema, para que se note de inmediato al abrir la Ficha. ── */
+    .ficha-hero.ficha-usaer {
+      background: linear-gradient(135deg, #f3e8ff, #e4d4fb);
+      border: 1.5px solid #9333ea;
+      box-shadow: 0 3px 18px rgba(147,51,234,0.25);
+    }
+    .ficha-badge-usaer {
+      background: #7c3aed !important;
     }
 
     .ficha-section-title {
@@ -1050,7 +1063,12 @@
     <div class="nav-item">
       <a href="#" onclick="return false;">Alumnos ▾</a>
       <div class="dropdown">
+        <!-- "🔍 Consulta de Alumnos(as)" deshabilitada por el momento a
+             petición de Dirección (13/sep/2026). El modal (id="modal-datos")
+             y su lógica siguen intactos más abajo — para reactivarla basta
+             con quitar este comentario y volver a poner el enlace:
         <a href="#" onclick="openModal('datos'); return false;">🔍 Consulta de Alumnos(as)</a>
+        -->
         <a href="#" onclick="openModal('alta'); return false;">✏️ Actualización de Alumnos(as)</a>
         <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva</a>
         <a href="#" onclick="openModal('cred-login'); return false;">🪪 Credenciales</a>
@@ -2706,6 +2724,7 @@
     let _fichaConductaRegistros = [];
     let _fichaAsistDetalle      = [];
     let _fichaFaltasDetalle     = [];
+    let _fichaUsaerActual       = null; // respuesta completa de usaerAlumnoFicha (enUsaer + registros + fichaInf + aluUsaer)
 
     async function abrirFichaDescriptiva(alumno) {
       const overlay = document.getElementById('ficha-overlay');
@@ -2723,6 +2742,7 @@
       _fichaAlumnoActual = alumno;
       _fichaCicloActual  = '';
       _fichaDetalleCache = {};
+      _fichaUsaerActual  = null;
 
       overlay.classList.add('active');
       overlay.scrollTop = 0;
@@ -2736,8 +2756,19 @@
           </div>
         </div>`;
 
-      const ciclosJson = await jsonpCall({ accion: 'listarCiclosEvaluaciones' }, 15000);
+      // USAER se consulta aquí, UNA sola vez para toda la Ficha (se
+      // reutiliza en cargarFichaConCiclo), en paralelo con los ciclos, para
+      // que la alusión especial (color + insignia) aparezca desde esta
+      // primera pantalla si el alumno(a) tiene apoyo USAER.
+      const [ciclosJson, usaerJson] = await Promise.all([
+        jsonpCall({ accion: 'listarCiclosEvaluaciones' }, 15000),
+        jsonpCall({ accion: 'usaerAlumnoFicha', nombre: nombre }, 15000)
+      ]);
       const ciclos = (ciclosJson && ciclosJson.ok && ciclosJson.ciclos) ? ciclosJson.ciclos : [];
+      _fichaUsaerActual = (usaerJson && usaerJson.ok) ? usaerJson : null;
+      const enUsaer = !!(_fichaUsaerActual && _fichaUsaerActual.enUsaer);
+      const heroClass = 'ficha-hero' + (enUsaer ? ' ficha-usaer' : '');
+      const badgeUsaerHtml = enUsaer ? ' <span class="ficha-badge ficha-badge-usaer">⭐ Apoyo USAER</span>' : '';
 
       if (ciclos.length === 0) {
         body.innerHTML += `
@@ -2749,11 +2780,11 @@
       }
 
       body.innerHTML = `
-        <div class="ficha-hero">
+        <div class="${heroClass}">
           ${fotoHtml}
           <div>
             <div class="ficha-nombre">${nombre}</div>
-            <span class="ficha-badge">Selecciona el ciclo escolar a consultar</span>
+            <span class="ficha-badge">Selecciona el ciclo escolar a consultar</span>${badgeUsaerHtml}
           </div>
         </div>
         <div style="max-width:340px;margin:1.8rem auto;text-align:center">
@@ -2792,12 +2823,18 @@
              onerror="fotoOnError(this, () => { this.style.display='none'; })"/></div>`
         : `<div class="ficha-avatar">${emoji}</div>`;
 
+      // Alusión especial USAER (ver _fichaUsaerActual, cargado una sola vez
+      // en abrirFichaDescriptiva): color propio de la Ficha + insignia.
+      const enUsaer = !!(_fichaUsaerActual && _fichaUsaerActual.enUsaer);
+      const heroClass = 'ficha-hero' + (enUsaer ? ' ficha-usaer' : '');
+      const badgeUsaerHtml = enUsaer ? ' <span class="ficha-badge ficha-badge-usaer">⭐ Apoyo USAER</span>' : '';
+
       body.innerHTML = `
-        <div class="ficha-hero">
+        <div class="${heroClass}">
           ${fotoHtml}
           <div>
             <div class="ficha-nombre">${nombre}</div>
-            <span class="ficha-badge">⏳ Cargando Ficha Descriptiva — Ciclo ${ciclo}…</span>
+            <span class="ficha-badge">⏳ Cargando Ficha Descriptiva — Ciclo ${ciclo}…</span>${badgeUsaerHtml}
           </div>
         </div>
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
@@ -2994,13 +3031,13 @@
 
       body.innerHTML = `
         <!-- ENCABEZADO -->
-        <div class="ficha-hero">
+        <div class="${heroClass}">
           ${fotoHtml}
           <div style="flex:1">
             <div class="ficha-nombre">${nombre}</div>
             <span class="ficha-badge">
               ${val('grado')}° ${val('grupo')} · Ficha Descriptiva · Ciclo ${_fichaCicloActual}
-            </span>
+            </span>${badgeUsaerHtml}
             <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;font-family:monospace">${curp}</div>
           </div>
         </div>
@@ -3080,6 +3117,25 @@
               : `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#1D7A4E">0</div>`}
           </div>
         </div>
+
+        ${enUsaer ? `
+        <!-- APOYO USAER (solo si el alumno(a) aparece en el roster AluUsaer) -->
+        <div class="ficha-section-title">⭐ Apoyo USAER</div>
+        <div class="ficha-grid">
+          <div class="ficha-field">
+            <div class="ficha-field-label">Bitácora e Información de Apoyo</div>
+            ${_fichaUsaerActual.total > 0
+              ? `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#7c3aed;
+                     cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+                   onclick="abrirUsaerDetalle()" title="Ver el detalle de la bitácora y ficha informativa de USAER">
+                   ${_fichaUsaerActual.total}</div>`
+              : `<div class="ficha-field-value" style="font-size:1.2rem;font-weight:700;color:#7c3aed;
+                     cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+                   onclick="abrirUsaerDetalle()" title="Ver el detalle del roster de apoyo USAER">
+                   Registrado(a) — ver detalle</div>`}
+          </div>
+        </div>
+        ` : ''}
 
         <!-- ASISTENCIA -->
         <div class="ficha-section-title">📅 Asistencia — Ciclo ${_fichaCicloActual}</div>
@@ -3342,6 +3398,120 @@
       document.getElementById('bitdoc-overlay').style.display = 'none';
     }
 
+    /* ── Ventana de detalle de Apoyo USAER (Ficha Descriptiva — clic en
+     * "⭐ Apoyo USAER"). Muestra, en orden, la(s) entrada(s) del roster
+     * "AluUsaer", la bitácora de "Registros" y la "FichaInf" — las 3 hojas
+     * del libro USAER que ya trajo usaerAlumnoFicha (ver _fichaUsaerActual,
+     * cargado una sola vez al abrir la Ficha). ── */
+    function renderUsaerAluCard_(u) {
+      const grupoTxt = (u.grado || u.grupo) ? ' · ' + (u.grado || '') + '° ' + (u.grupo || '') : '';
+      const extra = [];
+      if (u.comentarios)   extra.push(['Comentarios', u.comentarios]);
+      if (u.observaciones) extra.push(['Observaciones', u.observaciones]);
+      const extraHtml = extra.map(function(c){
+        return '<div style="margin-top:0.6rem">' +
+          '<div style="font-size:0.7rem;color:#8b5cf6;font-weight:700;text-transform:uppercase;letter-spacing:0.04em">' + c[0] + '</div>' +
+          '<div style="font-size:0.85rem;color:#3a2c10;line-height:1.6;margin-top:0.15rem">' + c[1] + '</div>' +
+        '</div>';
+      }).join('');
+      return '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-left:4px solid #9333ea;' +
+                  'border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem">' +
+        '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.6rem;align-items:baseline">' +
+          '<div style="font-weight:700;color:#3a2c10;font-size:0.9rem">📋 Registro en el roster USAER' + grupoTxt + '</div>' +
+          '<div style="font-size:0.75rem;color:#8b5cf6;white-space:nowrap">' + fmtFecha(u.fecha) + '</div>' +
+        '</div>' +
+        (u.tipIntervencion ? '<div style="font-size:0.78rem;color:#7c3aed;margin-top:0.2rem;font-weight:600">' + u.tipIntervencion + '</div>' : '') +
+        extraHtml +
+      '</div>';
+    }
+
+    function renderUsaerRegistroCard_(r) {
+      const campos = [];
+      if (r.desHechos)     campos.push(['Descripción de los Hechos', r.desHechos]);
+      if (r.intAccUsaer)   campos.push(['Intervención / Acción USAER', r.intAccUsaer]);
+      if (r.comunicacion)  campos.push(['Comunicación', r.comunicacion]);
+      if (r.resultados)    campos.push(['Resultados', r.resultados]);
+      if (r.acuerdos)      campos.push(['Acuerdos', r.acuerdos]);
+      if (r.seguimiento)   campos.push(['Seguimiento', r.seguimiento + (r.cual ? ' — ' + r.cual : '')]);
+      if (r.responsables)  campos.push(['Responsables', r.responsables]);
+      if (r.resCie)        campos.push(['Resultado de Cierre', r.resCie]);
+      if (r.observaciones) campos.push(['Observaciones', r.observaciones]);
+
+      const detalleHtml = campos.map(function(c){
+        return '<div style="margin-top:0.6rem">' +
+          '<div style="font-size:0.7rem;color:#8b5cf6;font-weight:700;text-transform:uppercase;letter-spacing:0.04em">' + c[0] + '</div>' +
+          '<div style="font-size:0.85rem;color:#3a2c10;line-height:1.6;margin-top:0.15rem">' + c[1] + '</div>' +
+        '</div>';
+      }).join('');
+
+      const grupoTxt = (r.grado || r.grupo) ? ' · ' + (r.grado || '') + '° ' + (r.grupo || '') : '';
+
+      return '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-left:4px solid #9333ea;' +
+                  'border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem">' +
+        '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.6rem;align-items:baseline">' +
+          '<div style="font-weight:700;color:#3a2c10;font-size:0.9rem">📓 Bitácora USAER' + (r.lugar ? ' — ' + r.lugar : '') + '</div>' +
+          '<div style="font-size:0.75rem;color:#8b5cf6;white-space:nowrap">' + fmtFecha(r.fecha) + (r.hora ? ' · ' + r.hora : '') + '</div>' +
+        '</div>' +
+        '<div style="font-size:0.78rem;color:#7c3aed;margin-top:0.2rem">👩‍🏫 ' + (r.docente || '—') + grupoTxt + '</div>' +
+        detalleHtml +
+      '</div>';
+    }
+
+    function renderUsaerFichaInfCard_(f) {
+      const campos = [];
+      if (f.necApoyoIden)        campos.push(['Necesidad de Apoyo Identificada', f.necApoyoIden]);
+      if (f.conAptSobresaliente) campos.push(['Condición y Aptitud Sobresaliente', f.conAptSobresaliente]);
+      if (f.fortaleza)           campos.push(['Fortaleza', f.fortaleza]);
+      if (f.objetivoInterv)      campos.push(['Objetivo de Intervención', f.objetivoInterv]);
+      if (f.estApoyImple)        campos.push(['Estrategias y Apoyos Implementados', f.estApoyImple]);
+      if (f.recomDoc)            campos.push(['Recomendaciones al Docente', f.recomDoc]);
+      if (f.recomFam)            campos.push(['Recomendaciones a la Familia', f.recomFam]);
+      if (f.acuerdo)             campos.push(['Acuerdo', f.acuerdo]);
+      if (f.comentarios)         campos.push(['Comentarios', f.comentarios]);
+
+      const detalleHtml = campos.map(function(c){
+        return '<div style="margin-top:0.6rem">' +
+          '<div style="font-size:0.7rem;color:#8b5cf6;font-weight:700;text-transform:uppercase;letter-spacing:0.04em">' + c[0] + '</div>' +
+          '<div style="font-size:0.85rem;color:#3a2c10;line-height:1.6;margin-top:0.15rem">' + c[1] + '</div>' +
+        '</div>';
+      }).join('');
+
+      const grupoTxt = (f.grado || f.grupo) ? ' · ' + (f.grado || '') + '° ' + (f.grupo || '') : '';
+
+      return '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-left:4px solid #9333ea;' +
+                  'border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem">' +
+        '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.6rem;align-items:baseline">' +
+          '<div style="font-weight:700;color:#3a2c10;font-size:0.9rem">📝 Ficha Informativa de Apoyo' + grupoTxt + '</div>' +
+          '<div style="font-size:0.75rem;color:#8b5cf6;white-space:nowrap">' + fmtFecha(f.fecha) + '</div>' +
+        '</div>' +
+        detalleHtml +
+      '</div>';
+    }
+
+    function abrirUsaerDetalle() {
+      const overlay = document.getElementById('usaer-overlay');
+      const body    = document.getElementById('usaer-body');
+      const datos   = _fichaUsaerActual || { aluUsaer: [], registros: [], fichaInf: [], total: 0 };
+
+      const partes = [];
+      (datos.aluUsaer   || []).forEach(function(u){ partes.push(renderUsaerAluCard_(u)); });
+      (datos.registros  || []).forEach(function(r){ partes.push(renderUsaerRegistroCard_(r)); });
+      (datos.fichaInf   || []).forEach(function(f){ partes.push(renderUsaerFichaInfCard_(f)); });
+
+      body.innerHTML = partes.length
+        ? partes.join('')
+        : '<p style="text-align:center;padding:1.5rem 0;color:#aaa">Sin registros.</p>';
+
+      document.getElementById('usaer-titulo').textContent =
+        `⭐ Apoyo USAER — ${(datos.registros||[]).length + (datos.fichaInf||[]).length} registro(s)`;
+
+      overlay.style.display = 'flex';
+    }
+
+    function cerrarUsaerDetalle() {
+      document.getElementById('usaer-overlay').style.display = 'none';
+    }
+
     /* ── Ventana de detalle de Puntos Perdidos (Conducta) ── */
     function abrirDetalleConducta() {
       const overlay = document.getElementById('detalle-cond-overlay');
@@ -3460,6 +3630,7 @@
       _fichaConductaRegistros  = [];
       _fichaAsistDetalle       = [];
       _fichaFaltasDetalle      = [];
+      _fichaUsaerActual        = null;
     }
 
     /* ── Impresión de la Ficha Descriptiva individual ──
@@ -3508,6 +3679,8 @@
         '.masthead .doc{font-weight:700;font-size:12px;color:#7a1a1a;margin-top:8px;letter-spacing:0.03em;text-transform:uppercase}' +
         '.ficha-hero{background:linear-gradient(135deg,#fff8e8,#fdf3d0);border:1px solid #e8d88a;border-radius:10px;' +
           'padding:1rem 1.3rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem}' +
+        '.ficha-hero.ficha-usaer{background:linear-gradient(135deg,#f3e8ff,#e4d4fb);border:1.5px solid #9333ea}' +
+        '.ficha-badge-usaer{background:#7c3aed!important}' +
         '.ficha-foto-wrap{width:72px;height:72px;flex-shrink:0;border-radius:12px;overflow:hidden;' +
           'border:3px solid #1a1a1a;background:#e5e1da}' +
         '.ficha-foto{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}' +
@@ -3905,21 +4078,48 @@
         { id:'f_grado',     label:'Grado',              col:'Grado',     full:false, select:['1','2','3'] },
         { id:'f_grupo',     label:'Grupo',              col:'Grupo',     full:false, select:['A','B','C','D','E','F'] },
         { id:'f_status',    label:'Status',             col:'Status',    full:false, select:['Presencial','En línea','Egresado','Baja','gen21-24'] },
-        { id:'f_padre',     label:'Nombre del Padre',   col:'Padre',     full:false },
-        { id:'f_madre',     label:'Nombre de la Madre', col:'Madre',     full:false },
-        { id:'f_celpadre',  label:'Cel Padre',          col:'Cel Padre', full:false, tipo:'tel' },
-        { id:'f_celmadre',  label:'Cel Madre',          col:'Cel Madre', full:false, tipo:'tel' },
-        { id:'f_correopadre', label:'Correo Padre',     col:'Correo Padre', full:false, tipo:'email' },
-        { id:'f_correomadre', label:'Correo Madre',     col:'Correo Madre', full:false, tipo:'email' },
         { id:'f_domicilio', label:'Domicilio',          col:'Domicilio', full:true },
         { id:'f_localidad', label:'Localidad',          col:'Localidad', full:false },
         { id:'f_municipio', label:'Municipio',          col:'Municipio', full:false },
         { id:'f_club',      label:'Club',               col:'Club',      full:false },
         { id:'f_comentario',label:'Comentario',         col:'Comentario',full:true },
         { id:'f_clannum',   label:'Número de Control',  col:'ClaNum',    full:false },
+        { id:'f_calprimaria', label:'Cal. Primaria',    col:'Cal Primaria', full:false },
       ];
 
-      const _fotoSrc = fotoUrl(a['Foto'] || '');
+      // Datos de Familia: bloque propio de DOS COLUMNAS FIJAS (Padre | Madre),
+      // separado de la rejilla general de arriba. La rejilla general usa
+      // "auto-fill" (2, 3 o hasta 4 columnas según el ancho de pantalla), así
+      // que un campo suelto ahí puede alinearse con cualquier otro campo
+      // vecino según cuántas columnas quepan — por eso antes "Cel Madre"
+      // terminaba junto a "Correo Padre" en vez de junto a "Cel Padre". Con
+      // columnas fijas, cada dato del Padre queda SIEMPRE arriba de su
+      // contraparte de la Madre, en el mismo orden sin importar la pantalla:
+      // fila 1 Nombre, fila 2 Celular, fila 3 Correo.
+      const camposFamilia = [
+        { id:'f_padre',       label:'Nombre del Padre',   col:'Padre' },
+        { id:'f_madre',       label:'Nombre de la Madre', col:'Madre' },
+        { id:'f_celpadre',    label:'Cel Padre',          col:'Cel Padre',    tipo:'tel' },
+        { id:'f_celmadre',    label:'Cel Madre',          col:'Cel Madre',    tipo:'tel' },
+        { id:'f_correopadre', label:'Correo Padre',       col:'Correo Padre', tipo:'email' },
+        { id:'f_correomadre', label:'Correo Madre',       col:'Correo Madre', tipo:'email' },
+      ];
+      const campoInputHtml_ = function(c) {
+        let val = a[c.col] !== undefined ? a[c.col] : '';
+        if (c.col === 'FecNac' && val) {
+          try { val = new Date(val).toISOString().split('T')[0]; } catch(ex) {}
+        }
+        if (c.select) {
+          const opts = c.select.map(o => `<option value="${o}" ${String(val)===o?'selected':''}>${o}</option>`).join('');
+          return `<select id="${c.id}"><option value="">-- Seleccionar --</option>${opts}</select>`;
+        }
+        return `<input type="${c.tipo||'text'}" id="${c.id}" value="${String(val).replace(/"/g,'&quot;')}" placeholder="${c.label}"/>`;
+      };
+
+      // Igual que en la Ficha Descriptiva: primero la foto ya resuelta por
+      // el servidor (resolverFotoUrl, entiende cualquier formato de link de
+      // Drive) y, si falla al cargar, el respaldo de "FotoImg".
+      const { principal: _fotoSrc, respaldo: _fotoAlt } = fotosAlumno(a);
       const _qrSrc   = a['QRalu'] || '';
       window._curpEditando   = a['CURP'] || '';
       window._fotoRutaActual = a['Foto'] || '';
@@ -3939,8 +4139,11 @@
               <div id="foto-wrap" style="position:relative;cursor:pointer" onclick="abrirCambioFoto('foto')" title="Clic para cambiar foto">
                 ${_fotoSrc
                   ? `<img id="img-foto-hero" src="${_fotoSrc}" alt="Foto"
+                       ${_fotoAlt ? `data-foto-alt="${_fotoAlt}"` : ''}
                        style="width:80px;height:100px;object-fit:cover;border-radius:6px;border:2px solid var(--gold-light);display:block"
-                       onerror="this.style.display='none'"/>`
+                       onerror="fotoOnError(this, () => { this.style.display='none'; const ph=document.getElementById('foto-hero-placeholder'); if(ph) ph.style.display='flex'; })"/>
+                     <div id="foto-hero-placeholder" style="display:none;width:80px;height:100px;background:#f5ecc8;border-radius:6px;border:2px dashed var(--gold-mid);
+                                 align-items:center;justify-content:center;font-size:2rem">👤</div>`
                   : `<div style="width:80px;height:100px;background:#f5ecc8;border-radius:6px;border:2px dashed var(--gold-mid);
                                  display:flex;align-items:center;justify-content:center;font-size:2rem">👤</div>`
                 }
@@ -4001,19 +4204,20 @@
           <div class="alta-form-grid">`;
 
       campos.forEach(c => {
-        let val = a[c.col] !== undefined ? a[c.col] : '';
-        if (c.col === 'FecNac' && val) {
-          try { val = new Date(val).toISOString().split('T')[0]; } catch(ex) {}
-        }
         const fullClass = c.full ? ' full' : '';
-        let input = '';
-        if (c.select) {
-          const opts = c.select.map(o => `<option value="${o}" ${String(val)===o?'selected':''}>${o}</option>`).join('');
-          input = `<select id="${c.id}"><option value="">-- Seleccionar --</option>${opts}</select>`;
-        } else {
-          input = `<input type="${c.tipo||'text'}" id="${c.id}" value="${String(val).replace(/"/g,'&quot;')}" placeholder="${c.label}"/>`;
+        formHtml += `<div class="alta-group${fullClass}"><label>${c.label}</label>${campoInputHtml_(c)}</div>`;
+        if (c.id === 'f_status') {
+          // Bloque de Familia (Padre | Madre) en dos columnas FIJAS, ver
+          // comentario junto a camposFamilia más arriba.
+          formHtml += '<div class="alta-group full">' +
+            '<div class="ficha-section-title" style="margin-top:0.4rem">👨‍👩‍👧 Familia</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">' +
+            camposFamilia.map(function(cf){
+              return `<div class="alta-group"><label>${cf.label}</label>${campoInputHtml_(cf)}</div>`;
+            }).join('') +
+            '</div>' +
+          '</div>';
         }
-        formHtml += `<div class="alta-group${fullClass}"><label>${c.label}</label>${input}</div>`;
       });
 
 
@@ -4368,6 +4572,7 @@
         Club:        document.getElementById('f_club').value.trim(),
         Comentario:  document.getElementById('f_comentario').value.trim(),
         ClaNum:      document.getElementById('f_clannum').value.trim(),
+        'Cal Primaria': (document.getElementById('f_calprimaria') ? document.getElementById('f_calprimaria').value.trim() : ''),
 
       };
 
@@ -5577,7 +5782,8 @@
         tarjetaGF_('% Asistencia', r.asistenciaPromedio !== null ? r.asistenciaPromedio.toFixed(1)+'%' : '—', colorGF_(r.asistenciaPromedio,'asis')),
         tarjetaGF_('Conducta', r.conductaPromedio !== null ? r.conductaPromedio.toFixed(1) : '—', colorGF_(r.conductaPromedio,'cond')),
         tarjetaGF_('Bitácora Docentes', r.totalBitacora, r.totalBitacora>0 ? '#C07A00' : '#1D7A4E'),
-        tarjetaGF_('Trabajo Social', r.totalTrabajoSocial, r.totalTrabajoSocial>0 ? '#C07A00' : '#1D7A4E')
+        tarjetaGF_('Trabajo Social', r.totalTrabajoSocial, r.totalTrabajoSocial>0 ? '#C07A00' : '#1D7A4E'),
+        tarjetaGF_('⭐ Apoyo USAER', r.totalUsaer, r.totalUsaer>0 ? '#9333ea' : '#6b7280')
       ].join('');
     }
 
@@ -5751,7 +5957,9 @@
           let val = a[c.campo];
           let txt, color = '#2d1f08';
           if(c.campo === 'nombre'){
-            txt = val || '—';
+            // ⭐ alusión especial: el alumno aparece en el roster de apoyo
+            // USAER (ver comentario junto a SS_USAER_ID en el .gs).
+            txt = (a.enUsaer ? '⭐ ' : '') + (val || '—');
           } else if(c.campo === 'promedioGeneral'){
             txt = val !== null && val !== undefined ? Number(val).toFixed(2) : '—';
             color = colorGF_(val, c.tipo);
@@ -5769,8 +5977,12 @@
           }
           return '<td style="padding:0.5rem 0.7rem;text-align:'+c.align+';font-weight:'+(c.campo==='nombre'?600:700)+';color:'+color+'">'+txt+'</td>';
         }).join('');
-        return '<tr onclick="abrirAlumnoDesdeGrupo(\''+curpEsc+'\')" style="border-bottom:1px solid #f0e8c0;cursor:pointer" '+
-          'onmouseover="this.style.background=\'#fdf6e0\'" onmouseout="this.style.background=\'\'">'+
+        // Fila resaltada con un tinte violeta para los alumnos con apoyo
+        // USAER — la misma alusión especial que en la Ficha individual,
+        // aquí visible de un vistazo en toda la tabla del grupo.
+        const bgBase = a.enUsaer ? '#f3e8ff' : '';
+        return '<tr onclick="abrirAlumnoDesdeGrupo(\''+curpEsc+'\')" style="border-bottom:1px solid #f0e8c0;cursor:pointer;background:'+bgBase+'" '+
+          'onmouseover="this.style.background=\'#fdf6e0\'" onmouseout="this.style.background=\''+bgBase+'\'">'+
           '<td style="padding:0.5rem 0.7rem;color:#999">'+(i+1)+'</td>'+celdas+'</tr>';
       }).join('') || '<tr><td colspan="'+(GF_COLUMNAS.length+1)+'" style="text-align:center;padding:1.2rem;color:#aaa">Sin alumnos.</td></tr>';
     }
@@ -6913,6 +7125,22 @@
                  border-radius:6px;cursor:pointer;font-weight:600">✕</button>
       </div>
       <div id="bitdoc-body" style="padding:1.3rem"></div>
+    </div>
+  </div>
+
+  <!-- APOYO USAER (Ficha Descriptiva — clic en "⭐ Apoyo USAER") -->
+  <div id="usaer-overlay" style="display:none;position:fixed;inset:0;z-index:999996;
+       background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#fffdf5;border-top:4px solid #9333ea;border-radius:8px;
+         max-width:900px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.4)">
+      <div style="background:linear-gradient(135deg,#2e1065,#4c1d95);padding:1rem 1.3rem;
+           display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1">
+        <h3 id="usaer-titulo" style="font-family:'Cinzel',serif;color:#e9d5ff;font-size:0.95rem;margin:0"></h3>
+        <button onclick="cerrarUsaerDetalle()"
+          style="background:rgba(124,58,237,0.8);border:none;color:#fff;padding:0.35rem 0.8rem;
+                 border-radius:6px;cursor:pointer;font-weight:600">✕</button>
+      </div>
+      <div id="usaer-body" style="padding:1.3rem"></div>
     </div>
   </div>
 
