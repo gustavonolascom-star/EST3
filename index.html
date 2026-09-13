@@ -1,4 +1,4 @@
-<!-- Generado: 13/septiembre/2026, 12:58 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 13/septiembre/2026, 17:19 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6114,7 +6114,9 @@
       const s=document.getElementById('xls-asig');
       s.innerHTML='<option value="">-- Selecciona --</option>';
       let lista=ASIGNATURAS_EVAL[g]||[];
-      if(_xlsNivel==='DOCENTE' && _xlsAsigSet.length){
+      // "Total" en su Asignatura (Usuarios) = autorizado para todas las
+      // materias de sus grupos, sin filtrar por el catálogo.
+      if(_xlsNivel==='DOCENTE' && _xlsAsigSet.length && _xlsAsigSet.indexOf('TOTAL')===-1){
         lista=lista.filter(a=>_xlsAsigSet.indexOf(normTxt(a))!==-1);
       }
       lista.forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
@@ -6650,7 +6652,9 @@
       const s=document.getElementById('ev-asig');
       s.innerHTML='<option value="">-- Selecciona --</option>';
       let lista=ASIGNATURAS_EVAL[g]||[];
-      if(_evalNivel==='DOCENTE' && _evalAsigSet.length){
+      // "Total" en su Asignatura (Usuarios) = autorizado para todas las
+      // materias de sus grupos, sin filtrar por el catálogo.
+      if(_evalNivel==='DOCENTE' && _evalAsigSet.length && _evalAsigSet.indexOf('TOTAL')===-1){
         lista=lista.filter(a=>_evalAsigSet.indexOf(normTxt(a))!==-1);
       }
       lista.forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
