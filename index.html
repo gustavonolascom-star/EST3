@@ -1,4 +1,4 @@
-<!-- Generado: 14/septiembre/2026, 21:40 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 14/septiembre/2026, 21:50 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1927,28 +1927,54 @@
     function parseDriveEmbed(url){
       try{
         let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-        if(m) return {tipo:'archivo', embedUrl:'https://drive.google.com/file/d/'+m[1]+'/preview'};
+        if(m) return {tipo:'archivo', id:m[1]};
         m = url.match(/\/drive\/folders\/([a-zA-Z0-9_-]+)/);
-        if(m) return {tipo:'carpeta', embedUrl:'https://drive.google.com/embeddedfolderview?id='+m[1]+'#grid'};
+        if(m) return {tipo:'carpeta', id:m[1]};
         m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if(m) return {tipo:'archivo', embedUrl:'https://drive.google.com/file/d/'+m[1]+'/preview'};
+        if(m) return {tipo:'archivo', id:m[1]};
       }catch(e){}
-      return {tipo:'otro', embedUrl:null};
+      return {tipo:'otro', id:null};
     }
 
+    // Por protección del sistema, una evidencia de Google Drive NUNCA se
+    // incrusta como una ventana interactiva de Drive (ni con <iframe> de
+    // vista previa, ni con el explorador de carpetas): esas vistas son de
+    // Google y traen sus propios controles ("Compartir", abrir con otra
+    // app, subir un nivel a la carpeta), que terminan dejando ver todo lo
+    // demás que haya en esa nube de Drive. En vez de eso, un archivo se
+    // muestra como una imagen ESTÁTICA (la miniatura que genera el propio
+    // Drive) dentro de nuestra propia tarjeta, y al tocarla solo se amplía
+    // aquí mismo (función abrirEvidenciaLightbox) — nunca se sale del
+    // sitio ni aparece ningún menú o enlace hacia drive.google.com.
     function evidenciaHtml(url, j){
       const urlSeg = url.replace(/"/g,'&quot;');
       const info = parseDriveEmbed(url);
-      if(info.embedUrl){
-        const alto = info.tipo === 'carpeta' ? '320px' : '380px';
-        return '<div style="border:1px solid #C8922A;border-radius:8px;overflow:hidden;background:#0d0a04">'+
-          '<iframe src="'+info.embedUrl+'" style="width:100%;height:'+alto+';border:0;display:block" '+
-            'loading="lazy" allow="autoplay" onclick="event.stopPropagation()"></iframe>'+
+
+      if(info.tipo === 'archivo' && info.id){
+        const idEsc = info.id.replace(/'/g,"\\'");
+        return '<div style="border:1px solid #C8922A;border-radius:8px;overflow:hidden;background:#0d0a04;cursor:zoom-in" '+
+            'onclick="event.stopPropagation();abrirEvidenciaLightbox(\''+idEsc+'\')">'+
+          '<img src="https://drive.google.com/thumbnail?id='+info.id+'&sz=w800" alt="Evidencia '+(j+1)+'" '+
+            'style="width:100%;max-height:380px;object-fit:contain;display:block" loading="lazy" '+
+            'onerror="this.closest(\'div\').style.display=\'none\'">'+
           '<div style="padding:0.35rem 0.7rem;background:rgba(200,146,42,0.12);display:flex;align-items:center;gap:0.5rem">'+
-            '<span style="font-size:0.72rem;color:#a08040">📷 Evidencia '+(j+1)+'</span>'+
+            '<span style="font-size:0.72rem;color:#a08040">📷 Evidencia '+(j+1)+' — toca para ampliar</span>'+
           '</div>'+
         '</div>';
       }
+
+      if(info.tipo === 'carpeta'){
+        // No hay forma de mostrar el contenido de una carpeta de Drive sin
+        // incrustar el explorador de Google (que deja navegar la carpeta
+        // completa). Por protección, solo se avisa — sin enlace ni vista.
+        return '<div style="border:1px dashed #C8922A;border-radius:8px;padding:0.9rem 1rem;background:#0d0a04;'+
+            'display:flex;align-items:center;gap:0.6rem">'+
+          '<span style="font-size:1.3rem">📁</span>'+
+          '<span style="font-size:0.78rem;color:#a08040">Evidencia '+(j+1)+': carpeta con varios archivos '+
+            '(por protección del sistema no se muestra aquí; mejor pega el enlace de cada archivo por separado).</span>'+
+        '</div>';
+      }
+
       const esImagen = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url);
       if(esImagen){
         return '<div style="border:1px solid #C8922A;border-radius:8px;overflow:hidden;background:#0d0a04">'+
@@ -1960,6 +1986,20 @@
         'style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(200,146,42,0.15);'+
         'border:1px solid #C8922A;color:#F0C040;padding:0.4rem 0.8rem;border-radius:6px;'+
         'font-size:0.78rem;font-weight:600;text-decoration:none;align-self:flex-start">📎 Ver evidencia '+(j+1)+'</a>';
+    }
+
+    // Visor propio (dentro del sitio) para ampliar una evidencia — jamás
+    // abre drive.google.com ni ninguna otra página fuera del sistema.
+    function abrirEvidenciaLightbox(id){
+      const img = document.getElementById('evid-lightbox-img');
+      img.src = 'https://drive.google.com/thumbnail?id='+id+'&sz=w1600';
+      document.getElementById('evid-lightbox-overlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    function cerrarEvidenciaLightbox(){
+      document.getElementById('evid-lightbox-overlay').style.display = 'none';
+      document.getElementById('evid-lightbox-img').src = '';
+      document.body.style.overflow = '';
     }
 
     function pintarEventos(eventos){
@@ -7144,6 +7184,19 @@
       </div>
       <div id="usaer-body" style="padding:1.3rem"></div>
     </div>
+  </div>
+
+  <!-- VISOR PROPIO DE EVIDENCIAS (Eventos) — amplía la imagen sin salir
+       nunca del sitio ni abrir drive.google.com. -->
+  <div id="evid-lightbox-overlay" style="display:none;position:fixed;inset:0;z-index:999997;
+       background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;cursor:zoom-out"
+       onclick="cerrarEvidenciaLightbox()">
+    <img id="evid-lightbox-img" src="" alt="Evidencia ampliada"
+         style="max-width:100%;max-height:92vh;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,0.5);cursor:default"
+         onclick="event.stopPropagation()">
+    <button onclick="cerrarEvidenciaLightbox()"
+      style="position:fixed;top:1rem;right:1.2rem;background:rgba(200,146,42,0.9);border:none;color:#1a1408;
+             width:2.2rem;height:2.2rem;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer;z-index:1">✕</button>
   </div>
 
   <!-- DETALLE DE PUNTOS PERDIDOS (Conducta — clic en Puntos Perdidos) -->
