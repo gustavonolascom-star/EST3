@@ -1,4 +1,4 @@
-<!-- Generado: 14/septiembre/2026, 21:50 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 15/septiembre/2026, 17:12 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1873,6 +1873,17 @@
     let _eventosCicloActual = '';
     let _eventosCache = {}; // ciclo -> eventos[] (evita recargar si ya se consultó)
 
+    // Ciclos escolares que NO se capturaron en la hoja "Eventos EST3" (por
+    // ser anteriores al sistema actual) y que en su lugar remiten al sitio
+    // anterior de la escuela, donde sí queda esa memoria institucional.
+    const CICLO_SITIO_ANTERIOR = {
+      '2015-2016': 'https://est3glezortsom.wixsite.com/est3',
+      '2016-2017': 'https://est3glezortsom.wixsite.com/est3c16',
+      '2017-2018': 'https://est3glezortsom.wixsite.com/est3c17',
+      '2018-2019': 'https://est3glezortsom.wixsite.com/est3c19',
+      '2019-2020': 'https://est3glezortsom.wixsite.com/est3c20'
+    };
+
     // Genera "2015-2016" … hasta el ciclo actual (agosto = inicio de ciclo),
     // más reciente primero. Se recalcula solo, sin tocar código, cada agosto.
     function generarCiclosEventos(){
@@ -1904,10 +1915,31 @@
       window.scrollTo({top:0,behavior:'smooth'});
     }
 
+    // Tarjeta que remite al sitio anterior de la escuela, para los ciclos
+    // que no viven en la hoja "Eventos EST3" (ver CICLO_SITIO_ANTERIOR).
+    function pintarEventosSitioAnterior(ciclo, url){
+      const cont = document.getElementById('ev2-lista');
+      const urlEsc = url.replace(/"/g,'&quot;');
+      cont.innerHTML =
+        '<div style="background:rgba(26,20,8,0.85);border:1px solid #C8922A;border-left:4px solid #F0C040;'+
+          'border-radius:10px;padding:1.6rem 1.4rem;text-align:center">'+
+          '<div style="font-size:1.8rem;margin-bottom:0.5rem">🌐</div>'+
+          '<p style="color:#e8d8b0;font-weight:700;font-size:0.95rem;margin:0 0 0.4rem">'+
+            'Los eventos del ciclo '+ciclo+' se encuentran en el sitio anterior de la escuela</p>'+
+          '<p style="color:#c9a96e;font-size:0.82rem;line-height:1.6;margin:0 0 1.1rem">'+
+            'Ese sitio se conserva tal como estaba, como memoria institucional de ese ciclo escolar.</p>'+
+          '<a href="'+urlEsc+'" target="_blank" rel="noopener noreferrer" '+
+            'style="display:inline-flex;align-items:center;gap:0.5rem;background:#C8922A;color:#1a1408;'+
+            'padding:0.6rem 1.3rem;border-radius:8px;font-weight:700;font-size:0.85rem;text-decoration:none">'+
+            '🔗 Visitar sitio del ciclo '+ciclo+'</a>'+
+        '</div>';
+    }
+
     async function cargarEventosCiclo(){
       const ciclo = document.getElementById('ev2-ciclo').value;
       const cont = document.getElementById('ev2-lista');
       _eventosCicloActual = ciclo;
+      if(CICLO_SITIO_ANTERIOR[ciclo]){ pintarEventosSitioAnterior(ciclo, CICLO_SITIO_ANTERIOR[ciclo]); return; }
       if(_eventosCache[ciclo]){ pintarEventos(_eventosCache[ciclo]); return; }
       cont.innerHTML = '<p style="text-align:center;color:#C8922A;font-size:0.85rem">⏳ Cargando eventos…</p>';
       const json = await jsonpCall({accion:'listarEventos', ciclo:ciclo}, 15000);
