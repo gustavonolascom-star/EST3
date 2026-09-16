@@ -1,4 +1,4 @@
-<!-- Generado: 15/septiembre/2026, 17:12 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 15/septiembre/2026, 19:53 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1978,14 +1978,30 @@
     // Drive) dentro de nuestra propia tarjeta, y al tocarla solo se amplía
     // aquí mismo (función abrirEvidenciaLightbox) — nunca se sale del
     // sitio ni aparece ningún menú o enlace hacia drive.google.com.
+    //
+    // Excepción necesaria: un VIDEO no puede "verse en movimiento" con una
+    // miniatura fija — Drive no ofrece otra forma de reproducirlo que su
+    // propio reproductor. Por eso, primero se pinta como foto (caso más
+    // común) y, en cuanto el servidor confirma que es un video
+    // (tipoArchivoDrive/marcarSiEsVideo), la tarjeta cambia a un botón de
+    // "▶ reproducir" — el reproductor de Drive solo se abre, ya dentro de
+    // nuestro propio visor, si el usuario lo pide expresamente.
+    let _evidCardSeq = 0;
+    const _tipoDriveCache = {}; // id de Drive -> true/false (es video)
+
     function evidenciaHtml(url, j){
       const urlSeg = url.replace(/"/g,'&quot;');
       const info = parseDriveEmbed(url);
 
       if(info.tipo === 'archivo' && info.id){
         const idEsc = info.id.replace(/'/g,"\\'");
-        return '<div style="border:1px solid #C8922A;border-radius:8px;overflow:hidden;background:#0d0a04;cursor:zoom-in" '+
-            'onclick="event.stopPropagation();abrirEvidenciaLightbox(\''+idEsc+'\')">'+
+        const cardId = 'evid-card-'+(++_evidCardSeq);
+        // Se dispara después de pintar la tarjeta (setTimeout 0 = siguiente
+        // vuelta del bucle de eventos), para no retrasar la lista de
+        // eventos esperando la respuesta del servidor.
+        setTimeout(function(){ marcarSiEsVideo(info.id, cardId, j); }, 0);
+        return '<div id="'+cardId+'" style="border:1px solid #C8922A;border-radius:8px;overflow:hidden;background:#0d0a04;cursor:zoom-in" '+
+            'onclick="event.stopPropagation();abrirEvidenciaLightbox(\''+idEsc+'\',false)">'+
           '<img src="https://drive.google.com/thumbnail?id='+info.id+'&sz=w800" alt="Evidencia '+(j+1)+'" '+
             'style="width:100%;max-height:380px;object-fit:contain;display:block" loading="lazy" '+
             'onerror="this.closest(\'div\').style.display=\'none\'">'+
@@ -2020,17 +2036,67 @@
         'font-size:0.78rem;font-weight:600;text-decoration:none;align-self:flex-start">📎 Ver evidencia '+(j+1)+'</a>';
     }
 
-    // Visor propio (dentro del sitio) para ampliar una evidencia — jamás
-    // abre drive.google.com ni ninguna otra página fuera del sistema.
-    function abrirEvidenciaLightbox(id){
-      const img = document.getElementById('evid-lightbox-img');
-      img.src = 'https://drive.google.com/thumbnail?id='+id+'&sz=w1600';
+    // Pregunta al servidor si un archivo de evidencia es un VIDEO (una sola
+    // vez por archivo, con caché) y, si lo es, cambia su tarjeta a un
+    // botón de "▶ reproducir" en vez de la imagen fija.
+    async function marcarSiEsVideo(id, cardId, j){
+      let esVideo;
+      if(Object.prototype.hasOwnProperty.call(_tipoDriveCache, id)){
+        esVideo = _tipoDriveCache[id];
+      } else {
+        const json = await jsonpCall({accion:'tipoArchivoDrive', id:id}, 12000);
+        esVideo = !!(json && json.ok && json.esVideo);
+        _tipoDriveCache[id] = esVideo;
+      }
+      if(!esVideo) return;
+      const card = document.getElementById(cardId);
+      if(!card) return; // ya no está en pantalla (cambió de ciclo, etc.)
+      const idEsc = id.replace(/'/g,"\\'");
+      card.setAttribute('onclick', "event.stopPropagation();abrirEvidenciaLightbox('"+idEsc+"',true)");
+      card.innerHTML =
+        '<div style="position:relative">'+
+          '<img src="https://drive.google.com/thumbnail?id='+id+'&sz=w800" alt="Evidencia '+(j+1)+' (video)" '+
+            'style="width:100%;max-height:380px;object-fit:contain;display:block;opacity:0.85" loading="lazy">'+
+          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">'+
+            '<div style="width:3.2rem;height:3.2rem;border-radius:50%;background:rgba(26,20,8,0.75);'+
+              'border:2px solid #F0C040;display:flex;align-items:center;justify-content:center;'+
+              'font-size:1.2rem;color:#F0C040;padding-left:3px">▶</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="padding:0.35rem 0.7rem;background:rgba(200,146,42,0.12);display:flex;align-items:center;gap:0.5rem">'+
+          '<span style="font-size:0.72rem;color:#a08040">🎬 Evidencia '+(j+1)+' — toca para reproducir</span>'+
+        '</div>';
+    }
+
+    // Visor propio (dentro del sitio) para ampliar/reproducir una
+    // evidencia — jamás abre drive.google.com como página completa.
+    // Para foto/PDF se muestra la imagen fija de siempre. Para un video no
+    // existe forma de reproducirlo sin el reproductor del propio Drive, así
+    // que aquí (y solo aquí, al pedirlo expresamente) se incrusta ese
+    // reproductor — con una franja sin clic en la esquina donde Drive pone
+    // su ícono de "abrir esta página en Drive", para no dejar esa puerta
+    // abierta ni siquiera dentro del visor.
+    function abrirEvidenciaLightbox(id, esVideo){
+      const cont = document.getElementById('evid-lightbox-content');
+      if(esVideo){
+        cont.innerHTML =
+          '<div style="position:relative;width:min(92vw,900px);aspect-ratio:16/9;background:#000;'+
+              'border-radius:8px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5)">'+
+            '<iframe src="https://drive.google.com/file/d/'+id+'/preview" allow="autoplay" allowfullscreen '+
+              'style="width:100%;height:100%;border:0;display:block"></iframe>'+
+            '<div title="" style="position:absolute;top:0;right:0;width:3.4rem;height:2.6rem" '+
+              'onclick="event.stopPropagation()"></div>'+
+          '</div>';
+      } else {
+        cont.innerHTML = '<img src="https://drive.google.com/thumbnail?id='+id+'&sz=w1600" alt="Evidencia ampliada" '+
+          'style="max-width:100%;max-height:92vh;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,0.5)">';
+      }
       document.getElementById('evid-lightbox-overlay').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
     function cerrarEvidenciaLightbox(){
       document.getElementById('evid-lightbox-overlay').style.display = 'none';
-      document.getElementById('evid-lightbox-img').src = '';
+      document.getElementById('evid-lightbox-content').innerHTML = '';
       document.body.style.overflow = '';
     }
 
@@ -7223,9 +7289,7 @@
   <div id="evid-lightbox-overlay" style="display:none;position:fixed;inset:0;z-index:999997;
        background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;cursor:zoom-out"
        onclick="cerrarEvidenciaLightbox()">
-    <img id="evid-lightbox-img" src="" alt="Evidencia ampliada"
-         style="max-width:100%;max-height:92vh;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,0.5);cursor:default"
-         onclick="event.stopPropagation()">
+    <div id="evid-lightbox-content" onclick="event.stopPropagation()" style="cursor:default"></div>
     <button onclick="cerrarEvidenciaLightbox()"
       style="position:fixed;top:1rem;right:1.2rem;background:rgba(200,146,42,0.9);border:none;color:#1a1408;
              width:2.2rem;height:2.2rem;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer;z-index:1">✕</button>
