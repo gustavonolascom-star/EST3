@@ -1,4 +1,4 @@
-<!-- Generado: 15/septiembre/2026, 19:53 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 17/septiembre/2026, 15:20 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1085,6 +1085,7 @@
         <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
+        <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
       </div>
     </div>
     <div class="nav-item">
@@ -4926,6 +4927,416 @@
       _evalDoc=''; _evalNivel=''; _evalGruposSet=[]; _evalAsigSet=[]; _evalGruposRaw=''; _evalAsigRaw='';
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    //  MÓDULO PERSONAL (expedientes) — mismo login (Usuario/Contraseña) que
+    //  el resto del sistema. El servidor decide siempre el rol real (Director/
+    //  Subdirector/Secretaria = control total; los demás solo ven y actualizan
+    //  su propio expediente) — aquí solo se pinta lo que el servidor autorizó.
+    // ══════════════════════════════════════════════════════════════════
+
+    const PERSONAL_CAMPOS_ADMIN_FE = [
+      'NOMBRE','Activo','FUNCION','TARJETA','NoPlanilla','Fecha Nac','RFC','CURP',
+      'SERVICIO 1','HORARIO','GRUPOS 1','HORAS 1',
+      'SERVICIO 2','GRUPOS 2','HORAS 2',
+      'SERVICIO 3','GRUPOS 3','HORAS 3',
+      'SERVICIO 4','GRUPOS 4','HORAS 4','TOTAL HORAS',
+      'F. ING SEP','F. ING SUB','C) FECHA ALTA FUN','D) F INGRESO AL C.T.',
+      'E) PREPARACION','PREPARACION 1','F) ESCUELA DE EGRESO','ESCUELA 1','ESCUELA 2',
+      'G) PUNTUACION ESCALAFONARIA'
+    ];
+    const PERSONAL_CAMPOS_CONTACTO_FE = ['Domicilio','Colonia','Localidad','CP','Municipio','Estado','Celular','Email','Comentarios'];
+    const PERSONAL_CAMPOS_DOCUMENTOS_FE = ['Foto','CreEle','Nombramiento','Perfil','Talon','Fiscal'];
+
+    const PERSONAL_ETIQUETAS_ = {
+      'NOMBRE':'Nombre completo','Activo':'Activo','FUNCION':'Función / Asignatura','TARJETA':'Tarjeta','NoPlanilla':'No. de planilla',
+      'Fecha Nac':'Fecha de nacimiento','RFC':'RFC','CURP':'CURP',
+      'SERVICIO 1':'Servicio 1','HORARIO':'Horario','GRUPOS 1':'Grupos 1','HORAS 1':'Horas 1',
+      'SERVICIO 2':'Servicio 2','GRUPOS 2':'Grupos 2','HORAS 2':'Horas 2',
+      'SERVICIO 3':'Servicio 3','GRUPOS 3':'Grupos 3','HORAS 3':'Horas 3',
+      'SERVICIO 4':'Servicio 4','GRUPOS 4':'Grupos 4','HORAS 4':'Horas 4','TOTAL HORAS':'Total de horas',
+      'F. ING SEP':'Fecha de ingreso a SEP','F. ING SUB':'Fecha de ingreso a Subsistema',
+      'C) FECHA ALTA FUN':'Fecha de alta en la función','D) F INGRESO AL C.T.':'Fecha de ingreso al C.T.',
+      'E) PREPARACION':'Preparación','PREPARACION 1':'Preparación (detalle)',
+      'F) ESCUELA DE EGRESO':'Escuela de egreso','ESCUELA 1':'Escuela 1','ESCUELA 2':'Escuela 2',
+      'G) PUNTUACION ESCALAFONARIA':'Puntuación escalafonaria',
+      'Domicilio':'Domicilio','Colonia':'Colonia','Localidad':'Localidad','CP':'Código Postal','Municipio':'Municipio','Estado':'Estado',
+      'Celular':'Celular','Email':'Correo electrónico','Comentarios':'Comentarios'
+    };
+    const PERSONAL_ETIQUETAS_DOC_ = {
+      'Foto':'Fotografía','CreEle':'Credencial del INE','Nombramiento':'Nombramiento',
+      'Perfil':'Perfil profesional','Talon':'Talón de pago','Fiscal':'Constancia fiscal'
+    };
+
+    let _personalUsuario    = '';
+    let _personalCurpPropia = '';
+    let _personalEsAdmin    = false;
+    let _personalCurpViendo = '';
+    let _personalListaCache = [];
+    let _personalFiltroEstado = 'activos'; // 'activos' | 'inactivos' | 'todos'
+
+    function personalEsc_(s){
+      return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function personalCargandoHtml_(){ return '<p style="text-align:center;color:#C8922A;padding:2rem">⏳ Cargando…</p>'; }
+    function personalErrorHtml_(msg){ return '<p style="text-align:center;color:#9b1c1c;padding:2rem">⚠️ '+personalEsc_(msg||'Ocurrió un error.')+'</p>'; }
+
+    async function accederPersonal(){
+      const user=(document.getElementById('personal-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('personal-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-personal-login');
+      const btn=document.getElementById('btn-personal-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('personal-pass').value='';
+        document.getElementById('personal-pass').focus();
+        return;
+      }
+      _personalUsuario = user;
+      closeModal('personal-login');
+      document.getElementById('personal-user').value='';
+      document.getElementById('personal-pass').value='';
+      res.innerHTML='';
+      document.getElementById('personal-overlay').style.display='block';
+      document.body.style.overflow='hidden';
+      await personalAbrirMiExpediente();
+    }
+
+    function cerrarPersonal(){
+      document.getElementById('personal-overlay').style.display='none';
+      document.body.style.overflow='';
+      _personalUsuario=''; _personalCurpPropia=''; _personalEsAdmin=false; _personalCurpViendo=''; _personalListaCache=[];
+    }
+
+    async function personalAbrirMiExpediente(){
+      const cont=document.getElementById('personal-content');
+      cont.innerHTML = personalCargandoHtml_();
+      const json = await jsonpCall({accion:'personalObtenerExpediente', usuario:_personalUsuario, curp:''}, 15000);
+      if(!json || !json.ok){ cont.innerHTML = personalErrorHtml_(json && json.mensaje); return; }
+      _personalEsAdmin    = !!json.esAdmin;
+      _personalCurpPropia = json.expediente['CURP'] || '';
+      _personalCurpViendo = _personalCurpPropia;
+      document.getElementById('personal-doc-label').textContent = 'Mi Expediente — ' + (json.expediente['NOMBRE']||'');
+      personalPintarExpediente_(json.expediente, true);
+    }
+
+    function personalCampoHtml_(campo, valor, editable, esTextarea){
+      const label = PERSONAL_ETIQUETAS_[campo] || campo;
+      const idSeguro = 'pf-' + campo.replace(/[^a-zA-Z0-9]/g,'_');
+      const valEsc = personalEsc_(valor);
+      const claseFull = esTextarea ? ' full' : '';
+      if(campo === 'Activo'){
+        const esActivo = (valor||'').toString().trim().toUpperCase() !== 'NO';
+        if(!editable){
+          return '<div class="alta-group"><label>'+label+'</label>'+
+            '<div style="padding:0.55rem 0.8rem;background:#f7f2e0;border:1.5px solid #e8d88a;border-radius:4px;font-size:0.85rem;'+
+            'color:'+(esActivo?'#1a7a1a':'#9b1c1c')+';font-weight:600">'+(esActivo?'Sí':'No')+'</div></div>';
+        }
+        return '<div class="alta-group"><label>'+label+'</label>'+
+          '<select id="'+idSeguro+'" data-campo="Activo" style="width:100%;padding:0.55rem 0.8rem;'+
+          'border:1.5px solid #d4c07a;border-radius:4px;font-size:0.88rem;background:#fff">'+
+          '<option value="SI"'+(esActivo?' selected':'')+'>Sí</option>'+
+          '<option value="NO"'+(!esActivo?' selected':'')+'>No</option>'+
+          '</select></div>';
+      }
+      if(!editable){
+        return '<div class="alta-group'+claseFull+'"><label>'+label+'</label>'+
+          '<div style="padding:0.55rem 0.8rem;background:#f7f2e0;border:1.5px solid #e8d88a;border-radius:4px;font-size:0.85rem;color:#5a4a1a;min-height:1.3em">'+
+          (valor ? personalEsc_(valor) : '<span style="opacity:0.5">— sin dato —</span>')+'</div></div>';
+      }
+      if(esTextarea){
+        return '<div class="alta-group full"><label>'+label+'</label>'+
+          '<textarea id="'+idSeguro+'" data-campo="'+campo+'" rows="3" style="width:100%;padding:0.55rem 0.8rem;'+
+          'border:1.5px solid #d4c07a;border-radius:4px;font-size:0.88rem;font-family:\'Inter\',sans-serif">'+valEsc+'</textarea></div>';
+      }
+      return '<div class="alta-group'+claseFull+'"><label>'+label+'</label>'+
+        '<input type="text" id="'+idSeguro+'" data-campo="'+campo+'" value="'+valEsc+'"/></div>';
+    }
+
+    function personalDocCampoHtml_(campo, valor){
+      const label = PERSONAL_ETIQUETAS_DOC_[campo] || campo;
+      const v = (valor||'').toString();
+      const esImagen = /^(https?:|data:image\/)/.test(v);
+      let preview;
+      if(esImagen){
+        preview = '<img src="'+v.replace(/"/g,'&quot;')+'" alt="'+label+'" '+
+          'style="width:100%;max-height:140px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #d4c07a" '+
+          'onerror="this.style.display=\'none\'">';
+      } else if(v){
+        preview = '<div style="font-size:0.78rem;color:#5a4a1a;background:#f7f2e0;border-radius:6px;border:1px solid #e8d88a;padding:0.5rem">'+personalEsc_(v)+'</div>';
+      } else {
+        preview = '<div style="height:80px;display:flex;align-items:center;justify-content:center;color:#a08040;font-size:0.78rem;'+
+          'background:#f7f2e0;border-radius:6px;border:1px dashed #d4c07a">Sin archivo</div>';
+      }
+      return '<div class="alta-group">'+
+        '<label>'+label+'</label>'+
+        '<div id="prev-'+campo+'">'+preview+'</div>'+
+        '<input type="file" id="pfd-'+campo+'" accept="image/*" style="margin-top:0.4rem;font-size:0.78rem;width:100%" '+
+        'onchange="personalSubirArchivo_(\''+campo+'\', this)">'+
+        '<div id="msg-'+campo+'" style="font-size:0.72rem;margin-top:0.2rem"></div>'+
+      '</div>';
+    }
+
+    // ── Horario de clases: NO es una lista de datos en el código ni en una
+    //    hoja — son imágenes estáticas (una por grupo, una por maestro),
+    //    exportadas del PDF que genera aSc Horarios y subidas junto con el
+    //    resto del sitio (carpeta "horarios/" del GitHub Pages). El nombre
+    //    del archivo se calcula con la MISMA fórmula en ambos lados (aquí y
+    //    al generar las imágenes), así que no hace falta ninguna tabla de
+    //    equivalencias: para un grupo es "Grupo_" + Grado+Grupo (sin
+    //    símbolos); para un maestro es "Maestro_" + sus palabras del nombre
+    //    ordenadas alfabéticamente (para que no importe si en Personal está
+    //    "APELLIDOS NOMBRE(S)" y en el horario "Nombre(s) Apellidos").
+    //    Si algún ciclo cambia el horario, solo hay que reemplazar esas
+    //    imágenes (mismo nombre de archivo) — no hay que tocar código.
+    function horarioSlugPersona_(nombre){
+      return normTxt(nombre).split(/\s+/).filter(Boolean).sort().join('_');
+    }
+
+    function horarioImgError_(imgEl, etiqueta){
+      const p = document.createElement('p');
+      p.style.cssText = 'color:#a08040;text-align:center;padding:1rem;font-size:0.85rem';
+      p.textContent = 'No hay horario disponible' + (etiqueta ? ' para ' + etiqueta + '.' : ' registrado.');
+      imgEl.replaceWith(p);
+    }
+
+    function horarioImagenHtml_(rutaImagen, etiqueta){
+      const etiquetaJs = personalEsc_(etiqueta||'').replace(/'/g,"\\'");
+      return '<div style="text-align:center">'+
+        '<img src="'+rutaImagen+'" alt="Horario de clases" loading="lazy" '+
+        'style="max-width:100%;border-radius:8px;border:1px solid #e8d88a;box-shadow:0 2px 6px rgba(0,0,0,0.15)" '+
+        'onerror="horarioImgError_(this,\''+etiquetaJs+'\')">'+
+        '</div>';
+    }
+
+    function personalPintarExpediente_(exp, esPropio){
+      const titulo = esPropio ? 'Mi Expediente' : ('Expediente: ' + (exp['NOMBRE']||''));
+      let html = '<div class="ficha-section-title">🗂️ '+titulo+'</div>';
+
+      if(!esPropio){
+        html += '<button class="btn-cancel" style="margin-bottom:1rem" onclick="personalVolverLista()">← Volver a la lista</button>';
+      }
+
+      html += '<div class="ficha-section-title" style="margin-top:1rem">📋 Datos oficiales</div><div class="alta-form-grid">';
+      PERSONAL_CAMPOS_ADMIN_FE.forEach(function(campo){
+        html += personalCampoHtml_(campo, exp[campo]||'', _personalEsAdmin, false);
+      });
+      html += '</div>';
+
+      html += '<div class="ficha-section-title">🏠 Datos de contacto y domicilio</div><div class="alta-form-grid">';
+      PERSONAL_CAMPOS_CONTACTO_FE.forEach(function(campo){
+        html += personalCampoHtml_(campo, exp[campo]||'', true, campo==='Comentarios');
+      });
+      html += '</div>';
+
+      html += '<div class="alta-actions"><button class="btn-guardar" id="btn-personal-guardar" onclick="personalGuardarCambios()">💾 Guardar cambios</button></div>';
+
+      html += '<div class="ficha-section-title">📎 Fotografía y documentos</div><div class="alta-form-grid">';
+      PERSONAL_CAMPOS_DOCUMENTOS_FE.forEach(function(campo){
+        html += personalDocCampoHtml_(campo, exp[campo]||'');
+      });
+      html += '</div>';
+
+      html += '<div class="ficha-section-title">🗓️ '+(esPropio ? 'Mi horario de clases' : 'Horario de clases')+'</div>';
+      html += horarioImagenHtml_('horarios/Maestro_'+horarioSlugPersona_(exp['NOMBRE'])+'.jpg', exp['NOMBRE']||'');
+
+      if(_personalEsAdmin && esPropio){
+        html += '<div style="margin-top:2rem;padding-top:1.2rem;border-top:2px solid #e8d88a">'+
+          '<button class="btn-submit" onclick="personalMostrarLista()">👥 Ver todo el personal</button></div>';
+      }
+
+      document.getElementById('personal-content').innerHTML = html;
+    }
+
+    async function personalGuardarCambios(){
+      const btn = document.getElementById('btn-personal-guardar');
+      const campos = document.querySelectorAll('#personal-content [data-campo]');
+      const datos = {};
+      campos.forEach(function(el){ datos[el.getAttribute('data-campo')] = el.value; });
+      btn.disabled = true; btn.textContent = '⏳ Guardando…';
+      const curpDestino = _personalCurpViendo || _personalCurpPropia;
+      const json = await jsonpCall({accion:'personalGuardar', usuario:_personalUsuario, curp:curpDestino, datos: JSON.stringify(datos)}, 15000);
+      btn.disabled = false; btn.textContent = '💾 Guardar cambios';
+      if(json && json.ok){
+        alert('✔ Expediente actualizado.');
+      } else {
+        alert('⚠️ '+((json&&json.mensaje)||'No se pudo guardar.'));
+      }
+    }
+
+    function personalArchivoABase64_(file){
+      return new Promise(function(resolve, reject){
+        const reader = new FileReader();
+        reader.onload = function(){
+          const s = reader.result || '';
+          const idx = s.indexOf(',');
+          resolve(idx>=0 ? s.slice(idx+1) : s);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function personalSubirArchivo_(campo, inputEl){
+      const file = inputEl.files && inputEl.files[0];
+      if(!file) return;
+      const msgEl = document.getElementById('msg-'+campo);
+      const MAX_MB = 8;
+      if(file.size > MAX_MB*1024*1024){
+        msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ El archivo pesa más de '+MAX_MB+' MB.</span>';
+        inputEl.value=''; return;
+      }
+      msgEl.innerHTML = '<span style="color:#7a6030">⏳ Subiendo…</span>';
+      try{
+        const base64 = await personalArchivoABase64_(file);
+        const curpDestino = _personalCurpViendo || _personalCurpPropia;
+        const resp = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            accion: 'personalSubirDocumento',
+            usuario: _personalUsuario,
+            curp: curpDestino,
+            campo: campo,
+            base64: base64,
+            mimeType: file.type || 'image/jpeg',
+            nombreArchivo: file.name || ''
+          })
+        });
+        const json = await resp.json();
+        if(json && json.ok){
+          msgEl.innerHTML = '<span style="color:#1a7a1a">✔ Actualizado.</span>';
+          if(json.fileId){
+            const nuevaUrl = 'https://drive.google.com/thumbnail?id='+json.fileId+'&sz=w400';
+            document.getElementById('prev-'+campo).innerHTML =
+              '<img src="'+nuevaUrl+'" alt="" style="width:100%;max-height:140px;object-fit:contain;border-radius:6px;'+
+              'background:#fff;border:1px solid #d4c07a" onerror="this.style.display=\'none\'">';
+          }
+        } else {
+          msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo subir el archivo.')+'</span>';
+        }
+      } catch(e){
+        msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ Error de red al subir el archivo.</span>';
+      }
+      inputEl.value='';
+    }
+
+    async function personalMostrarLista(){
+      const cont = document.getElementById('personal-content');
+      cont.innerHTML = personalCargandoHtml_();
+      document.getElementById('personal-doc-label').textContent = 'Todo el personal';
+      const json = await jsonpCall({accion:'personalListar', usuario:_personalUsuario, busqueda:''}, 15000);
+      if(!json || !json.ok){ cont.innerHTML = personalErrorHtml_(json && json.mensaje); return; }
+      _personalListaCache = json.personal || [];
+      personalPintarLista_(_personalListaCache);
+    }
+
+    function personalFilasListaHtml_(lista){
+      if(!lista.length) return '<p style="color:#a08040;text-align:center;padding:1.5rem">No se encontró personal con ese criterio.</p>';
+      return '<div style="display:flex;flex-direction:column;gap:0.6rem">' + lista.map(function(p){
+        const inactivo = !p.activo;
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.8rem;flex-wrap:wrap;'+
+          'padding:0.7rem 1rem;background:'+(inactivo?'#f5efe0':'#fffdf5')+';border:1.5px solid '+(inactivo?'#ccc':'#e8d88a')+
+          ';border-radius:8px'+(inactivo?';opacity:0.65':'')+'">'+
+          '<div><div style="font-weight:700;color:#2d1f08;font-size:0.9rem">'+personalEsc_(p.nombre)+
+            (inactivo?' <span style="font-size:0.72rem;color:#9b1c1c">(baja)</span>':'')+'</div>'+
+          '<div style="font-size:0.78rem;color:#7a6030">'+personalEsc_(p.funcion)+' · '+personalEsc_(p.curp)+'</div></div>'+
+          '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">'+
+            '<button class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem" onclick="personalAbrirExpedienteAjeno(\''+p.curp+'\')">Ver / Editar</button>'+
+          '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    function personalPintarLista_(lista){
+      let html = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem">'+
+        '<div class="ficha-section-title" style="margin:0">👥 Todo el personal ('+lista.length+')</div>'+
+        '<button class="btn-submit" onclick="personalMostrarAlta()">➕ Dar de alta</button>'+
+      '</div>';
+      html += '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1rem">'+
+        '<input type="text" id="personal-buscar" placeholder="Buscar por nombre…" oninput="personalFiltrarLista_()" '+
+        'style="flex:1;min-width:180px;padding:0.6rem 0.9rem;border:1.5px solid #d4c07a;border-radius:6px;font-size:0.9rem"/>'+
+        '<select id="personal-filtro-estado" onchange="personalFiltrarLista_()" '+
+        'style="padding:0.6rem 0.9rem;border:1.5px solid #d4c07a;border-radius:6px;font-size:0.9rem;background:#fff">'+
+        '<option value="activos"'+(_personalFiltroEstado==='activos'?' selected':'')+'>Solo activos</option>'+
+        '<option value="inactivos"'+(_personalFiltroEstado==='inactivos'?' selected':'')+'>Solo dados de baja</option>'+
+        '<option value="todos"'+(_personalFiltroEstado==='todos'?' selected':'')+'>Todos</option>'+
+        '</select></div>';
+      html += '<div id="personal-lista-tabla">' + personalFilasListaHtml_(personalAplicarFiltros_(lista, '', _personalFiltroEstado)) + '</div>';
+      html += '<div style="margin-top:1.5rem"><button class="btn-cancel" onclick="personalAbrirMiExpediente()">← Volver a mi expediente</button></div>';
+      document.getElementById('personal-content').innerHTML = html;
+    }
+
+    function personalAplicarFiltros_(lista, q, estado){
+      const qN = normTxt(q||'');
+      return lista.filter(function(p){
+        if(qN && normTxt(p.nombre).indexOf(qN)===-1) return false;
+        if(estado==='activos'   && !p.activo) return false;
+        if(estado==='inactivos' &&  p.activo) return false;
+        return true;
+      });
+    }
+
+    function personalFiltrarLista_(){
+      const q = (document.getElementById('personal-buscar')||{}).value||'';
+      _personalFiltroEstado = (document.getElementById('personal-filtro-estado')||{}).value || _personalFiltroEstado;
+      document.getElementById('personal-lista-tabla').innerHTML =
+        personalFilasListaHtml_(personalAplicarFiltros_(_personalListaCache, q, _personalFiltroEstado));
+    }
+
+    async function personalAbrirExpedienteAjeno(curp){
+      const cont=document.getElementById('personal-content');
+      cont.innerHTML = personalCargandoHtml_();
+      const json = await jsonpCall({accion:'personalObtenerExpediente', usuario:_personalUsuario, curp:curp}, 15000);
+      if(!json || !json.ok){ cont.innerHTML = personalErrorHtml_(json && json.mensaje); return; }
+      _personalCurpViendo = curp;
+      document.getElementById('personal-doc-label').textContent = json.expediente['NOMBRE']||'';
+      personalPintarExpediente_(json.expediente, false);
+    }
+
+    function personalVolverLista(){
+      document.getElementById('personal-doc-label').textContent = 'Todo el personal';
+      personalPintarLista_(_personalListaCache);
+    }
+
+    function personalMostrarAlta(){
+      document.getElementById('personal-doc-label').textContent = 'Dar de alta';
+      let html = '<div class="ficha-section-title">➕ Dar de alta nuevo expediente</div>'+
+        '<p style="color:#7a6030;font-size:0.82rem;margin-bottom:1rem">Esto crea únicamente el expediente en Personal. '+
+        'El usuario y contraseña para que la persona entre al sistema se dan de alta aparte, en Usuarios.</p>'+
+        '<div class="alta-form-grid">';
+      PERSONAL_CAMPOS_ADMIN_FE.forEach(function(campo){ html += personalCampoHtml_(campo, '', true, false); });
+      PERSONAL_CAMPOS_CONTACTO_FE.forEach(function(campo){ html += personalCampoHtml_(campo, '', true, campo==='Comentarios'); });
+      html += '</div><div class="alta-actions">'+
+        '<button class="btn-cancel" onclick="personalVolverLista()">Cancelar</button>'+
+        '<button class="btn-guardar" id="btn-personal-alta" onclick="personalGuardarAlta()">➕ Crear expediente</button>'+
+      '</div>';
+      document.getElementById('personal-content').innerHTML = html;
+    }
+
+    async function personalGuardarAlta(){
+      const btn = document.getElementById('btn-personal-alta');
+      const campos = document.querySelectorAll('#personal-content [data-campo]');
+      const datos = {};
+      campos.forEach(function(el){ datos[el.getAttribute('data-campo')] = el.value; });
+      if(!(datos['NOMBRE']||'').trim() || !(datos['CURP']||'').trim()){
+        alert('⚠️ El nombre y la CURP son obligatorios.');
+        return;
+      }
+      btn.disabled = true; btn.textContent='⏳ Creando…';
+      const json = await jsonpCall({accion:'personalAlta', usuario:_personalUsuario, datos: JSON.stringify(datos)}, 15000);
+      btn.disabled = false; btn.textContent='➕ Crear expediente';
+      if(json && json.ok){
+        alert('✔ Expediente creado.');
+        personalMostrarLista();
+      } else {
+        alert('⚠️ '+((json&&json.mensaje)||'No se pudo crear el expediente.'));
+      }
+    }
+
     /* ── Módulo Docentes: Lista de Asistencia (PDF para impresión) ── */
     let _laDoc = '';
 
@@ -5906,7 +6317,18 @@
       renderMatrizAcademicaGF_();
       renderTableroGF_();
       renderEstiloGF_();
+      renderHorarioGF_();
       renderTablaGF_();
+    }
+
+    function renderHorarioGF_(){
+      const cont = document.getElementById('gf-horario-wrap');
+      const claveGrupo = ((_gfDatos.grado||'')+(_gfDatos.grupo||'')).replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+      const etiqueta = (_gfDatos.grado||'')+'°'+(_gfDatos.grupo||'');
+      cont.innerHTML = '<div style="background:rgba(26,20,8,0.6);border:1px solid #C8922A;border-radius:10px;padding:0.9rem 1.1rem">'+
+        '<div style="font-family:\'Cinzel\',serif;color:#F0C040;font-size:0.85rem;margin-bottom:0.6rem">🗓️ Horario de clases del grupo</div>'+
+        horarioImagenHtml_('horarios/Grupo_'+claveGrupo+'.jpg', etiqueta) +
+        '</div>';
     }
 
     function renderTableroGF_(){
@@ -7413,6 +7835,59 @@
     </div>
   </div>
 
+  <!-- MODAL LOGIN PERSONAL (EXPEDIENTES) -->
+  <div class="modal-overlay" id="modal-personal-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🗂️ Acceso — Personal</h3>
+        <button class="modal-close" onclick="closeModal('personal-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">🗂️</div>
+        <p class="modal-desc">Ingresa tu usuario y contraseña.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="personal-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="personal-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederPersonal()"/>
+            <span onclick="togglePass('personal-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-personal-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('personal-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-personal-login" onclick="accederPersonal()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA PERSONAL (EXPEDIENTES) -->
+  <div id="personal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+       background:#FDFAF3;z-index:999999;overflow-y:auto;font-family:'Inter',sans-serif">
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.8rem 1.5rem;
+         display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">🗂️</span>
+        <div>
+          <div style="font-family:'Playfair Display',serif;color:#F0C040;font-weight:700;font-size:0.9rem">
+            Personal — EST No. 3
+          </div>
+          <div id="personal-doc-label" style="font-size:0.7rem;color:#C49A28;margin-top:0.1rem"></div>
+        </div>
+      </div>
+      <button onclick="cerrarPersonal()" style="background:rgba(192,18,26,0.85);border:none;color:#fff;
+        padding:0.4rem 1rem;border-radius:4px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Cerrar sesión</button>
+    </div>
+    <div style="max-width:920px;margin:0 auto;padding:1.5rem 1rem 3rem" id="personal-content"></div>
+  </div>
+
   <!-- MODAL LOGIN LISTA DE ASISTENCIA -->
   <div class="modal-overlay" id="modal-lista-asis-login">
     <div class="modal modal-login">
@@ -8290,6 +8765,9 @@
 
         <!-- Estilo de Aprendizaje del grupo (colapsable) -->
         <div id="gf-estilo-wrap" style="margin-bottom:1.4rem"></div>
+
+        <!-- Horario de clases del grupo (extraído del PDF de aSc Horarios) -->
+        <div id="gf-horario-wrap" style="margin-bottom:1.4rem"></div>
 
         <!-- Tabla de alumnos, ordenable -->
         <div id="gf-tabla-wrap" style="overflow-x:auto">
