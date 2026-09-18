@@ -1,4 +1,4 @@
-<!-- Generado: 17/septiembre/2026, 15:20 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 17/septiembre/2026, 20:16 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3194,6 +3194,12 @@
             <div class="ficha-field-value">${val('club')}</div></div>
         </div>
 
+        <!-- HORARIO DE CLASES (según el grupo del alumno(a)) -->
+        <div class="ficha-section-title">🗓️ Horario de clases</div>
+        <div style="margin-bottom:1.5rem">
+          ${horarioImagenHtml_('horarios/Grupo_'+((d.grado||'')+(d.grupo||'')).replace(/[^0-9A-Za-z]/g,'').toUpperCase()+'.jpg', val('grado')+'°'+val('grupo'))}
+        </div>
+
         <!-- APRENDIZAJE Y EMOCIONAL -->
         <div class="ficha-section-title">🧠 Estilo de Aprendizaje y Aspecto Emocional</div>
         <div class="ficha-grid">
@@ -4945,6 +4951,10 @@
       'G) PUNTUACION ESCALAFONARIA'
     ];
     const PERSONAL_CAMPOS_CONTACTO_FE = ['Domicilio','Colonia','Localidad','CP','Municipio','Estado','Celular','Email','Comentarios'];
+    // Dentro de PERSONAL_CAMPOS_ADMIN_FE, el dueño del expediente puede editar
+    // todos EXCEPTO estos 3 (Nombre, CURP, Activo) — esos quedan de solo
+    // lectura para él; Director/Subdirector/Secretaria sí los pueden editar.
+    const PERSONAL_CAMPOS_BLOQUEADOS_FE = ['NOMBRE','CURP','Activo'];
     const PERSONAL_CAMPOS_DOCUMENTOS_FE = ['Foto','CreEle','Nombramiento','Perfil','Talon','Fiscal'];
 
     const PERSONAL_ETIQUETAS_ = {
@@ -5058,15 +5068,24 @@
         '<input type="text" id="'+idSeguro+'" data-campo="'+campo+'" value="'+valEsc+'"/></div>';
     }
 
+    // Fotografía y documentos: SOLO de consulta — no hay forma de subirlos ni
+    // reemplazarlos desde el sistema (se cargan directamente en la hoja de
+    // cálculo "Personal"). Aquí únicamente se muestra lo que ya exista.
     function personalDocCampoHtml_(campo, valor){
       const label = PERSONAL_ETIQUETAS_DOC_[campo] || campo;
       const v = (valor||'').toString();
       const esImagen = /^(https?:|data:image\/)/.test(v);
+      const esPdf = /^(data:application\/pdf|https?:.*\.pdf($|\?))/i.test(v);
       let preview;
       if(esImagen){
         preview = '<img src="'+v.replace(/"/g,'&quot;')+'" alt="'+label+'" '+
           'style="width:100%;max-height:140px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #d4c07a" '+
           'onerror="this.style.display=\'none\'">';
+      } else if(esPdf){
+        preview = '<a href="'+v.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" '+
+          'style="display:flex;align-items:center;justify-content:center;height:80px;gap:0.4rem;font-size:0.82rem;'+
+          'color:#7a4a1a;background:#f7f2e0;border-radius:6px;border:1px solid #d4c07a;text-decoration:none;font-weight:600">'+
+          '📄 Ver documento (PDF)</a>';
       } else if(v){
         preview = '<div style="font-size:0.78rem;color:#5a4a1a;background:#f7f2e0;border-radius:6px;border:1px solid #e8d88a;padding:0.5rem">'+personalEsc_(v)+'</div>';
       } else {
@@ -5076,9 +5095,6 @@
       return '<div class="alta-group">'+
         '<label>'+label+'</label>'+
         '<div id="prev-'+campo+'">'+preview+'</div>'+
-        '<input type="file" id="pfd-'+campo+'" accept="image/*" style="margin-top:0.4rem;font-size:0.78rem;width:100%" '+
-        'onchange="personalSubirArchivo_(\''+campo+'\', this)">'+
-        '<div id="msg-'+campo+'" style="font-size:0.72rem;margin-top:0.2rem"></div>'+
       '</div>';
     }
 
@@ -5114,9 +5130,29 @@
         '</div>';
     }
 
+    // Fotografía en grande, arriba del nombre — se muestra si existe (misma
+    // fuente que el campo "Foto" del expediente); si no hay foto cargada, un
+    // marcador simple para no dejar un hueco vacío.
+    function personalFotoTopHtml_(valorFoto){
+      const v = (valorFoto||'').toString();
+      const esImagen = /^(https?:|data:image\/)/.test(v);
+      if(esImagen){
+        return '<div style="text-align:center;margin-bottom:0.8rem">'+
+          '<img src="'+v.replace(/"/g,'&quot;')+'" alt="Fotografía" '+
+          'style="width:130px;height:130px;object-fit:cover;border-radius:50%;border:3px solid #d4c07a;box-shadow:0 2px 6px rgba(0,0,0,0.15)" '+
+          'onerror="this.parentElement.style.display=\'none\'">'+
+        '</div>';
+      }
+      return '<div style="text-align:center;margin-bottom:0.8rem">'+
+        '<div style="width:130px;height:130px;border-radius:50%;background:#f7f2e0;border:3px dashed #d4c07a;'+
+        'display:inline-flex;align-items:center;justify-content:center;color:#a08040;font-size:0.75rem;text-align:center;padding:0.3rem">'+
+        'Sin fotografía</div></div>';
+    }
+
     function personalPintarExpediente_(exp, esPropio){
       const titulo = esPropio ? 'Mi Expediente' : ('Expediente: ' + (exp['NOMBRE']||''));
-      let html = '<div class="ficha-section-title">🗂️ '+titulo+'</div>';
+      let html = personalFotoTopHtml_(exp['Foto']);
+      html += '<div class="ficha-section-title">🗂️ '+titulo+'</div>';
 
       if(!esPropio){
         html += '<button class="btn-cancel" style="margin-bottom:1rem" onclick="personalVolverLista()">← Volver a la lista</button>';
@@ -5124,7 +5160,8 @@
 
       html += '<div class="ficha-section-title" style="margin-top:1rem">📋 Datos oficiales</div><div class="alta-form-grid">';
       PERSONAL_CAMPOS_ADMIN_FE.forEach(function(campo){
-        html += personalCampoHtml_(campo, exp[campo]||'', _personalEsAdmin, false);
+        const editable = _personalEsAdmin || PERSONAL_CAMPOS_BLOQUEADOS_FE.indexOf(campo) === -1;
+        html += personalCampoHtml_(campo, exp[campo]||'', editable, false);
       });
       html += '</div>';
 
@@ -5167,62 +5204,6 @@
       } else {
         alert('⚠️ '+((json&&json.mensaje)||'No se pudo guardar.'));
       }
-    }
-
-    function personalArchivoABase64_(file){
-      return new Promise(function(resolve, reject){
-        const reader = new FileReader();
-        reader.onload = function(){
-          const s = reader.result || '';
-          const idx = s.indexOf(',');
-          resolve(idx>=0 ? s.slice(idx+1) : s);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function personalSubirArchivo_(campo, inputEl){
-      const file = inputEl.files && inputEl.files[0];
-      if(!file) return;
-      const msgEl = document.getElementById('msg-'+campo);
-      const MAX_MB = 8;
-      if(file.size > MAX_MB*1024*1024){
-        msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ El archivo pesa más de '+MAX_MB+' MB.</span>';
-        inputEl.value=''; return;
-      }
-      msgEl.innerHTML = '<span style="color:#7a6030">⏳ Subiendo…</span>';
-      try{
-        const base64 = await personalArchivoABase64_(file);
-        const curpDestino = _personalCurpViendo || _personalCurpPropia;
-        const resp = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            accion: 'personalSubirDocumento',
-            usuario: _personalUsuario,
-            curp: curpDestino,
-            campo: campo,
-            base64: base64,
-            mimeType: file.type || 'image/jpeg',
-            nombreArchivo: file.name || ''
-          })
-        });
-        const json = await resp.json();
-        if(json && json.ok){
-          msgEl.innerHTML = '<span style="color:#1a7a1a">✔ Actualizado.</span>';
-          if(json.fileId){
-            const nuevaUrl = 'https://drive.google.com/thumbnail?id='+json.fileId+'&sz=w400';
-            document.getElementById('prev-'+campo).innerHTML =
-              '<img src="'+nuevaUrl+'" alt="" style="width:100%;max-height:140px;object-fit:contain;border-radius:6px;'+
-              'background:#fff;border:1px solid #d4c07a" onerror="this.style.display=\'none\'">';
-          }
-        } else {
-          msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo subir el archivo.')+'</span>';
-        }
-      } catch(e){
-        msgEl.innerHTML = '<span style="color:#9b1c1c">⚠️ Error de red al subir el archivo.</span>';
-      }
-      inputEl.value='';
     }
 
     async function personalMostrarLista(){
