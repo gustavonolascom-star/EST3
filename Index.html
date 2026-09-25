@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Paleta institucional EST 3 (igual que la web escolar) */
+  :root{--gold-deep:#8B6914;--gold-mid:#C49A28;--gold-light:#F0C040;--crimson:#C0121A;--cream:#FDFAF3;
+        --dark:#1A1208;--mid:#3D2B0A;--muted:#7A6030;--borde:#e8d88a;
+        --verde:#2e7d32;--amar:#C49A28;--rojo:#C0121A;--gris:#8a7f6a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',Arial,sans-serif;background:var(--cream);color:var(--dark);font-size:14px}
+  header{position:relative;background:linear-gradient(135deg,var(--dark) 0%,var(--mid) 60%,#5a3d0e 100%);
+         border-bottom:4px solid var(--gold-mid);padding:18px 16px;display:flex;gap:16px;align-items:center;justify-content:center;overflow:hidden}
+  header::before{content:'';position:absolute;inset:0;pointer-events:none;
+         background:repeating-linear-gradient(45deg,transparent,transparent 18px,rgba(196,154,40,.05) 18px,rgba(196,154,40,.05) 19px)}
+  .logo-wrap{position:relative;width:78px;height:78px;border-radius:50%;padding:3px;flex-shrink:0;
+         background:conic-gradient(var(--gold-light),var(--gold-deep),var(--gold-light),var(--gold-mid),var(--gold-light));
+         box-shadow:0 0 24px rgba(240,192,64,.4),0 4px 14px rgba(0,0,0,.6)}
+  .logo-wrap img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover;background:#fff}
+  .htxt{position:relative;text-align:center}
+  header h1{font-family:'Playfair Display',serif;font-weight:900;color:var(--gold-light);font-size:clamp(1.05rem,3.2vw,1.5rem);margin:0;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+  header small{display:block;color:var(--gold-mid);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+  .divider-gold{width:60px;height:2px;background:linear-gradient(90deg,transparent,var(--gold-light),transparent);margin:6px auto 0}
+  nav{display:flex;flex-wrap:wrap;justify-content:center;background:var(--dark);border-bottom:2px solid var(--gold-deep)}
+  nav button{border:0;background:none;padding:11px 14px;font-size:.74rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+         cursor:pointer;color:var(--gold-mid);white-space:nowrap;border-right:1px solid rgba(196,154,40,.2);font-family:inherit}
+  nav button:hover{color:var(--gold-light);background:rgba(240,192,64,.08)}
+  nav button.act{color:var(--gold-light);background:rgba(240,192,64,.12);box-shadow:inset 0 -3px 0 var(--crimson)}
+  #barraSesion{background:#f4ecd6;border-bottom:1px solid var(--borde);padding:8px 16px;display:flex;justify-content:flex-end}
+  #sesion{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mid)}
+  #sesion select,#sesion input{width:auto;padding:6px}
+  main{max-width:1150px;margin:0 auto;padding:18px 16px}
+  .card{background:#fff;border:1px solid var(--borde);border-top:3px solid var(--gold-mid);border-radius:6px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .card h2{font-family:'Playfair Display',serif;font-size:1.12rem;margin:0 0 12px;color:var(--mid);display:flex;align-items:center;gap:8px;
+         padding-bottom:6px;border-bottom:2px solid var(--gold-light)}
+  .card h2::before{content:'';display:inline-block;width:5px;height:20px;background:var(--crimson);border-radius:2px;flex-shrink:0}
+  .card h3{font-family:'Playfair Display',serif;font-size:.98rem;margin:16px 0 8px;color:var(--mid)}
+  .nota{color:var(--muted);font-size:12.5px;margin:0 0 10px;line-height:1.55}
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:500}
+  input,select,textarea{width:100%;padding:8px;border:1px solid #d9c98a;border-radius:4px;font-size:13px;font-family:inherit;background:#fffdf7}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold-light);border-color:var(--gold-mid)}
+  input:disabled,select:disabled{background:#f3eee0;color:#6b5d3f}
+  textarea{min-height:60px}
+  .btn{background:linear-gradient(135deg,var(--crimson) 0%,#9b0f16 100%);color:#fff;border:0;padding:9px 18px;border-radius:4px;cursor:pointer;
+       font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 4px 14px rgba(192,18,26,.25);font-family:inherit}
+  .btn:hover{box-shadow:0 6px 20px rgba(192,18,26,.4)}
+  .btn.sec{background:#fff;color:var(--mid);border:1px solid var(--gold-mid);box-shadow:none} .btn:disabled{opacity:.5}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{background:var(--mid);color:var(--gold-light);text-align:left;padding:7px;font-weight:600}
+  td{padding:7px;border-bottom:1px solid #eee3bf;vertical-align:top}
+  tr:nth-child(even) td{background:#fffbef}
+  .tw{overflow-x:auto}
+  a{color:var(--crimson)}
+  .sem{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;color:#fff}
+  .VERDE{background:var(--verde)} .AMARILLO{background:var(--amar)} .ROJO{background:var(--rojo)} .SIN{background:var(--gris)}
+  .barra{height:10px;background:#efe5c6;border-radius:5px;overflow:hidden} .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-mid),var(--gold-light))}
+  .fases{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .fase{border:1px solid var(--borde);border-radius:6px;padding:12px;background:#fffdf7}
+  .fase b{font-family:'Playfair Display',serif;font-size:24px;color:var(--crimson)} .fase p{margin:4px 0 6px;font-size:12.5px;font-weight:600;color:var(--mid)} .fase small{color:var(--muted);font-size:11px}
+  .preview{background:#fff8e1;border-left:4px solid var(--gold-mid);padding:10px;margin:8px 0;font-size:13.5px}
+  .oculto{display:none}
+  #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--gold-light);border:1px solid var(--gold-mid);padding:11px 18px;border-radius:6px;display:none;z-index:9;max-width:90%}
+  #carga{position:fixed;inset:0;background:rgba(253,250,243,.7);display:none;align-items:center;justify-content:center;z-index:8;font-weight:bold;color:var(--mid)}
+  .fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .chip{display:inline-block;background:#f4ecd6;border-radius:10px;padding:2px 8px;font-size:11px;margin:1px}
+  .narr p{margin:4px 0;text-align:justify}
+  .aviso{background:#fff3cd;border:1px solid var(--gold-mid);border-radius:4px;padding:8px 12px;font-size:12.5px;margin-bottom:12px;color:var(--mid)}
+  .msg{margin-top:8px;font-size:13px;font-weight:600}
+  .msg.ok{color:var(--verde)} .msg.err{color:var(--crimson)}
+  /* Modal (mismo estilo que la web escolar) */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;align-items:center;justify-content:center}
+  .modal-overlay.active{display:flex}
+  .modal{background:var(--cream);border-top:4px solid var(--crimson);border-radius:8px;width:100%;max-width:400px;margin:1rem;box-shadow:0 16px 48px rgba(0,0,0,.4);overflow:hidden}
+  .modal-header{background:linear-gradient(135deg,var(--dark),var(--mid));padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+  .modal-header h3{font-family:'Playfair Display',serif;color:var(--gold-light);font-size:1rem;margin:0}
+  .modal-close{background:none;border:0;color:var(--gold-mid);font-size:1.3rem;cursor:pointer}
+  .modal-body{padding:18px}
+  .modal-body label{margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-wrap"><img src="https://gustavonolascom-star.github.io/EST3/logo.png" alt="EST 3" onerror="this.style.display='none'"></div>
+  <div class="htxt"><h1 id="tEscuela">Escuela Secundaria Técnica 3</h1><small id="tSub">Proceso y Programa de Mejora Continua</small><div class="divider-gold"></div></div>
+</header>
+<nav id="nav"></nav>
+<div id="barraSesion"><div id="sesion"></div></div>
+<main id="vista"><div class="card">Cargando información…</div></main>
+<div id="toast"></div><div id="carga">Procesando…</div>
+
+<div class="modal-overlay" id="mLogin">
+  <div class="modal">
+    <div class="modal-header"><h3>📈 Acceso — Mejora Continua</h3></div>
+    <div class="modal-body">
+      <div style="text-align:center;font-size:2rem">📈</div>
+      <p class="nota" style="text-align:center">Ingresa tu usuario y contraseña de la plataforma escolar.</p>
+      <label>USUARIO</label><input id="mlU" autocomplete="username" oninput="this.value=this.value.toUpperCase()" placeholder="Usuario">
+      <label>CONTRASEÑA</label>
+      <div style="position:relative"><input id="mlP" type="password" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarModal()">
+        <span onclick="const p=$('mlP');p.type=p.type==='password'?'text':'password'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer">👁</span></div>
+      <div class="msg err" id="mlMsg"></div>
+      <div class="fila" style="justify-content:center"><button class="btn" id="mlBtn" onclick="entrarModal()">Entrar</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let D = null, U = null, TAB = 'inicio';
+const TABS = [['inicio','Inicio'],['diag','1. Diagnóstico'],['prio','2. Priorización'],['prog','3. Programa'],
+              ['seg','4. Seguimiento'],['com','5. Evaluación y comunicación'],['guia','Guía']];
+
+// ---------- utilidades ----------
+const esc = s => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+const opts = (arr, val, vacio) => (vacio ? '<option value="">' + vacio + '</option>' : '') +
+  arr.map(o => { const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(v) + '"' + (String(v) === String(val) ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
+const sem = s => '<span class="sem ' + (s === 'SIN DATO' ? 'SIN' : s) + '">' + esc(s) + '</span>';
+const barra = p => '<div class="barra"><i style="width:' + Math.max(0, Math.min(100, p || 0)) + '%"></i></div>';
+const amb = id => (D.ambitos.find(a => a.ID === id) || {})['Ámbito'] || id;
+const gestion = () => U && (U.rol === 'Director' || U.rol === 'Comité');
+function toast(m){ const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 4000); }
+function val(id){ const e = $(id); return e ? e.value.trim() : ''; }
+function datosForm(ids){ const o = {}; Object.keys(ids).forEach(k => o[k] = val(ids[k])); return o; }
+
+function llamar(fn, args, ok, fallo){
+  $('carga').style.display = 'flex';
+  const r = google.script.run.withSuccessHandler(x => { $('carga').style.display = 'none'; ok && ok(x); })
+    .withFailureHandler(e => { $('carga').style.display = 'none'; const m = (e && e.message) || String(e); fallo ? fallo(m) : toast('⚠ ' + m); });
+  r[fn].apply(r, args);
+}
+const esSesion = m => /sesi[oó]n|contrase/i.test(m);
+const VERSION_WEB = '2026-09-25';
+function recargar(msg){
+  if (!U) { abrirLogin(); return; }
+  llamar('getData', [U], d => {
+    D = d; pintar(); if (msg) toast('✔ ' + msg);
+    if (d.version !== VERSION_WEB) $('vista').insertAdjacentHTML('afterbegin', '<div class="aviso">⚠️ El archivo Código.gs no corresponde a esta versión de Index. Actualice ambos archivos en Apps Script y cree una Nueva versión de la implementación.</div>');
+  }, m => {
+    if (esSesion(m) || !D) { salir(esSesion(m) ? m : '⚠️ ' + m); } else toast('⚠ ' + m);
+  });
+}
+let PENDIENTE = null;
+function guardar(fn, datos, msg){
+  if (!U) { PENDIENTE = [fn, datos, msg]; abrirLogin(); return; }
+  llamar(fn, [U, datos], () => recargar(msg || 'Información guardada.'), m => {
+    if (esSesion(m)) { U = null; PENDIENTE = [fn, datos, msg]; abrirLogin(m); } else { alert('No se pudo guardar:\n' + m); }
+  });
+}
+function abrirLogin(m){ $('mlP').value = ''; $('mlMsg').textContent = m || ''; $('mLogin').classList.add('active'); setTimeout(() => $('mlU').focus(), 50); }
+function cerrarLogin(){ $('mLogin').classList.remove('active'); PENDIENTE = null; }
+function entrarModal(){
+  if (!val('mlU') || !val('mlP')) { $('mlMsg').textContent = '⚠️ Ingresa usuario y contraseña.'; return; }
+  $('mlMsg').textContent = '⏳ Verificando…'; $('mlBtn').disabled = true;
+  llamar('apiLogin', [val('mlU'), val('mlP')], u => {
+    $('mlBtn').disabled = false; $('mlMsg').textContent = '';
+    U = u; try { sessionStorage.setItem('pmcU', JSON.stringify(u)); } catch(e){}
+    $('mLogin').classList.remove('active');
+    if (PENDIENTE) { const p = PENDIENTE; PENDIENTE = null; guardar(p[0], p[1], p[2]); }
+    else recargar('Bienvenido(a), ' + u.nombre);
+  }, m => { $('mlBtn').disabled = false; $('mlMsg').textContent = '⚠️ ' + m; $('mlP').value = ''; });
+}
+
+// ---------- sesión ----------
+function pintarSesion(){
+  $('sesion').innerHTML = U ? '<span>👤 <b>' + esc(U.nombre) + '</b>' + (U.funcion ? ' · ' + esc(U.funcion) : '') + ' · <i>' + esc(U.rol) + '</i></span> <button class="btn sec" onclick="salir()">Salir</button>' : '';
+}
+function salir(m){ U = null; D = null; try { sessionStorage.removeItem('pmcU'); } catch(e){} $('vista').innerHTML = '<div class="card">Ingrese con su usuario y contraseña para consultar el sistema.</div>'; pintarSesion(); abrirLogin(m); }
+
+// ---------- render general ----------
+function pintar(){
+  $('tEscuela').textContent = D.escuela.nombre || 'Escuela Secundaria Técnica 3';
+  $('tSub').textContent = 'Proceso y Programa de Mejora Continua · Ciclo ' + D.escuela.ciclo + ' · ' + D.escuela.localidad;
+  $('nav').innerHTML = TABS.map(t => '<button class="' + (t[0] === TAB ? 'act' : '') + '" onclick="ir(\'' + t[0] + '\')">' + t[1] + '</button>').join('');
+  pintarSesion();
+  $('vista').innerHTML = '<datalist id="dlPers">' + (D.personal || []).map(p => '<option value="' + esc(p.nombre) + '">' + esc(p.funcion) + '</option>').join('') + '</datalist>' + ({inicio: vInicio, diag: vDiag, prio: vPrio, prog: vProg, seg: vSeg, com: vCom, guia: vGuia})[TAB]();
+  if (TAB === 'diag') cambiaAmbitoInd();
+  if (TAB === 'prog') previews();
+}
+function ir(t){ TAB = t; pintar(); window.scrollTo(0,0); }
+
+// ---------- INICIO ----------
+function vInicio(){
+  const f = D.fases.map((x, i) => '<div class="fase"><small>Fase ' + (i + 1) + '</small><p>' + esc(x.fase) + '</p><b>' + x.pct + '%</b>' + barra(x.pct) + '<small>' + esc(x.detalle) + '</small></div>').join('');
+  const rojos = D.ind.filter(i => i.semaforo === 'ROJO').length, amar = D.ind.filter(i => i.semaforo === 'AMARILLO').length;
+  const progs = D.progs.filter(g => D.probs.some(p => p.ID === g['ProblemáticaID'] && p.Seleccionada === 'Sí'));
+  const tabla = progs.map(g => '<tr><td>' + esc(g.problematica) + '</td><td>' + g.acciones + '</td><td style="min-width:120px">' + barra(g.avanceAcciones) + g.avanceAcciones + '%</td><td>' +
+    (g['Logro meta %'] === null || g['Logro meta %'] === '' ? 's/d' : g['Logro meta %'] + '%') + '</td></tr>').join('');
+  const retr = D.acc.filter(a => a.Estado === 'Retrasada');
+  return '<div class="card"><h2>Avance del Proceso de Mejora Continua</h2><div class="fases">' + f + '</div></div>' +
+    '<div class="card"><h2>Semáforo del diagnóstico</h2><p class="nota">' + rojos + ' indicador(es) en rojo · ' + amar + ' en amarillo. Periodo actual: ' + esc(D.escuela.periodoActual) + '</p>' +
+    '<div class="tw"><table><tr><th>Ámbito</th><th>Indicador</th><th>Valor</th><th>Parámetro</th><th>Estado</th></tr>' +
+    D.ind.map(i => '<tr><td>' + esc(amb(i.ambito)) + '</td><td>' + esc(i.indicador) + '</td><td>' + (i.valor === null ? '—' : esc(i.valor) + ' ' + esc(i.unidad)) + '</td><td>' + (i.sentido === 'MAYOR' ? '≥ ' : '≤ ') + esc(i.umbral) + '</td><td>' + sem(i.semaforo) + '</td></tr>').join('') +
+    '</table></div></div>' +
+    '<div class="card"><h2>Programa de Mejora Continua – avance por problemática</h2><div class="tw"><table><tr><th>Problemática</th><th>Acciones</th><th>Avance de acciones</th><th>Logro de meta</th></tr>' + tabla + '</table></div>' +
+    (retr.length ? '<h3 style="color:var(--rojo)">Acciones retrasadas (' + retr.length + ')</h3><ul>' + retr.map(a => '<li>' + esc(a['Acción']) + ' – <i>' + esc(a.Responsables) + '</i></li>').join('') + '</ul>' : '') + '</div>';
+}
+
+// ---------- 1. DIAGNÓSTICO ----------
+function vDiag(){
+  const ambs = D.ambitos.map(a => [a.ID, a['Ámbito'] + (a.Considerar === 'Sí' ? '' : ' (no priorizado)')]);
+  const per = opts(D.periodos, D.escuela.periodoActual);
+  const narr = D.narrativa.map(n => '<h3>' + esc(n.ambito) + ' <span class="chip">' + esc(n.escenario) + '</span></h3>' + n.parrafos.map(p => '<p>' + esc(p) + '</p>').join('')).join('');
+  return '<div class="card"><h2>Captura de indicadores (datos por grupo)</h2><p class="nota">Registre el dato de su grupo o área. El sistema lo integra por periodo y calcula el semáforo del ámbito.</p>' +
+    '<div class="grid"><div><label>Ámbito</label><select id="iA" onchange="cambiaAmbitoInd()">' + opts(D.ambitos.filter(a => D.cat.some(c => c['ÁmbitoID'] === a.ID)).map(a => [a.ID, a['Ámbito']])) + '</select></div>' +
+    '<div><label>Indicador</label><select id="iI" onchange="infoInd()"></select></div>' +
+    '<div><label>Periodo</label><select id="iP">' + per + '</select></div>' +
+    '<div><label>Grupo / área (ej. 2° B)</label><input id="iG"></div>' +
+    '<div><label>Valor <span id="iU"></span></label><input id="iV" type="number" step="any"></div>' +
+    '<div><label>Fuente de información</label><input id="iF"></div></div>' +
+    '<p class="nota" id="iInfo"></p><button class="btn" onclick="guardar(\'guardarIndicador\', datosForm({IndicadorID:\'iI\',Periodo:\'iP\',Grupo:\'iG\',Valor:\'iV\',Fuente:\'iF\'}), \'Dato registrado.\')">Guardar dato</button></div>' +
+
+    '<div class="card"><h2>Lectura de la realidad – aportes del colectivo</h2><p class="nota">Registre lo que observa: situación, causas probables y de dónde obtuvo la información (bitácoras, entrevistas, cuestionarios, fichas, etc.).</p>' +
+    '<div class="grid"><div><label>Ámbito</label><select id="aA">' + opts(ambs) + '</select></div><div><label>Periodo</label><select id="aP">' + per + '</select></div>' +
+    '<div><label>Fuente</label><input id="aF" placeholder="Bitácora, cuestionario, entrevista…"></div><div><label>Actor consultado</label><input id="aC" placeholder="Alumnos, padres, docentes…"></div></div>' +
+    '<label style="margin-top:8px">Situación observada</label><textarea id="aS"></textarea><label>Posibles causas</label><textarea id="aK"></textarea><label>Propuesta de atención</label><textarea id="aR"></textarea>' +
+    '<div class="fila"><button class="btn" onclick="guardar(\'guardarAporte\', datosForm({\'ÁmbitoID\':\'aA\',Periodo:\'aP\',Fuente:\'aF\',\'Actor consultado\':\'aC\',\'Situación observada\':\'aS\',\'Posibles causas\':\'aK\',Propuesta:\'aR\'}), \'Aporte registrado.\')">Guardar aporte</button></div></div>' +
+
+    '<div class="card narr"><h2>Narrativa del diagnóstico (generada automáticamente)</h2><p class="nota">Se integra con los datos y aportes registrados en los ámbitos marcados como "Considerar".</p>' + narr + '</div>' +
+
+    '<div class="card"><h2>Últimos datos capturados</h2><div class="tw"><table><tr><th>Fecha</th><th>Periodo</th><th>Indicador</th><th>Grupo</th><th>Valor</th><th>Capturó</th></tr>' +
+    D.datos.slice(0, 25).map(x => '<tr><td>' + esc(x.Fecha) + '</td><td>' + esc(x.Periodo) + '</td><td>' + esc(x.Indicador) + '</td><td>' + esc(x.Grupo) + '</td><td>' + esc(x.Valor) + '</td><td>' + esc(x['Capturó']) + '</td></tr>').join('') + '</table></div></div>';
+}
+function cambiaAmbitoInd(){
+  const a = val('iA'); if (!$('iI')) return;
+  $('iI').innerHTML = opts(D.cat.filter(c => c['ÁmbitoID'] === a).map(c => [c.ID, c.Indicador])); infoInd();
+}
+function infoInd(){
+  const c = D.cat.find(x => x.ID === val('iI')); if (!c) return;
+  $('iU').textContent = '(' + c.Unidad + ')';
+  $('iF').value = c['Fuente sugerida'] || '';
+  $('iInfo').textContent = 'Parámetro esperado: ' + (c.Sentido === 'MAYOR' ? 'mínimo ' : 'máximo ') + c.Umbral + ' ' + c.Unidad + ' · Se integra por ' + (c['Agregación'] === 'SUMA' ? 'suma' : 'promedio') + ' de los grupos.';
+}
+
+// ---------- 2. PRIORIZACIÓN ----------
+const CRIT = [['C1 Competencia','¿La escuela puede atenderla con sus recursos y es de su competencia?'],
+              ['C2 Mediano plazo','¿Requiere planeación con objetivos, metas y acciones a mediano/largo plazo?'],
+              ['C3 Aprendizaje','¿Afecta el aprendizaje y desarrollo integral de los estudiantes?'],
+              ['C4 Abandono','¿Afecta las trayectorias o podría incrementar el abandono escolar?'],
+              ['C5 Evidencia','¿Los datos del diagnóstico evidencian la problemática?']];
+function vPrio(){
+  const g = gestion();
+  const sug = D.sugerencias.length ? '<div class="card"><h2>Problemáticas sugeridas por los datos</h2><p class="nota">Indicadores en rojo cuyo ámbito aún no tiene problemática seleccionada.</p>' +
+    D.sugerencias.map(s => '<div class="fila">' + sem('ROJO') + ' <b>' + esc(amb(s.ambito)) + ':</b> ' + esc(s.indicador) + ' = ' + esc(s.valor) + ' ' + esc(s.unidad) +
+      (g ? ' <button class="btn sec" onclick="nuevaProb(\'' + s.ambito + '\',\'' + esc(String(s.indicador).replace(/['"]/g, '')) + '\')">Registrar como problemática</button>' : '') + '</div>').join('') + '</div>' : '';
+  const filas = D.probs.slice().sort((a, b) => (Number(b.Puntaje) || 0) - (Number(a.Puntaje) || 0)).map(p =>
+    '<tr><td><b>' + esc(p['Problemática']) + '</b><br><small>' + esc(amb(p['ÁmbitoID'])) + ' · ' + esc(p.Origen) + '</small></td>' +
+    CRIT.map(c => '<td>' + (g ? '<select id="' + p.ID + c[0].slice(0, 2) + '" style="width:52px">' + opts(['1','2','3','4','5'], p[c[0]], '–') + '</select>' : esc(p[c[0]])) + '</td>').join('') +
+    '<td><b>' + esc(p.Puntaje) + '</b></td><td>' + esc(p.Prioridad) + '</td><td>' + (g ? '<select id="' + p.ID + 'SEL" style="width:62px">' + opts(['Sí','No'], p.Seleccionada) + '</select>' : esc(p.Seleccionada)) + '</td>' +
+    (g ? '<td><button class="btn sec" onclick="guardaProb(\'' + p.ID + '\')">Guardar</button></td>' : '') + '</tr>').join('');
+  return sug + '<div class="card"><h2>Priorización de problemáticas</h2><p class="nota">Valore cada criterio de 1 (poco) a 5 (mucho). Puntaje: Alta ≥ 20 · Media 14–19 · Baja &lt; 14. La SEP recomienda concentrar esfuerzos en pocas problemáticas.</p>' +
+    '<p class="nota">' + CRIT.map(c => '<b>' + c[0].slice(0, 2) + '</b> ' + c[1]).join('<br>') + '</p>' +
+    '<div class="tw"><table><tr><th>Problemática</th>' + CRIT.map(c => '<th>' + c[0].slice(0, 2) + '</th>').join('') + '<th>Puntaje</th><th>Prioridad</th><th>Selec.</th>' + (g ? '<th></th>' : '') + '</tr>' + filas + '</table></div>' +
+    (g ? '<h3>Agregar problemática</h3><div class="grid"><div><label>Problemática</label><input id="npN"></div><div><label>Ámbito</label><select id="npA">' + opts(D.ambitos.map(a => [a.ID, a['Ámbito']])) + '</select></div>' +
+      '<div><label>Origen</label><input id="npO" value="Priorización CTE"></div></div><div class="fila"><button class="btn" onclick="agregaProb()">Agregar</button></div>'
+       : '<p class="nota">La valoración la registra la Dirección o el Comité de Planeación y Evaluación.</p>') + '</div>';
+}
+function guardaProb(id){
+  const p = D.probs.find(x => x.ID === id), d = Object.assign({}, p);
+  CRIT.forEach(c => d[c[0]] = val(id + c[0].slice(0, 2)));
+  d.Seleccionada = val(id + 'SEL');
+  guardar('guardarProblematica', d, 'Priorización actualizada.');
+}
+function nuevaProb(ambito, texto){ TAB = 'prio'; pintar(); $('npA').value = ambito; $('npN').value = texto; $('npO').value = 'Indicador en rojo'; $('npN').focus(); }
+function agregaProb(){ const d = datosForm({'Problemática':'npN','ÁmbitoID':'npA',Origen:'npO'}); if (!d['Problemática']) return toast('Escriba la problemática.'); d.Seleccionada = 'No'; guardar('guardarProblematica', d, 'Problemática agregada.'); }
+
+// ---------- 3. PROGRAMA ----------
+const CAMPOS_PROG = [['Verbo','Verbo en infinitivo (qué)','Fomentar, Mejorar, Incrementar…'],['Qué','Objeto','la sana convivencia escolar'],
+  ['Para qué','Con el fin de (para qué)','erradicar el acoso escolar…'],['Cómo','Mediante (cómo)','clubes lúdicos, reglamento…'],
+  ['Meta plazo','Meta – plazo','Al final del ciclo escolar 2026-2027'],['Meta cambio','Meta – cambio esperado','reducir al 0 % / incrementar a 90 %'],
+  ['Meta qué se mide','Meta – qué se mide','los casos de acoso escolar'],['Meta a quién','Meta – a quién se aplica','los alumnos de los tres grados']];
+function vProg(){
+  const g = gestion();
+  const sel = D.probs.filter(p => p.Seleccionada === 'Sí');
+  if (!sel.length) return '<div class="card">No hay problemáticas seleccionadas. Realice primero la priorización.</div>';
+  return '<p class="nota">El sistema redacta el objetivo y la meta con la estructura del Anexo 2 de las Orientaciones SEP. ' + (g ? '' : 'Solo la Dirección y el Comité pueden editar; los docentes consultan y registran seguimiento.') + '</p>' +
+    sel.map(p => {
+      const pr = D.progs.find(x => x['ProblemáticaID'] === p.ID) || {}; const id = pr.ID || '';
+      const acc = D.acc.filter(a => a.ProgramaID === id);
+      const indOpts = D.cat.map(c => [c.ID, c.ID + ' – ' + c.Indicador]);
+      const campos = CAMPOS_PROG.map(c => '<div><label>' + c[1] + '</label><input id="' + id + c[0].replace(/\W/g, '') + '" value="' + esc(pr[c[0]]) + '" placeholder="' + esc(c[2]) + '" oninput="previews()" ' + (g ? '' : 'disabled') + '></div>').join('');
+      return '<div class="card"><h2>PROBLEMA: ' + esc(p['Problemática'].toUpperCase()) + '</h2>' +
+        '<div class="preview"><b>OBJETIVO:</b> <span id="pvO' + id + '">' + esc(pr.Objetivo) + '</span><br><b>META:</b> <span id="pvM' + id + '">' + esc(pr.Meta) + '</span></div>' +
+        '<div class="grid">' + campos +
+        '<div><label>Indicador de la meta</label><select id="' + id + 'Ind" ' + (g ? '' : 'disabled') + '>' + opts(indOpts, pr.IndicadorID, '(seleccione)') + '</select></div>' +
+        '<div><label>Línea base</label><input id="' + id + 'LB" type="number" step="any" value="' + esc(pr['Línea base']) + '" ' + (g ? '' : 'disabled') + '></div>' +
+        '<div><label>Valor meta</label><input id="' + id + 'VM" type="number" step="any" value="' + esc(pr['Valor meta']) + '" ' + (g ? '' : 'disabled') + '></div>' +
+        '<div><label>Valor actual (automático)</label><input value="' + esc(pr['Valor actual']) + '" disabled></div></div>' +
+        (g && id ? '<div class="fila"><button class="btn" onclick="guardaProg(\'' + id + '\')">Guardar objetivo y meta</button></div>' : '') +
+        '<h3>Acciones (' + acc.length + ') · avance ' + (pr.avanceAcciones || 0) + '%</h3><div class="tw"><table><tr><th>#</th><th>Acción</th><th>Responsables</th><th>Tiempo</th><th>Seguimiento</th><th>Avance</th></tr>' +
+        acc.map((a, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(a['Acción']) + '</td><td>' + esc(a.Responsables) + '</td><td>' + esc(a.Tiempo || (a.Inicio + ' a ' + a.Fin)) + '</td><td>' + esc(a.Seguimiento) + '</td><td style="min-width:90px">' + barra(a['Avance %']) + a['Avance %'] + '% <small>' + esc(a.Estado) + '</small>' +
+          (g ? '<br><a href="#" onclick="editaAcc(\'' + a.ID + '\');return false">editar</a>' : '') + '</td></tr>').join('') + '</table></div>' +
+        (g && id ? formAccion(id) : '') + '</div>';
+    }).join('');
+}
+function formAccion(pid){
+  const f = (k, l, t, dl) => '<div><label>' + l + '</label><input id="na' + pid + k + '" type="' + (t || 'text') + '"' + (dl ? ' list="' + dl + '"' : '') + '></div>';
+  return '<details id="det' + pid + '"><summary style="cursor:pointer;margin-top:10px;color:var(--az)"><b>+ Agregar / editar acción</b></summary><input type="hidden" id="na' + pid + 'ID">' +
+    '<label style="margin-top:8px">Descripción de la acción (en qué consiste, cómo se desarrollará)</label><textarea id="na' + pid + 'Acc"></textarea><div class="grid">' +
+    f('Dir', 'Dirigida a') + f('Resp', 'Responsables', 'text', 'dlPers') + f('Ini', 'Inicio', 'date') + f('Fin', 'Fin', 'date') + f('Tie', 'Tiempo / periodicidad') + f('Seg', 'Seguimiento (quién y cuándo)') + f('Rec', 'Recursos') + f('Evi', 'Evidencia esperada') +
+    '</div><div class="fila"><button class="btn" onclick="guardaAcc(\'' + pid + '\')">Guardar acción</button></div></details>';
+}
+function editaAcc(aid){
+  const a = D.acc.find(x => x.ID === aid), p = a.ProgramaID, s = (k, v) => { const e = $('na' + p + k); if (e) e.value = v || ''; };
+  $('det' + p).open = true; s('ID', a.ID); s('Acc', a['Acción']); s('Dir', a['Dirigida a']); s('Resp', a.Responsables); s('Ini', a.Inicio); s('Fin', a.Fin);
+  s('Tie', a.Tiempo); s('Seg', a.Seguimiento); s('Rec', a.Recursos); s('Evi', a['Evidencia esperada']); $('na' + p + 'Acc').focus();
+}
+function guardaAcc(pid){
+  const v = k => val('na' + pid + k);
+  guardar('guardarAccion', {ID: v('ID'), ProgramaID: pid, 'Acción': v('Acc'), 'Dirigida a': v('Dir'), Responsables: v('Resp'), Inicio: v('Ini'), Fin: v('Fin'),
+    Tiempo: v('Tie'), Seguimiento: v('Seg'), Recursos: v('Rec'), 'Evidencia esperada': v('Evi')}, 'Acción guardada.');
+}
+function datosProg(id){ const d = {ID: id}; CAMPOS_PROG.forEach(c => d[c[0]] = val(id + c[0].replace(/\W/g, ''))); return d; }
+function componerObj(d){ if (!d.Verbo && !d['Qué']) return ''; let t = [d.Verbo, d['Qué']].filter(Boolean).join(' '); if (d['Para qué']) t += ', con el fin de ' + d['Para qué']; if (d['Cómo']) t += ', mediante ' + d['Cómo']; return t.charAt(0).toUpperCase() + t.slice(1) + '.'; }
+function componerMeta(d){ if (!d['Meta cambio'] && !d['Meta qué se mide']) return ''; let t = [d['Meta plazo'] ? d['Meta plazo'] + ',' : '', d['Meta cambio'], d['Meta qué se mide']].filter(Boolean).join(' '); if (d['Meta a quién']) t += ' en ' + d['Meta a quién']; return t.charAt(0).toUpperCase() + t.slice(1) + '.'; }
+function previews(){ D.progs.forEach(pr => { const o = $('pvO' + pr.ID); if (!o) return; const d = datosProg(pr.ID); o.textContent = componerObj(d) || '(por definir)'; $('pvM' + pr.ID).textContent = componerMeta(d) || '(por definir)'; }); }
+function guardaProg(id){ const d = datosProg(id); d.IndicadorID = val(id + 'Ind'); d['Línea base'] = val(id + 'LB'); d['Valor meta'] = val(id + 'VM'); guardar('guardarPrograma', d, 'Objetivo y meta guardados.'); }
+
+// ---------- 4. SEGUIMIENTO ----------
+function vSeg(){
+  const progSel = D.progs.filter(g => D.probs.some(p => p.ID === g['ProblemáticaID'] && p.Seleccionada === 'Sí'));
+  const accs = D.acc.filter(a => progSel.some(g => g.ID === a.ProgramaID));
+  const nombre = (s) => (D.progs.find(g => g.ID === s) || {}).problematica || '';
+  return '<div class="card"><h2>Registrar avance de una acción</h2><p class="nota">Cada responsable informa el avance acumulado (%), la evidencia (liga a foto o documento en Drive) y, en su caso, dificultades y ajustes.</p>' +
+    '<div class="grid"><div style="grid-column:1/-1"><label>Acción</label><select id="sA">' + opts(accs.map(a => [a.ID, nombre(a.ProgramaID) + ' · ' + a['Acción'].slice(0, 110) + ' (' + a['Avance %'] + '%)'])) + '</select></div>' +
+    '<div><label>Periodo</label><select id="sP">' + opts(D.periodos, D.escuela.periodoActual) + '</select></div>' +
+    '<div><label>Avance acumulado (%)</label><input id="sV" type="number" min="0" max="100"></div>' +
+    '<div><label>Evidencia (liga)</label><input id="sE" placeholder="https://drive.google.com/…"></div></div>' +
+    '<label style="margin-top:8px">Logros</label><textarea id="sL"></textarea><label>Dificultades</label><textarea id="sD"></textarea><label>Ajuste propuesto</label><textarea id="sJ"></textarea>' +
+    '<div class="fila"><button class="btn" onclick="guardar(\'guardarSeguimiento\', datosForm({\'AcciónID\':\'sA\',Periodo:\'sP\',\'Avance %\':\'sV\',Evidencia:\'sE\',Logros:\'sL\',Dificultades:\'sD\',\'Ajuste propuesto\':\'sJ\'}), \'Seguimiento registrado.\')">Guardar seguimiento</button></div></div>' +
+    '<div class="card"><h2>Historial de seguimiento</h2><div class="tw"><table><tr><th>Fecha</th><th>Acción</th><th>Avance</th><th>Logros / dificultades</th><th>Evidencia</th><th>Registró</th></tr>' +
+    D.seg.map(s => { const a = D.acc.find(x => x.ID === s['AcciónID']) || {}; return '<tr><td>' + esc(s.Fecha) + '</td><td>' + esc((a['Acción'] || '').slice(0, 90)) + '</td><td>' + esc(s['Avance %']) + '%</td><td>' + esc(s.Logros) + (s.Dificultades ? '<br><i>' + esc(s.Dificultades) + '</i>' : '') + '</td><td>' +
+      (/^https?:/.test(s.Evidencia) ? '<a href="' + esc(s.Evidencia) + '" target="_blank">ver</a>' : esc(s.Evidencia)) + '</td><td>' + esc(s['Capturó']) + '</td></tr>'; }).join('') + '</table></div></div>';
+}
+
+// ---------- 5. EVALUACIÓN Y COMUNICACIÓN ----------
+function vCom(){
+  const g = gestion();
+  const progSel = D.progs.filter(x => D.probs.some(p => p.ID === x['ProblemáticaID'] && p.Seleccionada === 'Sí'));
+  const docs = '<div class="card"><h2>Documentos generados por el sistema</h2><p class="nota">Se generan en Google Docs con la información vigente, en el formato de la escuela.</p>' +
+    (g ? '<div class="fila"><button class="btn" onclick="genDoc(\'PROGRAMA\')">Generar Programa de Mejora Continua</button><button class="btn" onclick="genDoc(\'PROCESO\')">Generar Proceso completo (5 fases)</button></div>' : '<p class="nota">La generación corresponde a la Dirección o al Comité.</p>') +
+    '<div class="fila">' + (D.escuela.programaUrl ? '<a href="' + esc(D.escuela.programaUrl) + '" target="_blank">📄 Último Programa</a>' : '') + (D.escuela.procesoUrl ? '<a href="' + esc(D.escuela.procesoUrl) + '" target="_blank">📄 Último Proceso</a>' : '') + '</div></div>';
+  const ev = '<div class="card"><h2>Evaluación – logro de metas</h2><p class="nota">El logro se valora por las metas (indicador), no solo por las acciones realizadas.</p><div class="tw"><table><tr><th>Problemática</th><th>Meta</th><th>Base</th><th>Meta</th><th>Actual</th><th>Logro</th></tr>' +
+    progSel.map(x => '<tr><td>' + esc(x.problematica) + '</td><td>' + esc(x.Meta) + '</td><td>' + esc(x['Línea base']) + '</td><td>' + esc(x['Valor meta']) + '</td><td>' + esc(x['Valor actual']) + '</td><td style="min-width:90px">' +
+      (x['Logro meta %'] === null || x['Logro meta %'] === '' ? 's/d' : barra(x['Logro meta %']) + x['Logro meta %'] + '%') + '</td></tr>').join('') + '</table></div></div>';
+  const com = '<div class="card"><h2>Comunicación de avances y logros</h2>' + (g ? '<div class="grid"><div><label>Periodo</label><select id="cP">' + opts(D.periodos, D.escuela.periodoActual) + '</select></div>' +
+    '<div><label>Medio</label><select id="cM">' + opts(['Asamblea de padres','Periódico mural','Redes sociales oficiales','Boletín escolar','Sesión de CTE','Cartas de reconocimiento','Página web escolar']) + '</select></div>' +
+    '<div><label>Destinatarios</label><input id="cD" value="Comunidad escolar"></div><div><label>Evidencia (liga)</label><input id="cE"></div></div>' +
+    '<label style="margin-top:8px">Logros comunicados</label><textarea id="cL"></textarea><div class="fila"><button class="btn" onclick="guardar(\'guardarComunicacion\', datosForm({Periodo:\'cP\',Medio:\'cM\',Destinatarios:\'cD\',Evidencia:\'cE\',\'Logros comunicados\':\'cL\'}), \'Comunicación registrada.\')">Registrar</button></div>' : '') +
+    '<div class="tw"><table><tr><th>Fecha</th><th>Periodo</th><th>Medio</th><th>Logros comunicados</th></tr>' + D.com.map(c => '<tr><td>' + esc(c.Fecha) + '</td><td>' + esc(c.Periodo) + '</td><td>' + esc(c.Medio) + '</td><td>' + esc(c['Logros comunicados']) + '</td></tr>').join('') + '</table></div></div>';
+  return docs + ev + com;
+}
+function genDoc(t){ llamar('apiGenerarDocumento', [U, t], url => { window.open(url, '_blank'); recargar('Documento generado.'); }); }
+
+// ---------- GUÍA ----------
+function vGuia(){
+  const pasos = [
+    ['1. Diagnóstico socioeducativo', 'Todos los docentes', 'Capturan indicadores por grupo y registran aportes (situación, causas, fuente). El sistema calcula el semáforo y redacta la narrativa por ámbito.'],
+    ['2. Priorización', 'Comité / Dirección en CTE', 'Valoran cada problemática con 5 criterios de la SEP; el sistema calcula el puntaje y sugiere problemáticas a partir de indicadores en rojo.'],
+    ['3. Planeación (Programa)', 'Comité / Dirección', 'Por cada problemática seleccionada se define objetivo (qué, para qué, cómo), meta medible con indicador, línea base y valor meta, y acciones con responsables, tiempos y seguimiento.'],
+    ['4. Implementación y seguimiento', 'Responsables de cada acción', 'Registran avance %, evidencias, logros, dificultades y ajustes. Las acciones vencidas se marcan como retrasadas.'],
+    ['5. Evaluación', 'Colectivo en CTE', 'El logro de cada meta se calcula con el valor actual del indicador frente a la línea base y el valor meta.'],
+    ['6. Comunicación', 'Dirección / Comité', 'Se registran los medios y logros comunicados; se generan en Docs el Programa y el Proceso completo.']];
+  return '<div class="card"><h2>¿Cómo funciona el sistema?</h2><div class="tw"><table><tr><th>Fase</th><th>Quién</th><th>Qué hace</th></tr>' +
+    pasos.map(p => '<tr><td><b>' + p[0] + '</b></td><td>' + p[1] + '</td><td>' + p[2] + '</td></tr>').join('') + '</table></div>' +
+    '<p class="nota" style="margin-top:10px">Referencia: SEP (2024). El Proceso de Mejora Continua. Orientaciones para las escuelas de Educación Básica. Acuerdo 05/04/24, Lineamientos de los CTE.</p></div>';
+}
+
+// ---------- inicio ----------
+try { const s = sessionStorage.getItem('pmcU'); if (s) U = JSON.parse(s); } catch(e){}
+if (typeof google === 'undefined' || !google.script || !google.script.run) {
+  $('vista').innerHTML = '<div class="card"><h2>Este archivo no se abre directamente</h2><p>El sistema solo funciona desde la <b>URL de la aplicación web</b> de Apps Script (termina en <b>/exec</b>).</p>' +
+    '<p>Pegue este archivo en Apps Script como <b>Index</b>, ejecute <b>configurarBase</b> y luego <b>Implementar &gt; Aplicación web</b>.</p></div>';
+} else {
+  recargar();
+}
+</script>
+</body>
+</html>
