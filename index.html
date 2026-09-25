@@ -1086,6 +1086,7 @@
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
+        <a href="#" onclick="abrirPMC();return false;">📈 Mejora Continua (PMC)</a>
       </div>
     </div>
     <div class="nav-item">
@@ -9104,6 +9105,34 @@
 
     </div>
   </div>
+
+<!-- ═══ MEJORA CONTINUA (PMC) — sistema en Apps Script incrustado ═══ -->
+<div id="pmc-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--cream);flex-direction:column">
+  <div style="background:linear-gradient(135deg,var(--dark),var(--mid));border-bottom:3px solid var(--gold-mid);
+              padding:0.7rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+    <span style="font-family:'Playfair Display',serif;color:var(--gold-light);font-weight:700">📈 Proceso y Programa de Mejora Continua</span>
+    <span>
+      <a id="pmc-nueva" href="#" target="_blank" style="color:var(--gold-mid);font-size:0.78rem;margin-right:1rem">Abrir en pestaña nueva ↗</a>
+      <button onclick="cerrarPMC()" style="background:var(--crimson);color:#fff;border:0;border-radius:4px;padding:0.4rem 0.9rem;cursor:pointer;font-weight:600">✕ Cerrar</button>
+    </span>
+  </div>
+  <iframe id="pmc-frame" title="Mejora Continua EST 3" style="flex:1;width:100%;border:0" allow="clipboard-write"></iframe>
+</div>
+<script>
+  // ► Pegue aquí la URL de la aplicación web del sistema PMC (termina en /exec)
+  const PMC_URL = 'https://script.google.com/macros/s/AKfycbzhhGXkey6KezXGwHwr6dIl-7g8VfVU6_K7Em1FyhBtGeRBHSHzS_FM2t7_31eQfd3uUA/exec';
+  function abrirPMC(){
+    const f = document.getElementById('pmc-frame');
+    if (!f.src) f.src = PMC_URL;
+    document.getElementById('pmc-nueva').href = PMC_URL;
+    document.getElementById('pmc-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function cerrarPMC(){
+    document.getElementById('pmc-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+</script>
 </body>
 
 </html>
