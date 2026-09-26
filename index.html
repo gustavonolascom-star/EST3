@@ -1,4 +1,4 @@
-<!-- Generado: 23/septiembre/2026, 21:15 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 25/septiembre/2026, 21:08 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1000,6 +1000,180 @@
     @media (max-width: 540px) {
       .logo-wrap { z-index: 1; position: relative; width: 100px; height: 100px; }
     }
+
+    /* ── MEJORA CONTINUA (PMC) ──────────────────────────── */
+    .pmc-card {
+      background: #fffdf5;
+      border: 1px solid #e8d88a;
+      border-radius: 8px;
+      padding: 1.2rem;
+      margin-bottom: 1.2rem;
+    }
+    .pmc-card h2 {
+      font-family: 'Playfair Display', serif;
+      color: var(--mid);
+      font-size: 1rem;
+      border-bottom: 1px solid #e8d88a;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .pmc-card h3 { font-size: 0.88rem; color: var(--mid); margin: 1rem 0 0.6rem; }
+
+    .pmc-card label, .pmc-grid label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+    .pmc-card input, .pmc-card select, .pmc-card textarea {
+      width: 100%;
+      padding: 0.5rem 0.7rem;
+      border: 1.5px solid #e8d88a;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      color: var(--dark);
+      margin-bottom: 0.8rem;
+    }
+    .pmc-card textarea { min-height: 4.5rem; resize: vertical; }
+    .pmc-card input:disabled, .pmc-card select:disabled, .pmc-card textarea:disabled {
+      background: #f4efdc; color: #8a7c50;
+    }
+
+    .pmc-fases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.9rem;
+    }
+    .pmc-fase {
+      background: #fff;
+      border: 1px solid #e8d88a;
+      border-radius: 8px;
+      padding: 0.8rem;
+      text-align: center;
+    }
+    .pmc-fase small { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pmc-fase p { font-size: 0.78rem; margin: 0.25rem 0 0.5rem; min-height: 2.1rem; }
+    .pmc-fase b { font-size: 1.15rem; color: var(--mid); }
+
+    .pmc-tw { overflow-x: auto; margin-bottom: 0.6rem; }
+    .pmc-tw table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+    .pmc-tw th, .pmc-tw td {
+      border: 1px solid #e8d88a;
+      padding: 0.45rem 0.6rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .pmc-tw th { background: #f4e9c8; color: var(--mid); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .pmc-sem {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .pmc-sem-VERDE { background: #1D7A4E; }
+    .pmc-sem-AMARILLO { background: #b8860b; }
+    .pmc-sem-ROJO { background: var(--crimson); }
+    .pmc-sem-SIN { background: #8a8a8a; }
+
+    .pmc-barra {
+      background: #eee0b0;
+      border-radius: 20px;
+      height: 8px;
+      width: 100%;
+      overflow: hidden;
+      margin: 0.35rem 0;
+    }
+    .pmc-barra i {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-mid), var(--gold-light));
+      border-radius: 20px;
+    }
+
+    .pmc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.4rem 0.9rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .pmc-btn {
+      background: linear-gradient(135deg, var(--dark), var(--mid));
+      color: var(--gold-light);
+      border: 1px solid var(--gold-deep);
+      padding: 0.55rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      margin: 0.2rem 0.4rem 0.2rem 0;
+    }
+    .pmc-btn-sec {
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px solid var(--gold-deep);
+    }
+
+    .pmc-chip {
+      display: inline-block;
+      background: #f4e9c8;
+      color: var(--mid);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pmc-nota { font-size: 0.78rem; color: var(--muted); line-height: 1.5; margin-bottom: 0.8rem; }
+
+    .pmc-narr h3 { margin-top: 1rem; }
+    .pmc-narr p { font-size: 0.85rem; line-height: 1.55; margin-bottom: 0.6rem; }
+
+    .pmc-preview {
+      background: #f4e9c8;
+      border-left: 3px solid var(--gold-deep);
+      border-radius: 4px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.83rem;
+      line-height: 1.5;
+      margin-bottom: 0.8rem;
+    }
+
+    .pmc-fila { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.6rem; }
+
+    .pmc-aviso {
+      padding: 0.6rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      margin-bottom: 1rem;
+    }
+    .pmc-aviso-ok { background: #eafaf1; border: 1px solid #b8e6c9; color: #1D7A4E; }
+    .pmc-aviso-err { background: #fff2f2; border: 1px solid #f5c0c0; color: var(--crimson); }
+    .pmc-aviso-info { background: #fffbe8; border: 1px solid #e8d88a; color: var(--muted); }
+
+    .pmc-tabbtn {
+      background: transparent;
+      border: 1.5px solid var(--gold-deep);
+      color: var(--gold-light);
+      padding: 0.45rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0 0.3rem 0.5rem 0;
+    }
+    .pmc-tabbtn.act { background: var(--gold-mid); color: var(--dark); border-color: var(--gold-mid); }
   </style>
 </head>
 <body>
@@ -1081,12 +1255,13 @@
       <a href="#" onclick="return false;">Docentes ▾</a>
       <div class="dropdown">
         <a href="#" onclick="openModal('eval-login');return false;">📝 Calificaciones (Captura y Consulta)</a>
+        <a href="#" onclick="openModal('calgrupo-login');return false;">📈 Consulta de Calificaciones por Grupo</a>
         <a href="#" onclick="openModal('lista-asis-login');return false;">📋 Lista de Asistencia</a>
         <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
-        <a href="#" onclick="abrirPMC();return false;">📈 Mejora Continua (PMC)</a>
+        <a href="#" onclick="openModal('pmc-login');return false;">🟧 Mejora Continua (PMC)</a>
       </div>
     </div>
     <div class="nav-item">
@@ -7064,6 +7239,693 @@
       res.innerHTML = '<div class="result-error" style="background:#eaf7ea;border-color:#a8d8a8;color:#1a5a1a">✅ Archivo generado: '+nombreArchivo+'</div>';
     }
 
+    /* ── Módulo Docentes: Consulta de Calificaciones por Grupo (pantalla) ──
+     * Reutiliza exactamente el mismo candado de acceso y la misma fuente de
+     * datos que "Generar Listas (Excel)" (obtenerMatrizCalificaciones), pero
+     * la presenta como tabla en pantalla — con el mismo criterio de color
+     * por calificación (XLS_BANDAS/xlsBanda) — más una gráfica comparando el
+     * promedio del grupo en cada columna, y el nombre del alumno(a) como
+     * enlace directo a su Ficha Descriptiva (mismo patrón que ya usa Ficha
+     * Descriptiva de Grupo, acción buscarAlumnoParaFichaDocente). */
+    let _cgDoc='', _cgNivel='', _cgGruposSet=[], _cgAsigSet=[], _cgGruposRaw='', _cgAsigRaw='';
+
+    async function accederCalGrupo(){
+      const user=(document.getElementById('calgrupo-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('calgrupo-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-calgrupo-login');
+      const btn=document.getElementById('btn-calgrupo-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas();
+      const json = await consultarUsuario(user, pass);
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _cgDoc=json.usuario.nombre||user;
+        _cgNivel=normTxt(json.usuario.nivel||'');
+        _cgGruposRaw=json.usuario.grupos||'';
+        _cgAsigRaw=json.usuario.asignatura||'';
+        _cgGruposSet=parsearGruposDocente(_cgGruposRaw);
+        _cgAsigSet=parsearAsigDocente(_cgAsigRaw);
+        closeModal('calgrupo-login');
+        document.getElementById('calgrupo-doc-label').textContent='Docente: '+_cgDoc;
+        document.getElementById('calgrupo-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        aplicarRestriccionCalGrupo();
+        document.getElementById('calgrupo-trim').value='';
+        document.getElementById('res-calgrupo').innerHTML='';
+        document.getElementById('calgrupo-resultado').style.display='none';
+        res.innerHTML='';
+        document.getElementById('calgrupo-user').value='';
+        document.getElementById('calgrupo-pass').value='';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('calgrupo-pass').value='';
+        document.getElementById('calgrupo-pass').focus();
+      }
+    }
+
+    function cerrarCalGrupoOverlay(){
+      document.getElementById('calgrupo-overlay').style.display='none';
+      document.body.style.overflow='';
+      _cgDoc=''; _cgNivel=''; _cgGruposSet=[]; _cgAsigSet=[];
+    }
+
+    // Restringe Grado/Grupo/Asignatura a lo que el docente atiende (mismo
+    // patrón que aplicarRestriccionDocente()/aplicarRestriccionXls()).
+    function aplicarRestriccionCalGrupo(){
+      const selGrado = document.getElementById('calgrupo-grado');
+      const selGrupo = document.getElementById('calgrupo-grupo');
+      const selAsig  = document.getElementById('calgrupo-asig');
+      const msg = document.getElementById('calgrupo-p1-msg');
+      msg.textContent = '';
+      selGrado.disabled = selGrupo.disabled = selAsig.disabled = false;
+
+      if(_cgNivel !== 'DOCENTE'){
+        selGrado.innerHTML = EV_GRADO_FULL;
+        selGrupo.innerHTML = EV_GRUPO_FULL;
+        selGrado.onchange = actualizarAsigCalGrupo;
+        return;
+      }
+      if(!_cgGruposSet.length || !_cgAsigSet.length){
+        selGrado.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selGrupo.innerHTML = '<option value="">-- Sin asignar --</option>';
+        selAsig.innerHTML  = '<option value="">-- Sin asignar --</option>';
+        selGrado.disabled = selGrupo.disabled = selAsig.disabled = true;
+        msg.innerHTML = mensajeSinGrupoAsig_(!_cgGruposSet.length, !_cgAsigSet.length, _cgGruposRaw, _cgAsigRaw);
+        return;
+      }
+      const gradosPermitidos = Array.from(new Set(_cgGruposSet.map(function(x){return x.grado;}))).sort();
+      selGrado.innerHTML = '<option value="">-- Selecciona --</option>' +
+        gradosPermitidos.map(function(g){return '<option value="'+g+'">'+g+'° Grado</option>';}).join('');
+      selGrupo.innerHTML = '<option value="">-- Selecciona grado --</option>';
+      selGrado.onchange = function(){
+        const g = selGrado.value;
+        const gruposDeEsteGrado = _cgGruposSet.filter(function(x){return x.grado===g;}).map(function(x){return x.grupo;});
+        selGrupo.innerHTML = '<option value="">-- Selecciona --</option>' +
+          gruposDeEsteGrado.map(function(gr){return '<option value="'+gr+'">Grupo '+gr+'</option>';}).join('');
+        actualizarAsigCalGrupo();
+      };
+    }
+
+    function actualizarAsigCalGrupo(){
+      const g=document.getElementById('calgrupo-grado').value;
+      const s=document.getElementById('calgrupo-asig');
+      s.innerHTML='<option value="">-- Selecciona --</option>';
+      let lista=ASIGNATURAS_EVAL[g]||[];
+      if(_cgNivel==='DOCENTE' && _cgAsigSet.length && _cgAsigSet.indexOf('TOTAL')===-1){
+        lista=lista.filter(a=>_cgAsigSet.indexOf(normTxt(a))!==-1);
+      }
+      lista.forEach(a=>{const o=document.createElement('option');o.value=a;o.text=a;s.appendChild(o);});
+    }
+
+    // Misma fórmula que promedioTrimestre_ en el backend (y que ya usa la
+    // Ficha Descriptiva): promedio de semanas numéricas + Examen (sin el
+    // Diagnóstico) por separado del Promedio "crudo", y Final = MIN(10,
+    // Promedio + Puntos Rasgos Evaluados) — igual que la columna "Final
+    // Trimestre" del Excel.
+    function cgCalcularFila_(semanasObj){
+      const vals = [];
+      let pe = 0;
+      Object.keys(semanasObj||{}).forEach(function(sem){
+        const raw = semanasObj[sem];
+        if(raw==='' || raw===null || raw===undefined) return;
+        const v = Number(raw);
+        if(isNaN(v)) return;
+        if(sem==='D') return;
+        if(sem==='PE'){ pe = v; return; }
+        vals.push(v);
+      });
+      const promedio = vals.length ? Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*100)/100 : null;
+      const final = promedio===null
+        ? (pe>0 ? Math.min(10,pe) : null)
+        : Math.round(Math.min(10, promedio+pe)*100)/100;
+      return { promedio: promedio, pe: pe, final: final };
+    }
+
+    let _cgUltimaConsulta = null; // {grado,grupo,asignatura,trimestre,alumnos,semCols}
+
+    async function consultarCalifGrupo(){
+      const g=document.getElementById('calgrupo-grado').value;
+      const gr=document.getElementById('calgrupo-grupo').value;
+      const a=document.getElementById('calgrupo-asig').value;
+      const t=document.getElementById('calgrupo-trim').value;
+      const res=document.getElementById('res-calgrupo');
+      document.getElementById('calgrupo-resultado').style.display='none';
+      if(!g||!gr||!a||!t){res.innerHTML='<div class="result-error">⚠️ Selecciona grado, grupo, asignatura y trimestre.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Consultando…</div>';
+
+      // Matriz de calificaciones y roster de Apoyo USAER del grupo se piden
+      // en paralelo (cada jsonpCall usa su propio callback, no hay choque).
+      // El de USAER no es crítico: si falla, simplemente no se resalta a
+      // nadie, pero la consulta de calificaciones sigue funcionando.
+      const [json, jsonUsaer] = await Promise.all([
+        jsonpCall({accion:'obtenerMatrizCalificaciones', grado:g, grupo:gr, asignatura:a, trimestre:t, usuario:_cgDoc}, 20000),
+        jsonpCall({accion:'obtenerUsaerGrupo', grado:g, grupo:gr, usuario:_cgDoc}, 20000)
+      ]);
+      if(!json || json.timeout || json.networkError){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(!json.ok){res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo consultar.')+'</div>';return;}
+      if(!json.alumnos || !json.alumnos.length){res.innerHTML='<div class="result-error">⚠️ No hay alumnos registrados en '+g+'°'+gr+'.</div>';return;}
+
+      res.innerHTML='';
+      const semCols = semanasT(t).filter(function(x){ return x.v!=='PE'; });
+      const usaerSet = new Set((jsonUsaer && jsonUsaer.ok && jsonUsaer.curpsUsaer) ? jsonUsaer.curpsUsaer : []);
+      _cgUltimaConsulta = {grado:g, grupo:gr, asignatura:a, trimestre:t, alumnos:json.alumnos, semCols:semCols, usaerSet:usaerSet};
+      construirTablaCalGrupo_(g, gr, a, t, json.alumnos, semCols, usaerSet);
+      document.getElementById('calgrupo-resultado').style.display='block';
+    }
+
+    function cgEsc_(s){
+      return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Conjunto de columnas (códigos de "semana": 'D','1'..'12','EX','PE') con
+    // cambios sin guardar todavía, para "Guardar cambios" (se reinicia cada
+    // vez que se hace una nueva consulta).
+    let _cgColumnasModificadas = new Set();
+
+    // Rango válido por tipo de columna — igual que valida guardarLoteCalificaciones
+    // en el servidor: Examen y Puntos Rasgos Evaluados en 0–10, el resto
+    // (incluido Diagnóstico) en 5–10.
+    function cgRangoColumna_(key){
+      return (key==='EX' || key==='PE') ? {min:0,max:10} : {min:5,max:10};
+    }
+
+    // Promedios del grupo por columna (ignorando alumnos sin valor en esa
+    // columna) — se recalcula tanto al construir la tabla como en cada
+    // edición en vivo, y alimenta a la vez la fila "Promedio del grupo" y
+    // la gráfica.
+    function cgPromediosGrupo_(filas, semCols){
+      const promediosCols = {};
+      semCols.forEach(function(sc){
+        const key = String(sc.v);
+        const vals = filas.map(function(f){ const raw=f.semanas[key]; return (raw!==undefined&&raw!==null&&raw!=='') ? Number(raw) : null; })
+          .filter(function(v){ return v!==null && !isNaN(v); });
+        promediosCols[key] = vals.length ? (vals.reduce(function(a,b){return a+b;},0)/vals.length) : null;
+      });
+      const promsProm = filas.map(function(f){return f.calc.promedio;}).filter(function(v){return v!==null;});
+      const promsFinal = filas.map(function(f){return f.calc.final;}).filter(function(v){return v!==null;});
+      const promsPE = filas.map(function(f){return f.calc.pe;}).filter(function(v){return v>0;});
+      return {
+        promediosCols: promediosCols,
+        promGrupoProm: promsProm.length ? promsProm.reduce(function(a,b){return a+b;},0)/promsProm.length : null,
+        promGrupoFinal: promsFinal.length ? promsFinal.reduce(function(a,b){return a+b;},0)/promsFinal.length : null,
+        promGrupoPE: promsPE.length ? promsPE.reduce(function(a,b){return a+b;},0)/promsPE.length : null
+      };
+    }
+
+    function construirTablaCalGrupo_(g, gr, a, t, alumnos, semCols, usaerSet){
+      const GUINDA = '#7A1A1A';
+      const usaer = usaerSet || new Set();
+      const filas = alumnos.map(function(al){
+        if(!al.semanas) al.semanas = {};
+        return { nombre: al.nombre, curp: al.curp, semanas: al.semanas, calc: cgCalcularFila_(al.semanas) };
+      });
+      _cgColumnasModificadas = new Set();
+
+      // ── Encabezado ──
+      let thead = '<thead><tr style="background:'+GUINDA+';color:#fff">'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">No.</th>'+
+        '<th style="padding:0.4rem 0.6rem;text-align:left">Nombre</th>';
+      semCols.forEach(function(sc){
+        let label = sc.l;
+        if(typeof sc.v === 'number') label += '<br><span style="font-weight:400;font-size:0.68rem;opacity:0.85">'+xlsRangoSemana(sc.v)+'</span>';
+        thead += '<th style="padding:0.4rem 0.5rem;text-align:center">'+label+'</th>';
+      });
+      thead += '<th style="padding:0.4rem 0.5rem;text-align:center">Promedio</th>'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">Puntos<br>Rasgos Evaluados</th>'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">Final<br>Trimestre '+t+'</th>'+
+        '</tr></thead>';
+
+      // ── Filas de alumnos (una celda editable por columna) ──
+      let tbody = '<tbody>';
+      filas.forEach(function(f, i){
+        const curpEsc = (f.curp||'').replace(/'/g,"\\'");
+        // Alumno(a) con Apoyo USAER: mismo resaltado violeta y estrella que
+        // ya se usa en la Ficha Descriptiva de Grupo (ver comentario junto a
+        // SS_USAER_ID en el .gs) — aquí visible de un vistazo en la lista.
+        const esUsaer = usaer.has(f.curp);
+        const bgFila = esUsaer ? '#f3e8ff' : '';
+        tbody += '<tr style="border-bottom:1px solid #f0e8c0;background:'+bgFila+'" '+
+          'onmouseover="this.style.background=\'#fdf6e0\'" onmouseout="this.style.background=\''+bgFila+'\'">';
+        tbody += '<td style="padding:0.35rem 0.5rem;text-align:center;color:#999">'+(i+1)+'</td>';
+        tbody += '<td style="padding:0.35rem 0.6rem;text-align:left">'+
+          (esUsaer ? '<span title="Alumno(a) con Apoyo USAER">⭐ </span>' : '')+
+          '<a href="#" onclick="abrirAlumnoDesdeCalGrupo(\''+curpEsc+'\');return false;" '+
+          'style="color:#7A1A1A;font-weight:600;text-decoration:none;cursor:pointer" '+
+          'onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'+
+          cgEsc_(f.nombre)+'</a></td>';
+        semCols.forEach(function(sc){
+          const key = String(sc.v);
+          const raw = f.semanas[key];
+          const v = (raw!==undefined && raw!==null && raw!=='') ? Number(raw) : null;
+          const banda = (v!==null && !isNaN(v)) ? xlsBanda(v) : null;
+          const bg = banda ? '#'+banda.fill.slice(2) : '#fff';
+          const col = banda ? '#'+banda.font.slice(2) : '#2d1f08';
+          const rango = cgRangoColumna_(key);
+          tbody += '<td style="padding:0.25rem 0.3rem;text-align:center">'+
+            '<input type="number" min="'+rango.min+'" max="'+rango.max+'" step="0.1" inputmode="decimal" '+
+            'id="cg-in-'+i+'-'+key+'" value="'+(v!==null && !isNaN(v) ? v : '')+'" '+
+            'oninput="cgOnInput_('+i+',\''+key+'\',this)" '+
+            'style="width:46px;padding:0.25rem;text-align:center;border:1.5px solid #e8d88a;border-radius:4px;'+
+            'font-size:0.8rem;font-weight:700;background:'+bg+';color:'+col+'"/></td>';
+        });
+        tbody += '<td id="cg-prom-'+i+'" style="padding:0.35rem 0.5rem;text-align:center;font-weight:700">'+(f.calc.promedio!==null ? f.calc.promedio.toFixed(2) : '—')+'</td>';
+        const peV = f.semanas['PE'];
+        tbody += '<td style="padding:0.25rem 0.3rem;text-align:center">'+
+          '<input type="number" min="0" max="10" step="0.1" inputmode="decimal" '+
+          'id="cg-in-'+i+'-PE" value="'+(peV!==undefined && peV!==null && peV!=='' ? peV : '')+'" '+
+          'oninput="cgOnInput_('+i+',\'PE\',this)" '+
+          'style="width:46px;padding:0.25rem;text-align:center;border:1.5px solid #e8d88a;border-radius:4px;'+
+          'font-size:0.8rem;font-weight:700;background:#fff;color:#2d1f08"/></td>';
+        const bandaFinal = f.calc.final!==null ? xlsBanda(f.calc.final) : null;
+        const styleFinal = bandaFinal ? 'background:#'+bandaFinal.fill.slice(2)+';color:#'+bandaFinal.font.slice(2)+';font-weight:800' : 'color:#ccc';
+        tbody += '<td id="cg-final-'+i+'" style="padding:0.35rem 0.5rem;text-align:center;'+styleFinal+'">'+(f.calc.final!==null ? f.calc.final.toFixed(2) : '—')+'</td>';
+        tbody += '</tr>';
+      });
+      tbody += '</tbody>';
+
+      // ── Fila de promedio del grupo (una por columna, ignorando vacíos) ──
+      const pg = cgPromediosGrupo_(filas, semCols);
+
+      let tfoot = '<tfoot><tr style="background:#fdf3d0;border-top:2px solid '+GUINDA+';font-style:italic;font-weight:700">'+
+        '<td></td><td style="padding:0.4rem 0.6rem">Promedio del grupo</td>';
+      semCols.forEach(function(sc){
+        const key = String(sc.v);
+        const v = pg.promediosCols[key];
+        tfoot += '<td id="cg-avg-'+key+'" style="padding:0.4rem 0.5rem;text-align:center">'+(v!==null ? v.toFixed(2) : '—')+'</td>';
+      });
+      tfoot += '<td id="cg-avg-prom" style="padding:0.4rem 0.5rem;text-align:center">'+(pg.promGrupoProm!==null ? pg.promGrupoProm.toFixed(2) : '—')+'</td>';
+      tfoot += '<td id="cg-avg-pe" style="padding:0.4rem 0.5rem;text-align:center">'+(pg.promGrupoPE!==null ? pg.promGrupoPE.toFixed(2) : '—')+'</td>';
+      tfoot += '<td id="cg-avg-final" style="padding:0.4rem 0.5rem;text-align:center">'+(pg.promGrupoFinal!==null ? pg.promGrupoFinal.toFixed(2) : '—')+'</td>';
+      tfoot += '</tr></tfoot>';
+
+      document.getElementById('calgrupo-tabla').innerHTML = thead + tbody + tfoot;
+
+      // ── Leyenda de Apoyo USAER (solo si el grupo tiene alumnos así) ──
+      const leyenda = document.getElementById('cg-usaer-legend');
+      if(usaer.size > 0){
+        leyenda.style.display = 'flex';
+        leyenda.innerHTML = '⭐ '+usaer.size+' alumno(a)'+(usaer.size===1?'':'s')+' del grupo con Apoyo USAER (resaltado(s) en la lista).';
+      } else {
+        leyenda.style.display = 'none';
+        leyenda.innerHTML = '';
+      }
+
+      // ── Gráfica: promedio del grupo en cada campo ──
+      cgDibujarGraficaDesdeGrupo_(semCols, t, pg);
+    }
+
+    function cgDibujarGraficaDesdeGrupo_(semCols, t, pg){
+      const etiquetas = semCols.map(function(sc){ return sc.l.replace('⭐ ','').replace('➕ ',''); }).concat(['Promedio','Pts. Rasgos','Final T'+t]);
+      const valores = semCols.map(function(sc){ return pg.promediosCols[String(sc.v)]; }).concat([pg.promGrupoProm, pg.promGrupoPE, pg.promGrupoFinal]);
+      dibujarGraficaCalGrupo(etiquetas, valores);
+    }
+
+    // Se dispara con cada tecleo en una celda de calificación: recalcula SOLO
+    // esa celda, el Promedio/Final de esa fila, el promedio del grupo y la
+    // gráfica — nunca reconstruye la tabla completa (así el cursor no se
+    // pierde del campo mientras el docente sigue escribiendo).
+    function cgOnInput_(idx, key, inputEl){
+      if(!_cgUltimaConsulta) return;
+      const al = _cgUltimaConsulta.alumnos[idx];
+      if(!al) return;
+      if(!al.semanas) al.semanas = {};
+      const raw = inputEl.value;
+      if(raw===''){ delete al.semanas[key]; }
+      else { al.semanas[key] = raw; }
+      _cgColumnasModificadas.add(key);
+
+      const v = raw==='' ? null : Number(raw);
+      const banda = (v!==null && !isNaN(v)) ? xlsBanda(v) : null;
+      inputEl.style.background = banda ? ('#'+banda.fill.slice(2)) : '#fff';
+      inputEl.style.color = banda ? ('#'+banda.font.slice(2)) : '#2d1f08';
+
+      const calc = cgCalcularFila_(al.semanas);
+      const promEl = document.getElementById('cg-prom-'+idx);
+      if(promEl) promEl.textContent = calc.promedio!==null ? calc.promedio.toFixed(2) : '—';
+      const finalEl = document.getElementById('cg-final-'+idx);
+      if(finalEl){
+        finalEl.textContent = calc.final!==null ? calc.final.toFixed(2) : '—';
+        const bf = calc.final!==null ? xlsBanda(calc.final) : null;
+        finalEl.style.background = bf ? ('#'+bf.fill.slice(2)) : '';
+        finalEl.style.color = bf ? ('#'+bf.font.slice(2)) : '#ccc';
+        finalEl.style.fontWeight = bf ? '800' : '400';
+      }
+
+      cgRecalcularPie_();
+    }
+
+    // Recalcula la fila "Promedio del grupo" y redibuja la gráfica a partir
+    // del estado actual en memoria (_cgUltimaConsulta), sin tocar los <input>
+    // de las celdas de calificación.
+    function cgRecalcularPie_(){
+      if(!_cgUltimaConsulta) return;
+      const semCols = _cgUltimaConsulta.semCols;
+      const filas = _cgUltimaConsulta.alumnos.map(function(al){
+        return { semanas: al.semanas||{}, calc: cgCalcularFila_(al.semanas) };
+      });
+      const pg = cgPromediosGrupo_(filas, semCols);
+      semCols.forEach(function(sc){
+        const key = String(sc.v);
+        const el = document.getElementById('cg-avg-'+key);
+        if(el){ const v = pg.promediosCols[key]; el.textContent = v!==null ? v.toFixed(2) : '—'; }
+      });
+      const elProm = document.getElementById('cg-avg-prom');
+      if(elProm) elProm.textContent = pg.promGrupoProm!==null ? pg.promGrupoProm.toFixed(2) : '—';
+      const elPE = document.getElementById('cg-avg-pe');
+      if(elPE) elPE.textContent = pg.promGrupoPE!==null ? pg.promGrupoPE.toFixed(2) : '—';
+      const elFinal = document.getElementById('cg-avg-final');
+      if(elFinal) elFinal.textContent = pg.promGrupoFinal!==null ? pg.promGrupoFinal.toFixed(2) : '—';
+
+      cgDibujarGraficaDesdeGrupo_(semCols, _cgUltimaConsulta.trimestre, pg);
+    }
+
+    // Guarda en el servidor solo las columnas ("semanas") que se editaron,
+    // una llamada por columna a guardarLoteCalificaciones (el mismo endpoint
+    // ya usado por Captura y Consulta, con el mismo candado de permisos) —
+    // cada llamada manda la calificación completa de TODOS los alumnos del
+    // grupo para esa columna, tal como ya lo exige ese endpoint.
+    async function guardarCambiosCalGrupo(){
+      if(!_cgUltimaConsulta) return;
+      const msg = document.getElementById('cg-save-msg');
+      const cols = Array.from(_cgColumnasModificadas);
+      if(!cols.length){ msg.innerHTML = '<span style="color:#e67e22">⚠️ No hay cambios para guardar.</span>'; return; }
+
+      const { grado, grupo, asignatura, trimestre, alumnos, semCols } = _cgUltimaConsulta;
+      msg.innerHTML = '<span style="color:#7a6030">⏳ Guardando '+cols.length+' columna(s)…</span>';
+
+      const etiquetaCol = function(key){
+        const sc = semCols.find(function(x){ return String(x.v)===key; });
+        return sc ? sc.l.replace('⭐ ','').replace('➕ ','') : key;
+      };
+
+      const okCols = [], errCols = [];
+      for(const key of cols){
+        const payloadAlumnos = alumnos.map(function(al){
+          const v = (al.semanas && al.semanas[key]!==undefined) ? al.semanas[key] : '';
+          return { curp: al.curp, nombre: al.nombre, calificacion: v };
+        });
+        const payload = { grado:grado, grupo:grupo, asignatura:asignatura, trimestre:trimestre, semana:key, alumnos:payloadAlumnos };
+        const json = await jsonpCall({accion:'guardarLoteCalificaciones', datos:JSON.stringify(payload), usuario:_cgDoc, confirmar:'true'}, 20000);
+        if(!json || json.timeout || json.networkError){ errCols.push({key:key, mensaje:'Sin respuesta del servidor.'}); continue; }
+        if(!json.ok){ errCols.push({key:key, mensaje: json.mensaje||'Error desconocido.'}); continue; }
+        okCols.push(key);
+      }
+      okCols.forEach(function(k){ _cgColumnasModificadas.delete(k); });
+
+      let resumen = '';
+      if(okCols.length) resumen += '<div style="color:#1D7A4E">✅ Guardado: '+okCols.map(etiquetaCol).join(', ')+'</div>';
+      if(errCols.length) resumen += '<div style="color:#c0392b">❌ No se pudo guardar — '+errCols.map(function(e){return etiquetaCol(e.key)+': '+e.mensaje;}).join(' | ')+'</div>';
+      msg.innerHTML = resumen;
+    }
+
+    // ── Impresión: arma una tabla ESTÁTICA (sin <input>) a partir del estado
+    //    actual en memoria (_cgUltimaConsulta), para que lo impreso siempre
+    //    refleje lo último capturado en pantalla, incluso si aún no se ha
+    //    dado clic en "Guardar cambios". Mismo patrón que imprimirFichaGrupo/
+    //    imprimirReporteAsistencia: ventana nueva con membrete oficial. ──
+    function construirTablaImpresionCalGrupo_(){
+      if(!_cgUltimaConsulta) return '';
+      const GUINDA = '#7A1A1A';
+      const usaer = _cgUltimaConsulta.usaerSet || new Set();
+      const semCols = _cgUltimaConsulta.semCols;
+      const filas = _cgUltimaConsulta.alumnos.map(function(al){
+        return { nombre: al.nombre, curp: al.curp, semanas: al.semanas||{}, calc: cgCalcularFila_(al.semanas) };
+      });
+
+      let thead = '<thead><tr style="background:'+GUINDA+';color:#fff">'+
+        '<th style="padding:4px 6px;text-align:center">No.</th>'+
+        '<th style="padding:4px 8px;text-align:left">Nombre</th>';
+      semCols.forEach(function(sc){
+        thead += '<th style="padding:4px 5px;text-align:center">'+sc.l.replace('⭐ ','').replace('➕ ','')+'</th>';
+      });
+      thead += '<th style="padding:4px 6px;text-align:center">Promedio</th>'+
+        '<th style="padding:4px 6px;text-align:center">Pts. Rasgos<br>Evaluados</th>'+
+        '<th style="padding:4px 6px;text-align:center">Final T'+_cgUltimaConsulta.trimestre+'</th>'+
+        '</tr></thead>';
+
+      let tbody = '<tbody>';
+      filas.forEach(function(f, i){
+        const esUsaer = usaer.has(f.curp);
+        const bgFila = esUsaer ? '#f3e8ff' : (i % 2 ? '#fffdf5' : '#fff');
+        tbody += '<tr style="background:'+bgFila+'">';
+        tbody += '<td style="padding:3px 6px;text-align:center;color:#999">'+(i+1)+'</td>';
+        tbody += '<td style="padding:3px 8px;text-align:left;font-weight:600">'+(esUsaer?'⭐ ':'')+cgEsc_(f.nombre)+'</td>';
+        semCols.forEach(function(sc){
+          const key = String(sc.v);
+          const raw = f.semanas[key];
+          const v = (raw!==undefined && raw!==null && raw!=='') ? Number(raw) : null;
+          const banda = (v!==null && !isNaN(v)) ? xlsBanda(v) : null;
+          const bg = banda ? '#'+banda.fill.slice(2) : 'transparent';
+          const col = banda ? '#'+banda.font.slice(2) : '#2d1f08';
+          tbody += '<td style="padding:3px 4px;text-align:center;font-weight:700;background:'+bg+';color:'+col+'">'+(v!==null && !isNaN(v) ? v : '—')+'</td>';
+        });
+        tbody += '<td style="padding:3px 6px;text-align:center;font-weight:700">'+(f.calc.promedio!==null ? f.calc.promedio.toFixed(2) : '—')+'</td>';
+        const peV = f.semanas['PE'];
+        tbody += '<td style="padding:3px 6px;text-align:center;font-weight:700">'+(peV!==undefined && peV!==null && peV!=='' ? peV : '—')+'</td>';
+        const bandaFinal = f.calc.final!==null ? xlsBanda(f.calc.final) : null;
+        const bgF = bandaFinal ? '#'+bandaFinal.fill.slice(2) : 'transparent';
+        const colF = bandaFinal ? '#'+bandaFinal.font.slice(2) : '#ccc';
+        tbody += '<td style="padding:3px 6px;text-align:center;font-weight:800;background:'+bgF+';color:'+colF+'">'+(f.calc.final!==null ? f.calc.final.toFixed(2) : '—')+'</td>';
+        tbody += '</tr>';
+      });
+      tbody += '</tbody>';
+
+      const pg = cgPromediosGrupo_(filas, semCols);
+      let tfoot = '<tfoot><tr style="background:#fdf3d0;border-top:2px solid '+GUINDA+';font-style:italic;font-weight:700">'+
+        '<td></td><td style="padding:4px 8px">Promedio del grupo</td>';
+      semCols.forEach(function(sc){
+        const v = pg.promediosCols[String(sc.v)];
+        tfoot += '<td style="padding:4px 4px;text-align:center">'+(v!==null ? v.toFixed(2) : '—')+'</td>';
+      });
+      tfoot += '<td style="padding:4px 6px;text-align:center">'+(pg.promGrupoProm!==null ? pg.promGrupoProm.toFixed(2) : '—')+'</td>';
+      tfoot += '<td style="padding:4px 6px;text-align:center">'+(pg.promGrupoPE!==null ? pg.promGrupoPE.toFixed(2) : '—')+'</td>';
+      tfoot += '<td style="padding:4px 6px;text-align:center">'+(pg.promGrupoFinal!==null ? pg.promGrupoFinal.toFixed(2) : '—')+'</td>';
+      tfoot += '</tr></tfoot>';
+
+      return '<table style="border-collapse:collapse;width:100%;font-size:10px">'+thead+tbody+tfoot+'</table>';
+    }
+
+    // Tamaños de hoja disponibles para la impresión (ancho × alto, siempre en
+    // orientación horizontal por la cantidad de columnas de la tabla). Carta
+    // es el tamaño por defecto. "Oficio" es el tamaño usado comúnmente en
+    // México (distinto del "Legal" estadounidense, un poco más angosto).
+    const CG_TAMANOS_HOJA = {
+      carta:  { label: 'Carta (21.6 × 27.9 cm)', dim: '215.9mm 279.4mm' },
+      oficio: { label: 'Oficio (21.6 × 34.0 cm)', dim: '215.9mm 340mm'  },
+      legal:  { label: 'Legal (21.6 × 35.6 cm)',  dim: '215.9mm 355.6mm' },
+      a4:     { label: 'A4 (21.0 × 29.7 cm)',     dim: '210mm 297mm'    }
+    };
+
+    function imprimirCalGrupo(){
+      if(!_cgUltimaConsulta){ alert('Primero realiza una consulta para poder imprimir.'); return; }
+      const { grado, grupo, asignatura, trimestre, usaerSet } = _cgUltimaConsulta;
+      const w = window.open('', '_blank');
+      if(!w){ alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.'); return; }
+
+      const fechaImpresion = new Date().toLocaleString('es-MX', {dateStyle:'long', timeStyle:'short'});
+      const tabla = construirTablaImpresionCalGrupo_();
+      const totalUsaer = usaerSet ? usaerSet.size : 0;
+
+      // El logotipo debe ir como URL ABSOLUTA: la ventana de impresión abre
+      // en blanco (about:blank/sin URL propia), así que una ruta relativa
+      // como "logo.png" no encontraría el archivo. Aquí, en la ventana
+      // principal (que sí conoce su URL real de GitHub Pages), se resuelve
+      // a la ruta completa antes de mandarla a la ventana nueva.
+      const logoUrl = new URL('logo.png', window.location.href).href;
+
+      const opcionesTamano = Object.keys(CG_TAMANOS_HOJA).map(function(k){
+        return '<option value="'+k+'"'+(k==='carta'?' selected':'')+'>'+CG_TAMANOS_HOJA[k].label+'</option>';
+      }).join('');
+
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+        '<title>Consulta de Calificaciones por Grupo</title>' +
+        '<style id="cg-pagina-style">@page{ size: '+CG_TAMANOS_HOJA.carta.dim+' landscape; margin: 10mm; }</style>' +
+        '<style>' +
+        '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+        'body{font-family:Arial,Helvetica,sans-serif;color:#2d1f08;margin:0;padding:16px;background:#fff;position:relative}' +
+        '.barra-imprimir{position:fixed;top:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:50;' +
+          'background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.25)}' +
+        '.barra-imprimir label{font-size:12px;color:#2d1f08}' +
+        '.barra-imprimir select{font-size:12px;padding:4px 6px;border-radius:5px;border:1px solid #ccc}' +
+        '.btn-imprimir{background:#7a1a1a;color:#F0C040;border:none;' +
+          'padding:8px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px}' +
+        '@media print{ .barra-imprimir{display:none} ' +
+          '*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important} }' +
+        // ── Marca de agua: el logotipo de la escuela, grande y muy tenue,
+        //    centrado detrás del contenido. position:fixed hace que se
+        //    repita en cada hoja impresa si el grupo ocupa varias páginas. ──
+        '.marca-agua{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+          'width:60%;max-width:520px;opacity:0.07;z-index:-1;pointer-events:none;filter:grayscale(100%)}' +
+        '.masthead{display:flex;align-items:center;justify-content:center;gap:14px;' +
+          'border-bottom:2px solid #7a1a1a;padding-bottom:10px;margin-bottom:14px}' +
+        '.masthead-logo{width:52px;height:52px;object-fit:contain;flex-shrink:0}' +
+        '.masthead-texto{text-align:center}' +
+        '.masthead .gob{font-size:11px;color:#666}' +
+        '.masthead .esc{font-weight:800;font-size:15px;color:#1a1a1a;margin-top:2px}' +
+        '.masthead .lug{font-size:11px;color:#666;margin-top:1px}' +
+        '.masthead .doc{font-weight:700;font-size:12px;color:#7a1a1a;margin-top:6px;letter-spacing:0.03em;text-transform:uppercase}' +
+        '.masthead .grp{font-weight:700;font-size:13px;color:#2d1f08;margin-top:4px}' +
+        'table{page-break-inside:auto;position:relative}' +
+        'tr{page-break-inside:avoid;break-inside:avoid}' +
+        '.leyenda{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#555;margin:10px 0 4px;align-items:center}' +
+        '.leyenda i{display:inline-block;width:11px;height:11px;border-radius:2px;background:#f3e8ff;border:1px solid #9333ea;margin-right:4px}' +
+        '.footer-firma{margin-top:32px;text-align:center;font-size:10.5px;color:#555}' +
+        '.footer-firma .linea{border-top:1px solid #333;width:220px;margin:24px auto 4px}' +
+        '.footer-fecha{margin-top:14px;text-align:right;font-size:9px;color:#999}' +
+        '</style></head><body>' +
+        '<div class="barra-imprimir">' +
+          '<label>Tamaño de hoja: <select id="cg-tam-hoja" onchange="cgCambiarTamanoHoja(this.value)">'+opcionesTamano+'</select></label>' +
+          '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
+        '</div>' +
+        '<img class="marca-agua" src="'+logoUrl+'" alt=""/>' +
+        '<div class="masthead">' +
+          '<img class="masthead-logo" src="'+logoUrl+'" alt="Logotipo"/>' +
+          '<div class="masthead-texto">' +
+            '<div class="gob">Gobierno de Zacatecas · Secretaría de Educación</div>' +
+            '<div class="esc">Escuela Secundaria Técnica No. 3</div>' +
+            '<div class="lug">González Ortega, Sombrerete, Zac.</div>' +
+            '<div class="doc">Consulta de Calificaciones por Grupo</div>' +
+            '<div class="grp">' + grado + '° Grupo ' + grupo + ' — ' + cgEsc_(asignatura) + ' — Trimestre ' + trimestre + '</div>' +
+          '</div>' +
+        '</div>' +
+        tabla +
+        (totalUsaer > 0 ? '<div class="leyenda"><span><i></i>⭐ '+totalUsaer+' alumno(a)'+(totalUsaer===1?'':'s')+' con Apoyo USAER</span></div>' : '') +
+        '<div class="footer-firma"><div class="linea"></div>Gustavo Nolasco Moreno<br>Director del Plantel</div>' +
+        '<div class="footer-fecha">Documento generado el ' + fechaImpresion + ' hrs.</div>' +
+        // Nota: la etiqueta de cierre se arma partida a propósito ("</scr"
+        // más "ipt>") — si esas letras aparecieran juntas y completas aquí
+        // dentro, el analizador HTML del NAVEGADOR (no solo el nuestro)
+        // cerraría de inmediato la etiqueta que envuelve esta función,
+        // rompiendo todo este archivo.
+        '<scr' + 'ipt>' + cgScriptSelectorHoja_() + '</scr' + 'ipt>' +
+        '</body></html>';
+
+      w.document.open(); w.document.write(html); w.document.close();
+    }
+
+    // Script que se inyecta en la ventana emergente de impresión (documento
+    // aparte, sin acceso a las funciones de esta página) para que el
+    // <select> de "Tamaño de hoja" reescriba en vivo la regla @page — así el
+    // usuario elige el tamaño de SU impresora/PDF sin volver a generar la
+    // vista. Los tamaños posibles vienen de CG_TAMANOS_HOJA (la misma tabla
+    // que arma las <option>, para que ambos lados siempre coincidan).
+    function cgScriptSelectorHoja_(){
+      const mapaJs = JSON.stringify(Object.keys(CG_TAMANOS_HOJA).reduce(function(acc,k){
+        acc[k] = CG_TAMANOS_HOJA[k].dim; return acc;
+      }, {}));
+      return 'var CG_DIM_HOJA = ' + mapaJs + ';' +
+        'function cgCambiarTamanoHoja(v){' +
+          'var dim = CG_DIM_HOJA[v] || CG_DIM_HOJA.carta;' +
+          'var st = document.getElementById("cg-pagina-style");' +
+          'if(st) st.textContent = "@page{ size: " + dim + " landscape; margin: 10mm; }";' +
+        '}';
+    }
+
+    async function abrirAlumnoDesdeCalGrupo(curp){
+      if(!_cgUltimaConsulta) return;
+      const grado = _cgUltimaConsulta.grado;
+      const grupo = _cgUltimaConsulta.grupo;
+
+      const overlay = document.getElementById('ficha-overlay');
+      const body    = document.getElementById('ficha-body');
+      overlay.classList.add('active');
+      overlay.scrollTop = 0;
+      body.innerHTML = `
+        <div style="text-align:center;padding:3.5rem 1rem;color:var(--muted)">
+          <div style="font-size:2rem;margin-bottom:1rem">⏳</div>
+          Abriendo ficha del Alumno(a)… espera un momento.
+        </div>`;
+
+      const json = await jsonpCall({accion:'buscarAlumnoParaFichaDocente', usuario:_cgDoc, grado:grado, grupo:grupo, curp:curp}, 15000);
+      if(!json || !json.ok){
+        body.innerHTML = `
+          <div style="background:#fff0f0;border:1px solid #C0181A;border-radius:8px;
+               padding:1rem 1.2rem;margin:1.5rem;color:#C0181A;font-size:0.88rem">
+            ⚠️ ${json ? json.mensaje : 'Sin respuesta del servidor.'}
+          </div>`;
+        return;
+      }
+      abrirFichaDescriptiva(json.alumno);
+    }
+
+    // Gráfica de barras con el estilo dorado/guinda del sitio (no las bandas
+    // rojo/naranja/azul de las calificaciones individuales, que ya se usan
+    // en las celdas de la tabla) — compara el promedio del grupo en cada
+    // columna (Diagnóstico, cada semana, Examen, Promedio, Puntos Rasgos
+    // Evaluados y Final de Trimestre).
+    function dibujarGraficaCalGrupo(etiquetas, valores){
+      const canvas = document.getElementById('grafica-cg');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.clientWidth || 900;
+      canvas.height = 320;
+      const W = canvas.width, H = canvas.height;
+      const padL = 40, padR = 16, padT = 34, padB = 70;
+      const aW = W - padL - padR;
+      const aH = H - padT - padB;
+      const YMIN = 0, YMAX = 10;
+
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = '#fffdf5';
+      ctx.fillRect(0,0,W,H);
+
+      ctx.fillStyle = '#3D2B0A';
+      ctx.font = 'bold 13px Cinzel, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Promedio del grupo por campo', W/2, 18);
+
+      const yTicks = [0,2,4,6,8,10];
+      ctx.lineWidth = 0.8;
+      yTicks.forEach(function(v){
+        const y = padT + aH - aH*(v-YMIN)/(YMAX-YMIN);
+        ctx.strokeStyle = v===0 ? '#C8922A' : '#eee0bd';
+        ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+aW,y); ctx.stroke();
+        ctx.fillStyle = '#7a6030';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(v, padL-6, y+3);
+      });
+
+      const n = etiquetas.length;
+      const barGrpW = aW/n;
+      const barW = barGrpW*0.6;
+
+      etiquetas.forEach(function(etq, i){
+        const val = valores[i];
+        const x = padL + i*barGrpW + (barGrpW-barW)/2;
+        if(val!==null && val!==undefined && !isNaN(val)){
+          const barH = aH*(val-YMIN)/(YMAX-YMIN);
+          const y = padT + aH - barH;
+          const grad = ctx.createLinearGradient(0,y,0,padT+aH);
+          grad.addColorStop(0,'#F0C040');
+          grad.addColorStop(1,'#8B6914');
+          ctx.fillStyle = grad;
+          ctx.strokeStyle = '#7A1A1A';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.rect(x,y,barW,barH);
+          ctx.fill(); ctx.stroke();
+
+          ctx.fillStyle = '#7A1A1A';
+          ctx.font = 'bold 9.5px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(val.toFixed(1), x+barW/2, y-4);
+        }
+
+        ctx.save();
+        ctx.translate(padL + i*barGrpW + barGrpW/2, padT+aH+12);
+        ctx.rotate(-0.55);
+        ctx.fillStyle = '#3D2B0A';
+        ctx.font = '9.5px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(etq, 0, 0);
+        ctx.restore();
+      });
+    }
+
     // ── CONTACTO > USUARIOS > ALUMNOS (cambio de contraseña) ──
     let _usuAluCurp='';
 
@@ -7770,6 +8632,387 @@
       msg.innerHTML=`<span style="color:#1D7A4E">✅ ${guardados} registros actualizados correctamente.</span>`;
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    //  DOCENTES > MEJORA CONTINUA (PMC) — Programa Escolar de Mejora
+    //  Continua (SEP). Reusa el login de Usuarios (mismo patrón que
+    //  Calificaciones/Asistencia/Personal/Consulta por Grupo) y llama a
+    //  las acciones pmc* del backend (ver comentario junto a SS_PMC_ID en
+    //  el .gs). El rol (Director/Comité/Docente) SIEMPRE lo decide el
+    //  servidor — aquí solo se usa para mostrar u ocultar controles.
+    // ══════════════════════════════════════════════════════════════════
+    let _pmcDoc = '', _pmcD = null, _pmcTab = 'inicio';
+    const PMC_TABS = [['inicio','Inicio'],['diag','1. Diagnóstico'],['prio','2. Priorización'],
+      ['prog','3. Programa'],['seg','4. Seguimiento'],['com','5. Evaluación y comunicación'],['guia','Guía']];
+
+    function pmcEsc_(s){ return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function pmcOpts_(arr, val, vacio){
+      return (vacio ? '<option value="">'+vacio+'</option>' : '') +
+        arr.map(function(o){ const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
+          return '<option value="'+pmcEsc_(v)+'"'+(String(v)===String(val)?' selected':'')+'>'+pmcEsc_(t)+'</option>'; }).join('');
+    }
+    function pmcSem_(s){ const cls = s==='SIN DATO' ? 'SIN' : s; return '<span class="pmc-sem pmc-sem-'+cls+'">'+pmcEsc_(s)+'</span>'; }
+    function pmcBarra_(p){ return '<div class="pmc-barra"><i style="width:'+Math.max(0,Math.min(100,p||0))+'%"></i></div>'; }
+    function pmcAmbito_(id){ const a = (_pmcD.ambitos||[]).find(function(x){ return x.ID===id; }); return a ? a['Ámbito'] : id; }
+    function pmcGestion_(){ return _pmcD && (_pmcD.miRol === 'Director' || _pmcD.miRol === 'Comité'); }
+    function pmcMsg_(html, tipo){
+      const el = document.getElementById('pmc-msg');
+      if (!el) return;
+      el.innerHTML = html ? '<div class="pmc-aviso pmc-aviso-'+(tipo||'info')+'">'+html+'</div>' : '';
+    }
+    function pmcVal_(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+    function pmcDatosForm_(ids){ const o = {}; Object.keys(ids).forEach(function(k){ o[k] = pmcVal_(ids[k]); }); return o; }
+
+    // ── Acceso ──
+    async function accederPmc(){
+      const user = pmcVal_('pmc-user').toUpperCase(), pass = pmcVal_('pmc-pass').toUpperCase();
+      const res = document.getElementById('res-pmc-login');
+      const btn = document.getElementById('btn-pmc-login');
+      if(!user || !pass){ res.innerHTML = '<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>'; return; }
+      res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled = true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled = false;
+      if(!json){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('pmc-pass').value=''; document.getElementById('pmc-pass').focus();
+        return;
+      }
+      _pmcDoc = (json.usuario.curp || user);
+      closeModal('pmc-login');
+      document.getElementById('pmc-overlay').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      res.innerHTML=''; document.getElementById('pmc-user').value=''; document.getElementById('pmc-pass').value='';
+      _pmcTab = 'inicio';
+      await pmcCargar_('Bienvenido(a).');
+    }
+    function cerrarPmcOverlay(){
+      document.getElementById('pmc-overlay').style.display = 'none';
+      document.body.style.overflow = '';
+      _pmcD = null; _pmcDoc = '';
+    }
+
+    async function pmcCargar_(msgOk){
+      const vista = document.getElementById('pmc-vista');
+      vista.innerHTML = '<div class="pmc-card">⏳ Cargando información…</div>';
+      const json = await jsonpCall({accion:'pmcObtenerDatos', usuario:_pmcDoc}, 25000);
+      if(!json || json.timeout || json.networkError){ vista.innerHTML = '<div class="pmc-card">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ vista.innerHTML = '<div class="pmc-card">⚠️ '+pmcEsc_(json.mensaje||'No se pudo cargar.')+'</div>'; return; }
+      _pmcD = json;
+      document.getElementById('pmc-doc-label').textContent = _pmcDoc + ' · ' + _pmcD.miRol;
+      pmcPintar_();
+      if (msgOk) pmcMsg_('✔ ' + msgOk, 'ok');
+    }
+
+    function pmcIr_(t){ _pmcTab = t; pmcPintar_(); document.getElementById('pmc-overlay').scrollTop = 0; }
+
+    function pmcPintar_(){
+      document.getElementById('pmc-tabnav').innerHTML = PMC_TABS.map(function(t){
+        return '<button class="pmc-tabbtn'+(t[0]===_pmcTab?' act':'')+'" onclick="pmcIr_(\''+t[0]+'\')">'+t[1]+'</button>';
+      }).join('');
+      pmcMsg_('');
+      const vistas = {inicio:pmcVistaInicio_, diag:pmcVistaDiag_, prio:pmcVistaPrio_, prog:pmcVistaProg_, seg:pmcVistaSeg_, com:pmcVistaCom_, guia:pmcVistaGuia_};
+      document.getElementById('pmc-vista').innerHTML =
+        '<datalist id="pmc-dlpers">' + (_pmcD.personal||[]).map(function(p){ return '<option value="'+pmcEsc_(p.nombre)+'">'+pmcEsc_(p.funcion)+'</option>'; }).join('') + '</datalist>' +
+        vistas[_pmcTab]();
+      if (_pmcTab === 'diag') pmcCambiaAmbitoInd_();
+      if (_pmcTab === 'prog') pmcPreviews_();
+    }
+
+    // ── INICIO ──
+    function pmcVistaInicio_(){
+      const fases = (_pmcD.fases||[]).map(function(x,i){
+        return '<div class="pmc-fase"><small>Fase '+(i+1)+'</small><p>'+pmcEsc_(x.fase)+'</p><b>'+x.pct+'%</b>'+pmcBarra_(x.pct)+'<small>'+pmcEsc_(x.detalle)+'</small></div>';
+      }).join('');
+      const rojos = _pmcD.ind.filter(function(i){ return i.semaforo==='ROJO'; }).length;
+      const amar = _pmcD.ind.filter(function(i){ return i.semaforo==='AMARILLO'; }).length;
+      const filasSem = _pmcD.ind.map(function(i){
+        return '<tr><td>'+pmcEsc_(pmcAmbito_(i.ambito))+'</td><td>'+pmcEsc_(i.indicador)+'</td>'+
+          '<td>'+(i.valor===null?'—':pmcEsc_(i.valor)+' '+pmcEsc_(i.unidad))+'</td>'+
+          '<td>'+(i.sentido==='MAYOR'?'≥ ':'≤ ')+pmcEsc_(i.umbral)+'</td><td>'+pmcSem_(i.semaforo)+'</td></tr>';
+      }).join('');
+      const progs = (_pmcD.progs||[]).filter(function(g){ return _pmcD.probs.some(function(p){ return p.ID===g['ProblemáticaID'] && p.Seleccionada==='Sí'; }); });
+      const filasProg = progs.map(function(g){
+        return '<tr><td>'+pmcEsc_(g.problematica)+'</td><td>'+g.acciones+'</td>'+
+          '<td style="min-width:120px">'+pmcBarra_(g.avanceAcciones)+g.avanceAcciones+'%</td>'+
+          '<td>'+(g['Logro meta %']===null||g['Logro meta %']===''?'s/d':g['Logro meta %']+'%')+'</td></tr>';
+      }).join('');
+      const retr = (_pmcD.acc||[]).filter(function(a){ return a.Estado==='Retrasada'; });
+      return '<div class="pmc-card"><h2>Avance del Proceso de Mejora Continua</h2><div class="pmc-fases">'+fases+'</div></div>' +
+        '<div class="pmc-card"><h2>Semáforo del diagnóstico</h2><p class="pmc-nota">'+rojos+' indicador(es) en rojo · '+amar+' en amarillo. Periodo actual: '+pmcEsc_(_pmcD.escuela.periodoActual)+'</p>' +
+        '<div class="pmc-tw"><table><tr><th>Ámbito</th><th>Indicador</th><th>Valor</th><th>Parámetro</th><th>Estado</th></tr>'+filasSem+'</table></div></div>' +
+        '<div class="pmc-card"><h2>Programa de Mejora Continua – avance por problemática</h2><div class="pmc-tw"><table><tr><th>Problemática</th><th>Acciones</th><th>Avance de acciones</th><th>Logro de meta</th></tr>'+filasProg+'</table></div>' +
+        (retr.length ? '<h3 style="color:#C0121A">Acciones retrasadas ('+retr.length+')</h3><ul>'+retr.map(function(a){ return '<li>'+pmcEsc_(a['Acción'])+' – <i>'+pmcEsc_(a.Responsables)+'</i></li>'; }).join('')+'</ul>' : '') +
+        '</div>';
+    }
+
+    // ── 1. DIAGNÓSTICO ──
+    function pmcVistaDiag_(){
+      const ambs = (_pmcD.ambitos||[]).map(function(a){ return [a.ID, a['Ámbito']+(a.Considerar==='Sí'?'':' (no priorizado)')]; });
+      const per = pmcOpts_(_pmcD.periodos, _pmcD.escuela.periodoActual);
+      const narr = (_pmcD.narrativa||[]).map(function(n){
+        return '<h3>'+pmcEsc_(n.ambito)+' <span class="pmc-chip">'+pmcEsc_(n.escenario)+'</span></h3>'+n.parrafos.map(function(p){ return '<p>'+pmcEsc_(p)+'</p>'; }).join('');
+      }).join('');
+      const ambitosConCat = (_pmcD.ambitos||[]).filter(function(a){ return _pmcD.cat.some(function(c){ return c['ÁmbitoID']===a.ID; }); }).map(function(a){ return [a.ID, a['Ámbito']]; });
+      return '<div class="pmc-card"><h2>Captura de indicadores (datos por grupo)</h2><p class="pmc-nota">Registra el dato de tu grupo o área. El sistema lo integra por periodo y calcula el semáforo del ámbito.</p>' +
+        '<div class="pmc-grid"><div><label>Ámbito</label><select id="pmc-iA" onchange="pmcCambiaAmbitoInd_()">'+pmcOpts_(ambitosConCat)+'</select></div>' +
+        '<div><label>Indicador</label><select id="pmc-iI" onchange="pmcInfoInd_()"></select></div>' +
+        '<div><label>Periodo</label><select id="pmc-iP">'+per+'</select></div>' +
+        '<div><label>Grupo / área (ej. 2° B)</label><input id="pmc-iG"></div>' +
+        '<div><label>Valor <span id="pmc-iU"></span></label><input id="pmc-iV" type="number" step="any"></div>' +
+        '<div><label>Fuente de información</label><input id="pmc-iF"></div></div>' +
+        '<p class="pmc-nota" id="pmc-iInfo"></p>' +
+        '<button class="pmc-btn" onclick="pmcGuardarIndicador_()">Guardar dato</button></div>' +
+
+        '<div class="pmc-card"><h2>Lectura de la realidad – aportes del colectivo</h2><p class="pmc-nota">Registra lo que observas: situación, causas probables y de dónde obtuviste la información (bitácoras, entrevistas, cuestionarios, fichas, etc.).</p>' +
+        '<div class="pmc-grid"><div><label>Ámbito</label><select id="pmc-aA">'+pmcOpts_(ambs)+'</select></div><div><label>Periodo</label><select id="pmc-aP">'+per+'</select></div>' +
+        '<div><label>Fuente</label><input id="pmc-aF" placeholder="Bitácora, cuestionario, entrevista…"></div><div><label>Actor consultado</label><input id="pmc-aC" placeholder="Alumnos, padres, docentes…"></div></div>' +
+        '<label style="margin-top:8px">Situación observada</label><textarea id="pmc-aS"></textarea><label>Posibles causas</label><textarea id="pmc-aK"></textarea><label>Propuesta de atención</label><textarea id="pmc-aR"></textarea>' +
+        '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarAporte_()">Guardar aporte</button></div></div>' +
+
+        '<div class="pmc-card pmc-narr"><h2>Narrativa del diagnóstico (borrador automático)</h2><p class="pmc-nota">Se integra con los datos y aportes registrados en los ámbitos marcados como "Considerar". Dirección puede afinar la redacción antes de usarla en el documento oficial.</p>'+narr+'</div>' +
+
+        '<div class="pmc-card"><h2>Últimos datos capturados</h2><div class="pmc-tw"><table><tr><th>Fecha</th><th>Periodo</th><th>Indicador</th><th>Grupo</th><th>Valor</th><th>Capturó</th></tr>' +
+        (_pmcD.datos||[]).slice(0,25).map(function(x){ return '<tr><td>'+pmcEsc_(x.Fecha)+'</td><td>'+pmcEsc_(x.Periodo)+'</td><td>'+pmcEsc_(x.Indicador)+'</td><td>'+pmcEsc_(x.Grupo)+'</td><td>'+pmcEsc_(x.Valor)+'</td><td>'+pmcEsc_(x['Capturó'])+'</td></tr>'; }).join('') +
+        '</table></div></div>';
+    }
+    function pmcCambiaAmbitoInd_(){
+      const a = pmcVal_('pmc-iA'); const sel = document.getElementById('pmc-iI'); if(!sel) return;
+      sel.innerHTML = pmcOpts_(_pmcD.cat.filter(function(c){ return c['ÁmbitoID']===a; }).map(function(c){ return [c.ID, c.Indicador]; }));
+      pmcInfoInd_();
+    }
+    function pmcInfoInd_(){
+      const c = _pmcD.cat.find(function(x){ return x.ID===pmcVal_('pmc-iI'); }); if(!c) return;
+      document.getElementById('pmc-iU').textContent = '('+c.Unidad+')';
+      document.getElementById('pmc-iF').value = c['Fuente sugerida'] || '';
+      document.getElementById('pmc-iInfo').textContent = 'Parámetro esperado: '+(c.Sentido==='MAYOR'?'mínimo ':'máximo ')+c.Umbral+' '+c.Unidad+' · Se integra por '+(c['Agregación']==='SUMA'?'suma':'promedio')+' de los grupos.';
+    }
+    async function pmcGuardarIndicador_(){
+      const datos = pmcDatosForm_({IndicadorID:'pmc-iI', Periodo:'pmc-iP', Grupo:'pmc-iG', Valor:'pmc-iV', Fuente:'pmc-iF'});
+      if(!datos.IndicadorID || datos.Valor===''){ pmcMsg_('⚠️ Selecciona el indicador y captura un valor.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarIndicador', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Dato registrado.');
+    }
+    async function pmcGuardarAporte_(){
+      const datos = pmcDatosForm_({'ÁmbitoID':'pmc-aA', Periodo:'pmc-aP', Fuente:'pmc-aF', 'Actor consultado':'pmc-aC', 'Situación observada':'pmc-aS', 'Posibles causas':'pmc-aK', Propuesta:'pmc-aR'});
+      if(!datos['Situación observada']){ pmcMsg_('⚠️ Describe la situación observada.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarAporte', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Aporte registrado.');
+    }
+
+    // ── 2. PRIORIZACIÓN ──
+    const PMC_CRIT = [['C1 Competencia','¿La escuela puede atenderla con sus recursos y es de su competencia?'],
+      ['C2 Mediano plazo','¿Requiere planeación con objetivos, metas y acciones a mediano/largo plazo?'],
+      ['C3 Aprendizaje','¿Afecta el aprendizaje y desarrollo integral de los estudiantes?'],
+      ['C4 Abandono','¿Afecta las trayectorias o podría incrementar el abandono escolar?'],
+      ['C5 Evidencia','¿Los datos del diagnóstico evidencian la problemática?']];
+    function pmcVistaPrio_(){
+      const g = pmcGestion_();
+      const sug = (_pmcD.sugerencias||[]).length ? '<div class="pmc-card"><h2>Problemáticas sugeridas por los datos</h2><p class="pmc-nota">Indicadores en rojo cuyo ámbito aún no tiene problemática seleccionada.</p>' +
+        _pmcD.sugerencias.map(function(s){ return '<div class="pmc-fila">'+pmcSem_('ROJO')+' <b>'+pmcEsc_(pmcAmbito_(s.ambito))+':</b> '+pmcEsc_(s.indicador)+' = '+pmcEsc_(s.valor)+' '+pmcEsc_(s.unidad)+
+          (g ? ' <button class="pmc-btn pmc-btn-sec" onclick="pmcNuevaProbDesdeIndicador_(\''+s.ambito+'\',\''+pmcEsc_(String(s.indicador).replace(/[\'"]/g,''))+'\')">Registrar como problemática</button>' : '')+'</div>'; }).join('')+'</div>' : '';
+      const filas = _pmcD.probs.slice().sort(function(a,b){ return (Number(b.Puntaje)||0)-(Number(a.Puntaje)||0); }).map(function(p){
+        const criterios = PMC_CRIT.map(function(c){
+          return '<td>'+(g ? '<select id="pmc-'+p.ID+c[0].slice(0,2)+'" style="width:52px">'+pmcOpts_(['1','2','3','4','5'], p[c[0]], '–')+'</select>' : pmcEsc_(p[c[0]]))+'</td>';
+        }).join('');
+        return '<tr><td><b>'+pmcEsc_(p['Problemática'])+'</b><br><small>'+pmcEsc_(pmcAmbito_(p['ÁmbitoID']))+' · '+pmcEsc_(p.Origen)+'</small></td>' + criterios +
+          '<td><b>'+pmcEsc_(p.Puntaje)+'</b></td><td>'+pmcEsc_(p.Prioridad)+'</td>' +
+          '<td>'+(g ? '<select id="pmc-'+p.ID+'SEL" style="width:62px">'+pmcOpts_(['Sí','No'], p.Seleccionada)+'</select>' : pmcEsc_(p.Seleccionada))+'</td>' +
+          (g ? '<td><button class="pmc-btn pmc-btn-sec" onclick="pmcGuardarProblematicaExistente_(\''+p.ID+'\')">Guardar</button></td>' : '') + '</tr>';
+      }).join('');
+      return sug + '<div class="pmc-card"><h2>Priorización de problemáticas</h2><p class="pmc-nota">Valora cada criterio de 1 (poco) a 5 (mucho). Puntaje: Alta ≥ 20 · Media 14–19 · Baja &lt; 14.</p>' +
+        '<p class="pmc-nota">'+PMC_CRIT.map(function(c){ return '<b>'+c[0].slice(0,2)+'</b> '+c[1]; }).join('<br>')+'</p>' +
+        '<div class="pmc-tw"><table><tr><th>Problemática</th>'+PMC_CRIT.map(function(c){ return '<th>'+c[0].slice(0,2)+'</th>'; }).join('')+'<th>Puntaje</th><th>Prioridad</th><th>Selec.</th>'+(g?'<th></th>':'')+'</tr>'+filas+'</table></div>' +
+        (g ? '<h3>Agregar problemática</h3><div class="pmc-grid"><div><label>Problemática</label><input id="pmc-npN"></div><div><label>Ámbito</label><select id="pmc-npA">'+pmcOpts_(_pmcD.ambitos.map(function(a){ return [a.ID, a['Ámbito']]; }))+'</select></div>' +
+          '<div><label>Origen</label><input id="pmc-npO" value="Priorización CTE"></div></div><div class="pmc-fila"><button class="pmc-btn" onclick="pmcAgregarProblematica_()">Agregar</button></div>'
+          : '<p class="pmc-nota">La valoración la registra la Dirección o el Comité de Planeación y Evaluación.</p>') + '</div>';
+    }
+    function pmcNuevaProbDesdeIndicador_(ambito, texto){ _pmcTab='prio'; pmcPintar_(); document.getElementById('pmc-npA').value=ambito; document.getElementById('pmc-npN').value=texto; document.getElementById('pmc-npO').value='Indicador en rojo'; document.getElementById('pmc-npN').focus(); }
+    async function pmcGuardarProblematicaExistente_(id){
+      const p = _pmcD.probs.find(function(x){ return x.ID===id; }); const d = Object.assign({}, p);
+      PMC_CRIT.forEach(function(c){ d[c[0]] = pmcVal_('pmc-'+id+c[0].slice(0,2)); });
+      d.Seleccionada = pmcVal_('pmc-'+id+'SEL');
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarProblematica', usuario:_pmcDoc, datos:JSON.stringify(d)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Priorización actualizada.');
+    }
+    async function pmcAgregarProblematica_(){
+      const d = pmcDatosForm_({'Problemática':'pmc-npN','ÁmbitoID':'pmc-npA', Origen:'pmc-npO'});
+      if(!d['Problemática']){ pmcMsg_('⚠️ Escribe la problemática.', 'err'); return; }
+      d.Seleccionada = 'No';
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarProblematica', usuario:_pmcDoc, datos:JSON.stringify(d)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Problemática agregada.');
+    }
+
+    // ── 3. PROGRAMA ──
+    const PMC_CAMPOS_PROG = [['Verbo','Verbo en infinitivo (qué)','Fomentar, Mejorar, Incrementar…'],['Qué','Objeto','la sana convivencia escolar'],
+      ['Para qué','Con el fin de (para qué)','erradicar el acoso escolar…'],['Cómo','Mediante (cómo)','clubes lúdicos, reglamento…'],
+      ['Meta plazo','Meta – plazo','Al final del ciclo escolar'],['Meta cambio','Meta – cambio esperado','reducir al 0 % / incrementar a 90 %'],
+      ['Meta qué se mide','Meta – qué se mide','los casos de acoso escolar'],['Meta a quién','Meta – a quién se aplica','los alumnos de los tres grados']];
+    // Mismas fórmulas que el backend (pmcComponerObjetivo_/pmcComponerMeta_
+    // en el .gs) — así la vista previa siempre coincide con lo que se
+    // guarda.
+    function pmcComponerObjetivoPreview_(d){
+      if(!d.Verbo && !d['Qué']) return '';
+      let t = [d.Verbo, d['Qué']].filter(Boolean).join(' ');
+      if(d['Para qué']) t += ', con el fin de ' + d['Para qué'];
+      if(d['Cómo']) t += ', mediante ' + d['Cómo'];
+      return t.charAt(0).toUpperCase() + t.slice(1) + '.';
+    }
+    function pmcComponerMetaPreview_(d){
+      if(!d['Meta cambio'] && !d['Meta qué se mide']) return '';
+      let t = [d['Meta plazo'] ? d['Meta plazo']+',' : '', d['Meta cambio'], d['Meta qué se mide']].filter(Boolean).join(' ');
+      if(d['Meta a quién']) t += ' en ' + d['Meta a quién'];
+      return t.charAt(0).toUpperCase() + t.slice(1) + '.';
+    }
+    function pmcDatosProg_(id){ const d={ID:id}; PMC_CAMPOS_PROG.forEach(function(c){ d[c[0]] = pmcVal_('pmc-'+id+c[0].replace(/\W/g,'')); }); return d; }
+    function pmcPreviews_(){
+      (_pmcD.progs||[]).forEach(function(pr){
+        const o = document.getElementById('pmc-pvO'+pr.ID); if(!o) return;
+        const d = pmcDatosProg_(pr.ID);
+        o.textContent = pmcComponerObjetivoPreview_(d) || '(por definir)';
+        document.getElementById('pmc-pvM'+pr.ID).textContent = pmcComponerMetaPreview_(d) || '(por definir)';
+      });
+    }
+    function pmcVistaProg_(){
+      const g = pmcGestion_();
+      const sel = _pmcD.probs.filter(function(p){ return p.Seleccionada==='Sí'; });
+      if(!sel.length) return '<div class="pmc-card">No hay problemáticas seleccionadas. Realiza primero la priorización.</div>';
+      return '<p class="pmc-nota">El sistema redacta el objetivo y la meta con la estructura del Anexo 2 de las Orientaciones SEP. ' + (g ? '' : 'Solo la Dirección y el Comité pueden editar; los docentes consultan y registran seguimiento.') + '</p>' +
+        sel.map(function(p){
+          const pr = _pmcD.progs.find(function(x){ return x['ProblemáticaID']===p.ID; }) || {}; const id = pr.ID || '';
+          const acc = _pmcD.acc.filter(function(a){ return a.ProgramaID===id; });
+          const indOpts = _pmcD.cat.map(function(c){ return [c.ID, c.ID+' – '+c.Indicador]; });
+          const campos = PMC_CAMPOS_PROG.map(function(c){
+            return '<div><label>'+c[1]+'</label><input id="pmc-'+id+c[0].replace(/\W/g,'')+'" value="'+pmcEsc_(pr[c[0]])+'" placeholder="'+pmcEsc_(c[2])+'" oninput="pmcPreviews_()" '+(g?'':'disabled')+'></div>';
+          }).join('');
+          return '<div class="pmc-card"><h2>PROBLEMA: '+pmcEsc_((p['Problemática']||'').toUpperCase())+'</h2>' +
+            '<div class="pmc-preview"><b>OBJETIVO:</b> <span id="pmc-pvO'+id+'">'+pmcEsc_(pr.Objetivo)+'</span><br><b>META:</b> <span id="pmc-pvM'+id+'">'+pmcEsc_(pr.Meta)+'</span></div>' +
+            '<div class="pmc-grid">' + campos +
+            '<div><label>Indicador de la meta</label><select id="pmc-'+id+'Ind" '+(g?'':'disabled')+'>'+pmcOpts_(indOpts, pr.IndicadorID, '(selecciona)')+'</select></div>' +
+            '<div><label>Línea base</label><input id="pmc-'+id+'LB" type="number" step="any" value="'+pmcEsc_(pr['Línea base'])+'" '+(g?'':'disabled')+'></div>' +
+            '<div><label>Valor meta</label><input id="pmc-'+id+'VM" type="number" step="any" value="'+pmcEsc_(pr['Valor meta'])+'" '+(g?'':'disabled')+'></div>' +
+            '<div><label>Valor actual (automático)</label><input value="'+pmcEsc_(pr['Valor actual'])+'" disabled></div></div>' +
+            (g && id ? '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarProgramaObjetivo_(\''+id+'\')">Guardar objetivo y meta</button></div>' : '') +
+            '<h3>Acciones ('+acc.length+') · avance '+(pr.avanceAcciones||0)+'%</h3><div class="pmc-tw"><table><tr><th>#</th><th>Acción</th><th>Responsables</th><th>Tiempo</th><th>Seguimiento</th><th>Avance</th></tr>' +
+            acc.map(function(a,i){ return '<tr><td>'+(i+1)+'</td><td>'+pmcEsc_(a['Acción'])+'</td><td>'+pmcEsc_(a.Responsables)+'</td><td>'+pmcEsc_(a.Tiempo||(a.Inicio+' a '+a.Fin))+'</td><td>'+pmcEsc_(a.Seguimiento)+'</td>' +
+              '<td style="min-width:90px">'+pmcBarra_(a['Avance %'])+a['Avance %']+'% <small>'+pmcEsc_(a.Estado)+'</small>' + (g ? '<br><a href="#" onclick="pmcEditarAccion_(\''+a.ID+'\');return false">editar</a>' : '') + '</td></tr>'; }).join('') + '</table></div>' +
+            (g && id ? pmcFormAccion_(id) : '') + '</div>';
+        }).join('');
+    }
+    function pmcFormAccion_(pid){
+      const f = function(k,l,t,dl){ return '<div><label>'+l+'</label><input id="pmc-na'+pid+k+'" type="'+(t||'text')+'"'+(dl?' list="'+dl+'"':'')+'></div>'; };
+      return '<details id="pmc-det'+pid+'"><summary style="cursor:pointer;margin-top:10px"><b>+ Agregar / editar acción</b></summary><input type="hidden" id="pmc-na'+pid+'ID">' +
+        '<label style="margin-top:8px">Descripción de la acción (en qué consiste, cómo se desarrollará)</label><textarea id="pmc-na'+pid+'Acc"></textarea><div class="pmc-grid">' +
+        f('Dir','Dirigida a') + f('Resp','Responsables','text','pmc-dlpers') + f('Ini','Inicio','date') + f('Fin','Fin','date') + f('Tie','Tiempo / periodicidad') + f('Seg','Seguimiento (quién y cuándo)') + f('Rec','Recursos') + f('Evi','Evidencia esperada') +
+        '</div><div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarAccion_(\''+pid+'\')">Guardar acción</button></div></details>';
+    }
+    function pmcEditarAccion_(aid){
+      const a = _pmcD.acc.find(function(x){ return x.ID===aid; }); if(!a) return;
+      const p = a.ProgramaID, s = function(k,v){ const e = document.getElementById('pmc-na'+p+k); if(e) e.value = v||''; };
+      const det = document.getElementById('pmc-det'+p); if(det) det.open = true;
+      s('ID', a.ID); s('Acc', a['Acción']); s('Dir', a['Dirigida a']); s('Resp', a.Responsables); s('Ini', a.Inicio); s('Fin', a.Fin);
+      s('Tie', a.Tiempo); s('Seg', a.Seguimiento); s('Rec', a.Recursos); s('Evi', a['Evidencia esperada']);
+      const foco = document.getElementById('pmc-na'+p+'Acc'); if(foco) foco.focus();
+    }
+    async function pmcGuardarAccion_(pid){
+      const v = function(k){ return pmcVal_('pmc-na'+pid+k); };
+      const d = {ID:v('ID'), ProgramaID:pid, 'Acción':v('Acc'), 'Dirigida a':v('Dir'), Responsables:v('Resp'), Inicio:v('Ini'), Fin:v('Fin'), Tiempo:v('Tie'), Seguimiento:v('Seg'), Recursos:v('Rec'), 'Evidencia esperada':v('Evi')};
+      if(!d['Acción']){ pmcMsg_('⚠️ Describe la acción.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarAccion', usuario:_pmcDoc, datos:JSON.stringify(d)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Acción guardada.');
+    }
+    async function pmcGuardarProgramaObjetivo_(id){
+      const d = pmcDatosProg_(id);
+      d.IndicadorID = pmcVal_('pmc-'+id+'Ind'); d['Línea base'] = pmcVal_('pmc-'+id+'LB'); d['Valor meta'] = pmcVal_('pmc-'+id+'VM');
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarPrograma', usuario:_pmcDoc, datos:JSON.stringify(d)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Objetivo y meta guardados.');
+    }
+
+    // ── 4. SEGUIMIENTO ──
+    function pmcVistaSeg_(){
+      const progSel = _pmcD.progs.filter(function(g){ return _pmcD.probs.some(function(p){ return p.ID===g['ProblemáticaID'] && p.Seleccionada==='Sí'; }); });
+      const accs = _pmcD.acc.filter(function(a){ return progSel.some(function(g){ return g.ID===a.ProgramaID; }); });
+      const nombreProg = function(id){ const g = _pmcD.progs.find(function(x){ return x.ID===id; }); return g ? g.problematica : ''; };
+      return '<div class="pmc-card"><h2>Registrar avance de una acción</h2><p class="pmc-nota">Cada responsable informa el avance acumulado (%), la evidencia (liga a foto o documento en Drive) y, en su caso, dificultades y ajustes.</p>' +
+        '<div class="pmc-grid"><div style="grid-column:1/-1"><label>Acción</label><select id="pmc-sA">'+pmcOpts_(accs.map(function(a){ return [a.ID, nombreProg(a.ProgramaID)+' · '+a['Acción'].slice(0,110)+' ('+a['Avance %']+'%)']; }))+'</select></div>' +
+        '<div><label>Periodo</label><select id="pmc-sP">'+pmcOpts_(_pmcD.periodos, _pmcD.escuela.periodoActual)+'</select></div>' +
+        '<div><label>Avance acumulado (%)</label><input id="pmc-sV" type="number" min="0" max="100"></div>' +
+        '<div><label>Evidencia (liga)</label><input id="pmc-sE" placeholder="https://drive.google.com/…"></div></div>' +
+        '<label style="margin-top:8px">Logros</label><textarea id="pmc-sL"></textarea><label>Dificultades</label><textarea id="pmc-sD"></textarea><label>Ajuste propuesto</label><textarea id="pmc-sJ"></textarea>' +
+        '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarSeguimiento_()">Guardar seguimiento</button></div></div>' +
+        '<div class="pmc-card"><h2>Historial de seguimiento</h2><div class="pmc-tw"><table><tr><th>Fecha</th><th>Acción</th><th>Avance</th><th>Logros / dificultades</th><th>Evidencia</th><th>Registró</th></tr>' +
+        (_pmcD.seg||[]).map(function(s){ const a = _pmcD.acc.find(function(x){ return x.ID===s['AcciónID']; }) || {};
+          return '<tr><td>'+pmcEsc_(s.Fecha)+'</td><td>'+pmcEsc_((a['Acción']||'').slice(0,90))+'</td><td>'+pmcEsc_(s['Avance %'])+'%</td>' +
+            '<td>'+pmcEsc_(s.Logros)+(s.Dificultades?'<br><i>'+pmcEsc_(s.Dificultades)+'</i>':'')+'</td>' +
+            '<td>'+(/^https?:/.test(s.Evidencia) ? '<a href="'+pmcEsc_(s.Evidencia)+'" target="_blank">ver</a>' : pmcEsc_(s.Evidencia))+'</td><td>'+pmcEsc_(s['Capturó'])+'</td></tr>'; }).join('') +
+        '</table></div></div>';
+    }
+    async function pmcGuardarSeguimiento_(){
+      const datos = pmcDatosForm_({'AcciónID':'pmc-sA', Periodo:'pmc-sP', 'Avance %':'pmc-sV', Evidencia:'pmc-sE', Logros:'pmc-sL', Dificultades:'pmc-sD', 'Ajuste propuesto':'pmc-sJ'});
+      if(!datos['AcciónID'] || datos['Avance %']===''){ pmcMsg_('⚠️ Selecciona la acción y captura el avance.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarSeguimiento', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Seguimiento registrado.');
+    }
+
+    // ── 5. EVALUACIÓN Y COMUNICACIÓN ──
+    function pmcVistaCom_(){
+      const g = pmcGestion_();
+      const progSel = _pmcD.progs.filter(function(x){ return _pmcD.probs.some(function(p){ return p.ID===x['ProblemáticaID'] && p.Seleccionada==='Sí'; }); });
+      const docs = '<div class="pmc-card"><h2>Documentos generados por el sistema</h2><p class="pmc-nota">Próximamente: generación automática en Google Docs con el formato de la escuela. Por ahora, el Programa y el Proceso pueden consultarse directamente en la hoja de cálculo del PMC.</p>' +
+        (g ? '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcGenerarDocumento_(\'PROGRAMA\')">Generar Programa de Mejora Continua</button><button class="pmc-btn" onclick="pmcGenerarDocumento_(\'PROCESO\')">Generar Proceso completo (5 fases)</button></div>' : '<p class="pmc-nota">La generación corresponde a la Dirección o al Comité.</p>') + '</div>';
+      const ev = '<div class="pmc-card"><h2>Evaluación – logro de metas</h2><p class="pmc-nota">El logro se valora por las metas (indicador), no solo por las acciones realizadas.</p><div class="pmc-tw"><table><tr><th>Problemática</th><th>Meta</th><th>Base</th><th>Meta</th><th>Actual</th><th>Logro</th></tr>' +
+        progSel.map(function(x){ return '<tr><td>'+pmcEsc_(x.problematica)+'</td><td>'+pmcEsc_(x.Meta)+'</td><td>'+pmcEsc_(x['Línea base'])+'</td><td>'+pmcEsc_(x['Valor meta'])+'</td><td>'+pmcEsc_(x['Valor actual'])+'</td>' +
+          '<td style="min-width:90px">'+(x['Logro meta %']===null||x['Logro meta %']===''?'s/d':pmcBarra_(x['Logro meta %'])+x['Logro meta %']+'%')+'</td></tr>'; }).join('') + '</table></div></div>';
+      const com = '<div class="pmc-card"><h2>Comunicación de avances y logros</h2>' + (g ? '<div class="pmc-grid"><div><label>Periodo</label><select id="pmc-cP">'+pmcOpts_(_pmcD.periodos, _pmcD.escuela.periodoActual)+'</select></div>' +
+        '<div><label>Medio</label><select id="pmc-cM">'+pmcOpts_(['Asamblea de padres','Periódico mural','Redes sociales oficiales','Boletín escolar','Sesión de CTE','Cartas de reconocimiento','Página web escolar'])+'</select></div>' +
+        '<div><label>Destinatarios</label><input id="pmc-cD" value="Comunidad escolar"></div><div><label>Evidencia (liga)</label><input id="pmc-cE"></div></div>' +
+        '<label style="margin-top:8px">Logros comunicados</label><textarea id="pmc-cL"></textarea><div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarComunicacion_()">Registrar</button></div>' : '') +
+        '<div class="pmc-tw"><table><tr><th>Fecha</th><th>Periodo</th><th>Medio</th><th>Logros comunicados</th></tr>' + (_pmcD.com||[]).map(function(c){ return '<tr><td>'+pmcEsc_(c.Fecha)+'</td><td>'+pmcEsc_(c.Periodo)+'</td><td>'+pmcEsc_(c.Medio)+'</td><td>'+pmcEsc_(c['Logros comunicados'])+'</td></tr>'; }).join('') + '</table></div></div>';
+      return docs + ev + com;
+    }
+    async function pmcGuardarComunicacion_(){
+      const datos = pmcDatosForm_({Periodo:'pmc-cP', Medio:'pmc-cM', Destinatarios:'pmc-cD', Evidencia:'pmc-cE', 'Logros comunicados':'pmc-cL'});
+      if(!datos['Logros comunicados']){ pmcMsg_('⚠️ Describe los logros comunicados.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarComunicacion', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Comunicación registrada.');
+    }
+    async function pmcGenerarDocumento_(tipo){
+      pmcMsg_('⏳ Generando…');
+      const json = await jsonpCall({accion:'pmcGenerarDocumento', usuario:_pmcDoc, tipo:tipo}, 20000);
+      if(json && json.ok && json.url){ window.open(json.url, '_blank'); await pmcCargar_('Documento generado.'); return; }
+      pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err');
+    }
+
+    // ── GUÍA ──
+    function pmcVistaGuia_(){
+      const pasos = [
+        ['1. Diagnóstico socioeducativo','Todos los docentes','Capturan indicadores por grupo y registran aportes (situación, causas, fuente). El sistema calcula el semáforo y redacta la narrativa por ámbito.'],
+        ['2. Priorización','Comité / Dirección en CTE','Valoran cada problemática con 5 criterios de la SEP; el sistema calcula el puntaje y sugiere problemáticas a partir de indicadores en rojo.'],
+        ['3. Planeación (Programa)','Comité / Dirección','Por cada problemática seleccionada se define objetivo (qué, para qué, cómo), meta medible con indicador, línea base y valor meta, y acciones con responsables, tiempos y seguimiento.'],
+        ['4. Implementación y seguimiento','Responsables de cada acción','Registran avance %, evidencias, logros, dificultades y ajustes. Las acciones vencidas se marcan como retrasadas.'],
+        ['5. Evaluación','Colectivo en CTE','El logro de cada meta se calcula con el valor actual del indicador frente a la línea base y el valor meta.'],
+        ['6. Comunicación','Dirección / Comité','Se registran los medios y logros comunicados.']];
+      return '<div class="pmc-card"><h2>¿Cómo funciona el sistema?</h2><div class="pmc-tw"><table><tr><th>Fase</th><th>Quién</th><th>Qué hace</th></tr>' +
+        pasos.map(function(p){ return '<tr><td><b>'+p[0]+'</b></td><td>'+p[1]+'</td><td>'+p[2]+'</td></tr>'; }).join('') + '</table></div>' +
+        '<p class="pmc-nota" style="margin-top:10px">Referencia: SEP (2024). El Proceso de Mejora Continua. Orientaciones para las escuelas de Educación Básica. Acuerdo 05/04/24, Lineamientos de los CTE.</p></div>';
+    }
+
   </script>
 
   <!-- ═══ PANTALLA COMPLETA — EXPEDIENTE ALUMNO ═══ -->
@@ -8138,6 +9381,72 @@
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeModal('xls-login')">Cancelar</button>
         <button class="btn-submit" id="btn-xls-login" onclick="accederXls()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DOCENTES > CONSULTA DE CALIFICACIONES POR GRUPO (login) -->
+  <div class="modal-overlay" id="modal-calgrupo-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📈 Acceso — Consulta de Calificaciones por Grupo</h3>
+        <button class="modal-close" onclick="closeModal('calgrupo-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="calgrupo-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="calgrupo-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederCalGrupo()"/>
+            <span onclick="togglePass('calgrupo-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-calgrupo-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('calgrupo-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-calgrupo-login" onclick="accederCalGrupo()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DOCENTES > MEJORA CONTINUA (login) -->
+  <div class="modal-overlay" id="modal-pmc-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🟧 Acceso — Mejora Continua (PMC)</h3>
+        <button class="modal-close" onclick="closeModal('pmc-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">📈</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="pmc-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="pmc-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederPmc()"/>
+            <span onclick="togglePass('pmc-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-pmc-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('pmc-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-pmc-login" onclick="accederPmc()">Entrar</button>
       </div>
     </div>
   </div>
@@ -8573,6 +9882,109 @@
           style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
                  border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
                  font-size:0.92rem;cursor:pointer">📊 Generar Excel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DOCENTES > CONSULTA DE CALIFICACIONES POR GRUPO -->
+  <div id="calgrupo-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <div class="logo-wrap" style="width:34px;height:34px">
+          <img src="logo.png" alt="Logotipo" style="width:100%;height:100%;border-radius:50%;display:block;object-fit:contain"/>
+        </div>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Consulta de Calificaciones por Grupo — EST No. 3
+          </div>
+          <div id="calgrupo-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarCalGrupoOverlay()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1180px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <h3 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.95rem;
+                 border-bottom:1px solid #C8922A;padding-bottom:0.5rem;margin-bottom:1.2rem">
+        Consultar calificaciones de un grupo completo
+      </h3>
+      <p style="font-size:0.8rem;color:#e8d8b0;margin:-0.5rem 0 1.2rem">
+        Muestra en pantalla la misma lista de evaluación del trimestre (Diagnóstico, semanas,
+        Examen, Promedio, Puntos Rasgos Evaluados y Final), con el nombre del alumno(a) como enlace
+        directo a su Ficha Descriptiva. Las calificaciones pueden editarse directamente en la
+        tabla; use "💾 Guardar cambios" para registrar lo modificado.
+      </p>
+
+      <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem;margin-bottom:1.5rem">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.9rem;margin-bottom:1rem">
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+            <select id="calgrupo-grado"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+            <select id="calgrupo-grupo"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Asignatura</label>
+            <select id="calgrupo-asig"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona grado --</option>
+            </select>
+          </div>
+          <div>
+            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Trimestre</label>
+            <select id="calgrupo-trim"
+              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+              <option value="">-- Selecciona --</option>
+              <option value="1">1° Trimestre (Diag + Sem 1-12)</option>
+              <option value="2">2° Trimestre (Sem 13-26)</option>
+              <option value="3">3° Trimestre (Sem 27-38)</option>
+            </select>
+          </div>
+        </div>
+        <div id="calgrupo-p1-msg" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.8rem;min-height:1.2rem"></div>
+        <button onclick="consultarCalifGrupo()"
+          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                 font-size:0.92rem;cursor:pointer">🔎 Consultar</button>
+      </div>
+
+      <div id="res-calgrupo"></div>
+
+      <div id="calgrupo-resultado" style="display:none">
+        <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:0.6rem;overflow-x:auto">
+          <table id="calgrupo-tabla" style="border-collapse:collapse;width:100%;font-size:0.78rem;white-space:nowrap"></table>
+        </div>
+        <div id="cg-usaer-legend" style="display:none;align-items:center;gap:0.4rem;font-size:0.76rem;color:#5b3a8a;
+             background:#f3e8ff;border:1px solid #d8bdf7;border-radius:6px;padding:0.4rem 0.7rem;margin-bottom:1.2rem;width:fit-content"></div>
+        <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem;
+             display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+          <button onclick="guardarCambiosCalGrupo()"
+            style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                   border:1px solid #C8922A;padding:0.65rem 1.4rem;border-radius:8px;font-weight:700;
+                   font-size:0.88rem;cursor:pointer">💾 Guardar cambios</button>
+          <button onclick="imprimirCalGrupo()"
+            style="background:#fff;color:#7A1A1A;border:1.5px solid #7A1A1A;padding:0.65rem 1.4rem;border-radius:8px;
+                   font-weight:700;font-size:0.88rem;cursor:pointer">🖨️ Imprimir</button>
+          <div id="cg-save-msg" style="font-size:0.82rem;color:#2d1f08;flex:1;min-width:200px"></div>
+        </div>
+        <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1rem 1rem 0.5rem">
+          <canvas id="grafica-cg" style="width:100%;height:320px;display:block"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -9104,35 +10516,39 @@
       </div>
 
     </div>
+
+  <!-- PANTALLA COMPLETA — MEJORA CONTINUA (PMC) -->
+  <div id="pmc-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <div class="logo-wrap" style="width:34px;height:34px">
+          <img src="logo.png" alt="Logotipo" style="width:100%;height:100%;border-radius:50%;display:block;object-fit:contain"/>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            🟧 Mejora Continua (PMC) — EST No. 3
+          </div>
+          <div id="pmc-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarPmcOverlay()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1180px;margin:0 auto;padding:1.2rem 1rem 3rem">
+      <div id="pmc-tabnav" style="margin-bottom:1rem"></div>
+      <div id="pmc-msg"></div>
+      <div id="pmc-vista"></div>
+    </div>
   </div>
 
-<!-- ═══ MEJORA CONTINUA (PMC) — sistema en Apps Script incrustado ═══ -->
-<div id="pmc-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--cream);flex-direction:column">
-  <div style="background:linear-gradient(135deg,var(--dark),var(--mid));border-bottom:3px solid var(--gold-mid);
-              padding:0.7rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem">
-    <span style="font-family:'Playfair Display',serif;color:var(--gold-light);font-weight:700">📈 Proceso y Programa de Mejora Continua</span>
-    <span>
-      <a id="pmc-nueva" href="#" target="_blank" style="color:var(--gold-mid);font-size:0.78rem;margin-right:1rem">Abrir en pestaña nueva ↗</a>
-      <button onclick="cerrarPMC()" style="background:var(--crimson);color:#fff;border:0;border-radius:4px;padding:0.4rem 0.9rem;cursor:pointer;font-weight:600">✕ Cerrar</button>
-    </span>
   </div>
-  <iframe id="pmc-frame" title="Mejora Continua EST 3" style="flex:1;width:100%;border:0" allow="clipboard-write"></iframe>
-</div>
-<script>
-  // ► Pegue aquí la URL de la aplicación web del sistema PMC (termina en /exec)
-  const PMC_URL = 'https://script.google.com/macros/s/AKfycbzhhGXkey6KezXGwHwr6dIl-7g8VfVU6_K7Em1FyhBtGeRBHSHzS_FM2t7_31eQfd3uUA/exec';
-  function abrirPMC(){
-    const f = document.getElementById('pmc-frame');
-    if (!f.src) f.src = PMC_URL;
-    document.getElementById('pmc-nueva').href = PMC_URL;
-    document.getElementById('pmc-overlay').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-  function cerrarPMC(){
-    document.getElementById('pmc-overlay').style.display = 'none';
-    document.body.style.overflow = '';
-  }
-</script>
 </body>
 
 </html>
