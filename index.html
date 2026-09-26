@@ -1,4 +1,4 @@
-<!-- Generado: 26/septiembre/2026, 10:22 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 26/septiembre/2026, 13:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2562,10 +2562,10 @@
       else { input.type = 'password'; btn.textContent = '👁'; }
     }
 
-    async function consultarAPI(curp, clave) {
+    async function consultarAPI(curp, clave, modulo) {
       return new Promise((resolve) => {
         const callbackName = 'cb_' + Date.now();
-        const url = `${APPS_SCRIPT_URL}?accion=consultaAlumno&curp=${encodeURIComponent(curp)}&clave=${encodeURIComponent(clave)}&callback=${callbackName}`;
+        const url = `${APPS_SCRIPT_URL}?accion=consultaAlumno&curp=${encodeURIComponent(curp)}&clave=${encodeURIComponent(clave)}&modulo=${encodeURIComponent(modulo||'')}&callback=${callbackName}`;
         const script = document.createElement('script');
 
         window[callbackName] = function(json) {
@@ -2593,6 +2593,10 @@
       });
     }
 
+    // Nombre "bonito" del módulo para la Bitácora de accesos, según el
+    // modal de login de alumno(a) que se haya usado.
+    const MODULOS_ALUMNO_ = { datos: 'Consulta de Alumnos(as)', ficha: 'Ficha Descriptiva' };
+
     async function loginAlumno(tipo) {
       const res = document.getElementById('resultado-' + tipo);
       res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030;">⏳ Procesando…</div>';
@@ -2614,7 +2618,7 @@
       btn.disabled = true;
       res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030;">⏳ Consultando servidor…</div>';
 
-      const json = await consultarAPI(curp, clave);
+      const json = await consultarAPI(curp, clave, MODULOS_ALUMNO_[tipo] || tipo);
 
       btn.textContent = 'Ingresar';
       btn.disabled = false;
@@ -4068,7 +4072,7 @@
       res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030;">⏳ Verificando acceso…</div>';
 
       // Validar contra hoja usuarios
-      const json = await consultarUsuario(curp, clave);
+      const json = await consultarUsuario(curp, clave, 'Actualización de Alumnos(as)');
 
       btn.textContent = 'Continuar';
       btn.disabled = false;
@@ -4091,10 +4095,10 @@
       }
     }
 
-    async function consultarUsuario(curp, clave) {
+    async function consultarUsuario(curp, clave, modulo) {
       return new Promise((resolve) => {
         const cb  = 'cbu_' + Date.now();
-        const url = APPS_SCRIPT_URL + '?accion=loginUsuario&curp=' + encodeURIComponent(curp) + '&clave=' + encodeURIComponent(clave) + '&callback=' + cb;
+        const url = APPS_SCRIPT_URL + '?accion=loginUsuario&curp=' + encodeURIComponent(curp) + '&clave=' + encodeURIComponent(clave) + '&modulo=' + encodeURIComponent(modulo||'') + '&callback=' + cb;
         const script = document.createElement('script');
         window[cb] = function(json) {
           delete window[cb];
@@ -5090,7 +5094,7 @@
       btn.disabled=true;
       if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas(); // respaldo si la precarga no alcanzó a terminar
       // Usar consultarUsuario — misma función que usa Actualización (que sí funciona)
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Calificaciones (Captura y Consulta)');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -5186,7 +5190,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Personal');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(!json.ok){
@@ -5686,7 +5690,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Lista de Asistencia');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -5723,7 +5727,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Control de Asistencia');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -5927,7 +5931,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Credenciales');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok && normTxt(json.usuario.facultades||'').indexOf('DIRECTOR')===-1){
@@ -6462,7 +6466,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Ficha Descriptiva de Grupo');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -6935,7 +6939,7 @@
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
       if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas();
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Generar Listas (Excel)');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -7270,7 +7274,7 @@
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
       if(!_catalogoAsigCargado) await cargarCatalogoAsignaturas();
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Consulta de Calificaciones por Grupo');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
@@ -8414,7 +8418,7 @@
       if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
       res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled=true;
-      const json=await consultarUsuario(user,pass);
+      const json=await consultarUsuario(user,pass,'Consulta y Modificación');
       btn.disabled=false;
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor.</div>';return;}
       if(json.ok){
@@ -8683,7 +8687,7 @@
       if(!user || !pass){ res.innerHTML = '<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>'; return; }
       res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled = true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Mejora Continua (PMC)');
       btn.disabled = false;
       if(!json){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
       if(!json.ok){
@@ -8719,7 +8723,7 @@
       if(!user || !pass){ res.innerHTML = '<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>'; return; }
       res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
       btn.disabled = true;
-      const json = await consultarUsuario(user, pass);
+      const json = await consultarUsuario(user, pass, 'Registro de accesos');
       btn.disabled = false;
       if(!json){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
       if(!json.ok){
@@ -8756,7 +8760,8 @@
       const filas = _bitVisitas.filter(function(v){
         if(!q) return true;
         return (v.Identificador||'').toString().toUpperCase().indexOf(q) >= 0 ||
-               (v.Nombre||'').toString().toUpperCase().indexOf(q) >= 0;
+               (v.Nombre||'').toString().toUpperCase().indexOf(q) >= 0 ||
+               (v.Modulo||'').toString().toUpperCase().indexOf(q) >= 0;
       });
       const cont = document.getElementById('bitacora-tabla');
       if(!filas.length){
@@ -8766,11 +8771,11 @@
       const filasHtml = filas.map(function(v){
         const ok = v.Resultado === 'Éxito';
         return '<tr><td>'+bitEsc_(v.Fecha)+'</td><td>'+bitEsc_(v.Hora)+'</td><td>'+bitEsc_(v.Tipo)+'</td>'+
-          '<td>'+bitEsc_(v.Identificador)+'</td><td>'+bitEsc_(v.Nombre)+'</td>'+
+          '<td>'+bitEsc_(v.Modulo)+'</td><td>'+bitEsc_(v.Identificador)+'</td><td>'+bitEsc_(v.Nombre)+'</td>'+
           '<td style="color:'+(ok?'#2e7d32':'#9b1c1c')+';font-weight:700">'+bitEsc_(v.Resultado)+'</td>'+
           '<td>'+bitEsc_(v.Detalle)+'</td></tr>';
       }).join('');
-      cont.innerHTML = '<div class="pmc-tw"><table><tr><th>Fecha</th><th>Hora</th><th>Tipo</th>'+
+      cont.innerHTML = '<div class="pmc-tw"><table><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Módulo</th>'+
         '<th>CURP / Usuario</th><th>Nombre / Puesto</th><th>Resultado</th><th>Detalle</th></tr>'+filasHtml+'</table></div>';
     }
 
@@ -10785,7 +10790,7 @@
         <h2>Últimas visitas registradas</h2>
         <p class="pmc-nota">Cada inicio de sesión (exitoso o fallido) queda aquí con fecha, hora, y si fue por CURP de alumno o Usuario de personal. Se muestran hasta las 300 más recientes.</p>
         <div class="pmc-grid" style="align-items:end;margin-bottom:0.8rem">
-          <div><label>Buscar por CURP, Usuario o Nombre</label><input id="bitacora-filtro" type="text" placeholder="Escribe para filtrar…" oninput="bitacoraPintar_()"></div>
+          <div><label>Buscar por CURP, Usuario, Nombre o Módulo</label><input id="bitacora-filtro" type="text" placeholder="Escribe para filtrar…" oninput="bitacoraPintar_()"></div>
           <div style="display:flex;align-items:center;gap:0.6rem">
             <button class="pmc-btn pmc-btn-sec" onclick="bitacoraCargar_()">↻ Actualizar</button>
             <span style="font-size:0.8rem;color:var(--mid)">Total: <b id="bitacora-total">—</b></span>
