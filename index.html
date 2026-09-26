@@ -1,4 +1,4 @@
-<!-- Generado: 25/septiembre/2026, 22:57 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 26/septiembre/2026, 10:22 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1174,6 +1174,17 @@
       margin: 0 0.3rem 0.5rem 0;
     }
     .pmc-tabbtn.act { background: var(--gold-mid); color: var(--dark); border-color: var(--gold-mid); }
+
+    /* Selects angostos (criterios 1-5, Sí/No) dentro de tablas: la regla
+       general .pmc-card select ya trae padding amplio, que en un ancho
+       fijo pequeño recortaba el número/texto visualmente. */
+    .pmc-card select.pmc-sel-mini {
+      width: 64px;
+      padding: 0.3rem 0.25rem;
+      margin-bottom: 0;
+      text-align: center;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -1262,6 +1273,7 @@
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
         <a href="#" onclick="openModal('pmc-login');return false;">🟧 Mejora Continua (PMC)</a>
+        <a href="#" onclick="openModal('bitacora-login');return false;">🗝️ Registro de accesos</a>
       </div>
     </div>
     <div class="nav-item">
@@ -8642,7 +8654,8 @@
     // ══════════════════════════════════════════════════════════════════
     let _pmcDoc = '', _pmcD = null, _pmcTab = 'inicio';
     const PMC_TABS = [['inicio','Inicio'],['diag','1. Diagnóstico'],['prio','2. Priorización'],
-      ['prog','3. Programa'],['seg','4. Seguimiento'],['com','5. Evaluación y comunicación'],['guia','Guía']];
+      ['prog','3. Programa'],['seg','4. Seguimiento'],['com','5. Evaluación y comunicación'],['guia','Guía'],
+      ['config','⚙ Configuración']];
 
     function pmcEsc_(s){ return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function pmcOpts_(arr, val, vacio){
@@ -8692,6 +8705,75 @@
       _pmcD = null; _pmcDoc = '';
     }
 
+    // ── Registro de accesos (Bitácora) — solo Dirección. Reusa el mismo
+    //    login (loginUsuario/consultarUsuario) que el resto del sistema;
+    //    quien no sea Director recibe el mensaje del backend y no ve datos. ──
+    let _bitDoc = '', _bitVisitas = [];
+    function bitEsc_(s){ return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+    async function accederBitacora(){
+      const user = document.getElementById('bitacora-user').value.trim().toUpperCase();
+      const pass = document.getElementById('bitacora-pass').value.trim().toUpperCase();
+      const res = document.getElementById('res-bitacora-login');
+      const btn = document.getElementById('btn-bitacora-login');
+      if(!user || !pass){ res.innerHTML = '<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>'; return; }
+      res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled = true;
+      const json = await consultarUsuario(user, pass);
+      btn.disabled = false;
+      if(!json){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('bitacora-pass').value=''; document.getElementById('bitacora-pass').focus();
+        return;
+      }
+      _bitDoc = (json.usuario.curp || user);
+      closeModal('bitacora-login');
+      document.getElementById('bitacora-overlay').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      res.innerHTML=''; document.getElementById('bitacora-user').value=''; document.getElementById('bitacora-pass').value='';
+      await bitacoraCargar_();
+    }
+    function cerrarBitacoraOverlay(){
+      document.getElementById('bitacora-overlay').style.display = 'none';
+      document.body.style.overflow = '';
+      _bitDoc = ''; _bitVisitas = [];
+    }
+    async function bitacoraCargar_(){
+      const cont = document.getElementById('bitacora-tabla');
+      cont.innerHTML = '<p style="text-align:center;color:#C8922A;padding:2rem">⏳ Cargando…</p>';
+      const json = await jsonpCall({accion:'obtenerBitacora', usuario:_bitDoc}, 20000);
+      if(!json || json.timeout || json.networkError){ cont.innerHTML = '<p style="text-align:center;color:#9b1c1c;padding:2rem">⚠️ Sin respuesta del servidor. Intenta de nuevo.</p>'; return; }
+      if(!json.ok){ cont.innerHTML = '<p style="text-align:center;color:#9b1c1c;padding:2rem">⚠️ '+bitEsc_(json.mensaje||'No se pudo cargar.')+'</p>'; return; }
+      _bitVisitas = json.visitas || [];
+      const totalEl = document.getElementById('bitacora-total');
+      if(totalEl) totalEl.textContent = json.total || _bitVisitas.length;
+      bitacoraPintar_();
+    }
+    function bitacoraPintar_(){
+      const filtroEl = document.getElementById('bitacora-filtro');
+      const q = (filtroEl ? filtroEl.value : '').trim().toUpperCase();
+      const filas = _bitVisitas.filter(function(v){
+        if(!q) return true;
+        return (v.Identificador||'').toString().toUpperCase().indexOf(q) >= 0 ||
+               (v.Nombre||'').toString().toUpperCase().indexOf(q) >= 0;
+      });
+      const cont = document.getElementById('bitacora-tabla');
+      if(!filas.length){
+        cont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:2rem">Sin visitas registradas'+(q?' con ese filtro.':' todavía.')+'</p>';
+        return;
+      }
+      const filasHtml = filas.map(function(v){
+        const ok = v.Resultado === 'Éxito';
+        return '<tr><td>'+bitEsc_(v.Fecha)+'</td><td>'+bitEsc_(v.Hora)+'</td><td>'+bitEsc_(v.Tipo)+'</td>'+
+          '<td>'+bitEsc_(v.Identificador)+'</td><td>'+bitEsc_(v.Nombre)+'</td>'+
+          '<td style="color:'+(ok?'#2e7d32':'#9b1c1c')+';font-weight:700">'+bitEsc_(v.Resultado)+'</td>'+
+          '<td>'+bitEsc_(v.Detalle)+'</td></tr>';
+      }).join('');
+      cont.innerHTML = '<div class="pmc-tw"><table><tr><th>Fecha</th><th>Hora</th><th>Tipo</th>'+
+        '<th>CURP / Usuario</th><th>Nombre / Puesto</th><th>Resultado</th><th>Detalle</th></tr>'+filasHtml+'</table></div>';
+    }
+
     async function pmcCargar_(msgOk){
       const vista = document.getElementById('pmc-vista');
       vista.innerHTML = '<div class="pmc-card">⏳ Cargando información…</div>';
@@ -8707,11 +8789,16 @@
     function pmcIr_(t){ _pmcTab = t; pmcPintar_(); document.getElementById('pmc-overlay').scrollTop = 0; }
 
     function pmcPintar_(){
-      document.getElementById('pmc-tabnav').innerHTML = PMC_TABS.map(function(t){
+      // La pestaña "Configuración" solo la ven quienes pueden usarla
+      // (Director/Comité); si un Docente llegara a tener ese tab activo
+      // (p.ej. quedó marcado de una sesión anterior), se manda a Inicio.
+      if (_pmcTab === 'config' && !pmcGestion_()) _pmcTab = 'inicio';
+      const tabsVisibles = PMC_TABS.filter(function(t){ return t[0] !== 'config' || pmcGestion_(); });
+      document.getElementById('pmc-tabnav').innerHTML = tabsVisibles.map(function(t){
         return '<button class="pmc-tabbtn'+(t[0]===_pmcTab?' act':'')+'" onclick="pmcIr_(\''+t[0]+'\')">'+t[1]+'</button>';
       }).join('');
       pmcMsg_('');
-      const vistas = {inicio:pmcVistaInicio_, diag:pmcVistaDiag_, prio:pmcVistaPrio_, prog:pmcVistaProg_, seg:pmcVistaSeg_, com:pmcVistaCom_, guia:pmcVistaGuia_};
+      const vistas = {inicio:pmcVistaInicio_, diag:pmcVistaDiag_, prio:pmcVistaPrio_, prog:pmcVistaProg_, seg:pmcVistaSeg_, com:pmcVistaCom_, guia:pmcVistaGuia_, config:pmcVistaConfig_};
       document.getElementById('pmc-vista').innerHTML =
         '<datalist id="pmc-dlpers">' + (_pmcD.personal||[]).map(function(p){ return '<option value="'+pmcEsc_(p.nombre)+'">'+pmcEsc_(p.funcion)+'</option>'; }).join('') + '</datalist>' +
         vistas[_pmcTab]();
@@ -8753,7 +8840,7 @@
       const narr = (_pmcD.narrativa||[]).map(function(n){
         return '<h3>'+pmcEsc_(n.ambito)+' <span class="pmc-chip">'+pmcEsc_(n.escenario)+'</span></h3>'+n.parrafos.map(function(p){ return '<p>'+pmcEsc_(p)+'</p>'; }).join('');
       }).join('');
-      const ambitosConCat = (_pmcD.ambitos||[]).filter(function(a){ return _pmcD.cat.some(function(c){ return c['ÁmbitoID']===a.ID; }); }).map(function(a){ return [a.ID, a['Ámbito']]; });
+      const ambitosConCat = (_pmcD.ambitos||[]).filter(function(a){ return _pmcD.cat.some(function(c){ return c['ÁmbitoID']===a.ID && c.Activo!=='No'; }); }).map(function(a){ return [a.ID, a['Ámbito']]; });
       return '<div class="pmc-card"><h2>Captura de indicadores (datos por grupo)</h2><p class="pmc-nota">Registra el dato de tu grupo o área. El sistema lo integra por periodo y calcula el semáforo del ámbito.</p>' +
         '<div class="pmc-grid"><div><label>Ámbito</label><select id="pmc-iA" onchange="pmcCambiaAmbitoInd_()">'+pmcOpts_(ambitosConCat)+'</select></div>' +
         '<div><label>Indicador</label><select id="pmc-iI" onchange="pmcInfoInd_()"></select></div>' +
@@ -8778,7 +8865,7 @@
     }
     function pmcCambiaAmbitoInd_(){
       const a = pmcVal_('pmc-iA'); const sel = document.getElementById('pmc-iI'); if(!sel) return;
-      sel.innerHTML = pmcOpts_(_pmcD.cat.filter(function(c){ return c['ÁmbitoID']===a; }).map(function(c){ return [c.ID, c.Indicador]; }));
+      sel.innerHTML = pmcOpts_(_pmcD.cat.filter(function(c){ return c['ÁmbitoID']===a && c.Activo!=='No'; }).map(function(c){ return [c.ID, c.Indicador]; }));
       pmcInfoInd_();
     }
     function pmcInfoInd_(){
@@ -8817,11 +8904,11 @@
           (g ? ' <button class="pmc-btn pmc-btn-sec" onclick="pmcNuevaProbDesdeIndicador_(\''+s.ambito+'\',\''+pmcEsc_(String(s.indicador).replace(/[\'"]/g,''))+'\')">Registrar como problemática</button>' : '')+'</div>'; }).join('')+'</div>' : '';
       const filas = _pmcD.probs.slice().sort(function(a,b){ return (Number(b.Puntaje)||0)-(Number(a.Puntaje)||0); }).map(function(p){
         const criterios = PMC_CRIT.map(function(c){
-          return '<td>'+(g ? '<select id="pmc-'+p.ID+c[0].slice(0,2)+'" style="width:52px">'+pmcOpts_(['1','2','3','4','5'], p[c[0]], '–')+'</select>' : pmcEsc_(p[c[0]]))+'</td>';
+          return '<td>'+(g ? '<select id="pmc-'+p.ID+c[0].slice(0,2)+'" class="pmc-sel-mini">'+pmcOpts_(['1','2','3','4','5'], p[c[0]], '–')+'</select>' : pmcEsc_(p[c[0]]))+'</td>';
         }).join('');
         return '<tr><td><b>'+pmcEsc_(p['Problemática'])+'</b><br><small>'+pmcEsc_(pmcAmbito_(p['ÁmbitoID']))+' · '+pmcEsc_(p.Origen)+'</small></td>' + criterios +
           '<td><b>'+pmcEsc_(p.Puntaje)+'</b></td><td>'+pmcEsc_(p.Prioridad)+'</td>' +
-          '<td>'+(g ? '<select id="pmc-'+p.ID+'SEL" style="width:62px">'+pmcOpts_(['Sí','No'], p.Seleccionada)+'</select>' : pmcEsc_(p.Seleccionada))+'</td>' +
+          '<td>'+(g ? '<select id="pmc-'+p.ID+'SEL" class="pmc-sel-mini" style="width:74px">'+pmcOpts_(['Sí','No'], p.Seleccionada)+'</select>' : pmcEsc_(p.Seleccionada))+'</td>' +
           (g ? '<td><button class="pmc-btn pmc-btn-sec" onclick="pmcGuardarProblematicaExistente_(\''+p.ID+'\')">Guardar</button></td>' : '') + '</tr>';
       }).join('');
       return sug + '<div class="pmc-card"><h2>Priorización de problemáticas</h2><p class="pmc-nota">Valora cada criterio de 1 (poco) a 5 (mucho). Puntaje: Alta ≥ 20 · Media 14–19 · Baja &lt; 14.</p>' +
@@ -9011,6 +9098,93 @@
       return '<div class="pmc-card"><h2>¿Cómo funciona el sistema?</h2><div class="pmc-tw"><table><tr><th>Fase</th><th>Quién</th><th>Qué hace</th></tr>' +
         pasos.map(function(p){ return '<tr><td><b>'+p[0]+'</b></td><td>'+p[1]+'</td><td>'+p[2]+'</td></tr>'; }).join('') + '</table></div>' +
         '<p class="pmc-nota" style="margin-top:10px">Referencia: SEP (2024). El Proceso de Mejora Continua. Orientaciones para las escuelas de Educación Básica. Acuerdo 05/04/24, Lineamientos de los CTE.</p></div>';
+    }
+
+    // ── CONFIGURACIÓN (solo Director/Comité) — alta/edición/baja de los
+    //    catálogos del PEMC desde la propia app, en vez de editar la hoja
+    //    de cálculo a mano. Deliberadamente NO incluye los 5 criterios de
+    //    priorización ni las 6 fases: son el marco oficial de la SEP. ──
+    function pmcVistaConfig_(){
+      if (!pmcGestion_()) return '<div class="pmc-card">Esta sección es solo para la Dirección o el Comité.</div>';
+
+      const ajustes = '<div class="pmc-card"><h2>Ajustes generales</h2>' +
+        '<div class="pmc-grid"><div><label>Periodo actual</label><select id="pmc-cfgPer">'+pmcOpts_(_pmcD.periodos, _pmcD.escuela.periodoActual)+'</select></div>' +
+        '<div><label>Tolerancia del semáforo amarillo (%)</label><input id="pmc-cfgTol" type="number" min="0" max="100" value="'+pmcEsc_(_pmcD.escuela.toleranciaSemaforo)+'"></div></div>' +
+        '<p class="pmc-nota">El semáforo pasa de amarillo a rojo cuando el valor se aleja del umbral más allá de este porcentaje. Valor de fábrica: 20%.</p>' +
+        '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcGuardarAjustesConfig_()">Guardar ajustes</button></div></div>';
+
+      const filasAmb = (_pmcD.ambitos||[]).map(function(a){
+        return '<tr><td><b>'+pmcEsc_(a['Ámbito'])+'</b><br><small>'+pmcEsc_(a.ID)+'</small></td>' +
+          '<td><input id="pmc-amb'+a.ID+'Esc" value="'+pmcEsc_(a.Escenario)+'" style="min-width:100px"></td>' +
+          '<td><textarea id="pmc-amb'+a.ID+'PG" style="min-width:220px;min-height:3rem">'+pmcEsc_(a['Preguntas guía'])+'</textarea></td>' +
+          '<td><textarea id="pmc-amb'+a.ID+'OS" style="min-width:180px;min-height:3rem">'+pmcEsc_(a['Objetivo sugerido'])+'</textarea></td>' +
+          '<td><select id="pmc-amb'+a.ID+'Con" class="pmc-sel-mini" style="width:64px">'+pmcOpts_(['Sí','No'], a.Considerar)+'</select></td>' +
+          '<td><button class="pmc-btn pmc-btn-sec" onclick="pmcGuardarAmbitoConfig_(\''+a.ID+'\')">Guardar</button></td></tr>';
+      }).join('');
+      const ambitosCard = '<div class="pmc-card"><h2>Ámbitos de mejora continua</h2>' +
+        '<p class="pmc-nota">"Considerar" activa o desactiva el ámbito para este ciclo escolar (afecta el diagnóstico y la narrativa). Los 14 ámbitos son el catálogo oficial de la SEP: no se agregan ni se eliminan, solo se ajusta su redacción y si se consideran o no.</p>' +
+        '<div class="pmc-tw"><table><tr><th>Ámbito</th><th>Escenario</th><th>Preguntas guía</th><th>Objetivo sugerido</th><th>Considerar</th><th></th></tr>'+filasAmb+'</table></div></div>';
+
+      const ambOpts = (_pmcD.ambitos||[]).map(function(a){ return [a.ID, a.ID+' – '+a['Ámbito']]; });
+      const filasCat = (_pmcD.cat||[]).slice().sort(function(a,b){ return a.ID<b.ID?-1:(a.ID>b.ID?1:0); }).map(function(c){
+        const inactivo = c.Activo==='No';
+        return '<tr'+(inactivo?' style="opacity:0.55"':'')+'><td><b>'+pmcEsc_(c.ID)+'</b><br><small>'+pmcEsc_(pmcAmbito_(c['ÁmbitoID']))+'</small></td>' +
+          '<td><input id="pmc-cat'+c.ID+'Nom" value="'+pmcEsc_(c.Indicador)+'" style="min-width:190px"></td>' +
+          '<td><input id="pmc-cat'+c.ID+'Uni" value="'+pmcEsc_(c.Unidad)+'" style="width:80px"></td>' +
+          '<td><input id="pmc-cat'+c.ID+'Umb" type="number" step="any" value="'+pmcEsc_(c.Umbral)+'" style="width:66px"></td>' +
+          '<td><select id="pmc-cat'+c.ID+'Sen" style="width:78px">'+pmcOpts_(['MAYOR','MENOR'], c.Sentido)+'</select></td>' +
+          '<td><select id="pmc-cat'+c.ID+'Agr" style="width:96px">'+pmcOpts_(['SUMA','PROMEDIO'], c['Agregación'])+'</select></td>' +
+          '<td><input id="pmc-cat'+c.ID+'Fue" value="'+pmcEsc_(c['Fuente sugerida'])+'" style="min-width:130px"></td>' +
+          '<td><select id="pmc-cat'+c.ID+'Act" class="pmc-sel-mini" style="width:64px">'+pmcOpts_(['Sí','No'], c.Activo)+'</select></td>' +
+          '<td><button class="pmc-btn pmc-btn-sec" onclick="pmcGuardarIndicadorCat_(\''+c.ID+'\')">Guardar</button></td></tr>';
+      }).join('');
+      const catCard = '<div class="pmc-card"><h2>Catálogo de indicadores</h2>' +
+        '<p class="pmc-nota">Ajusta umbral, unidad, sentido o fórmula de cada indicador. "Activo = No" lo da de baja (deja de ofrecerse para capturar datos nuevos) sin borrar lo ya registrado con ese indicador.</p>' +
+        '<div class="pmc-tw"><table><tr><th>ID</th><th>Indicador</th><th>Unidad</th><th>Umbral</th><th>Sentido</th><th>Agregación</th><th>Fuente sugerida</th><th>Activo</th><th></th></tr>'+filasCat+'</table></div>' +
+        '<h3>Agregar indicador</h3><div class="pmc-grid">' +
+        '<div><label>Ámbito</label><select id="pmc-catN-Amb">'+pmcOpts_(ambOpts)+'</select></div>' +
+        '<div><label>Indicador</label><input id="pmc-catN-Nom"></div>' +
+        '<div><label>Unidad</label><input id="pmc-catN-Uni" placeholder="%, casos, alumnos…"></div>' +
+        '<div><label>Umbral</label><input id="pmc-catN-Umb" type="number" step="any"></div>' +
+        '<div><label>Sentido</label><select id="pmc-catN-Sen">'+pmcOpts_(['MAYOR','MENOR'])+'</select></div>' +
+        '<div><label>Agregación</label><select id="pmc-catN-Agr">'+pmcOpts_(['SUMA','PROMEDIO'])+'</select></div>' +
+        '<div><label>Fuente sugerida</label><input id="pmc-catN-Fue"></div></div>' +
+        '<div class="pmc-fila"><button class="pmc-btn" onclick="pmcAgregarIndicadorCat_()">Agregar indicador</button></div></div>';
+
+      return ajustes + ambitosCard + catCard;
+    }
+
+    async function pmcGuardarAjustesConfig_(){
+      const datos = { 'Periodo actual': pmcVal_('pmc-cfgPer'), 'Tolerancia semáforo (%)': pmcVal_('pmc-cfgTol') };
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarAjustes', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Ajustes actualizados.');
+    }
+    async function pmcGuardarAmbitoConfig_(id){
+      const v = function(k){ return pmcVal_('pmc-amb'+id+k); };
+      const datos = { ID:id, Escenario:v('Esc'), Considerar:v('Con'), 'Preguntas guía':v('PG'), 'Objetivo sugerido':v('OS') };
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarAmbito', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Ámbito actualizado.');
+    }
+    async function pmcGuardarIndicadorCat_(id){
+      const v = function(k){ return pmcVal_('pmc-cat'+id+k); };
+      const datos = { ID:id, Indicador:v('Nom'), Unidad:v('Uni'), Umbral:v('Umb'), Sentido:v('Sen'), 'Agregación':v('Agr'), 'Fuente sugerida':v('Fue'), Activo:v('Act') };
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarIndicadorCatalogo', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Indicador actualizado.');
+    }
+    async function pmcAgregarIndicadorCat_(){
+      const datos = { 'ÁmbitoID':pmcVal_('pmc-catN-Amb'), Indicador:pmcVal_('pmc-catN-Nom'), Unidad:pmcVal_('pmc-catN-Uni'), Umbral:pmcVal_('pmc-catN-Umb'), Sentido:pmcVal_('pmc-catN-Sen'), 'Agregación':pmcVal_('pmc-catN-Agr'), 'Fuente sugerida':pmcVal_('pmc-catN-Fue') };
+      if(!datos.Indicador){ pmcMsg_('⚠️ Escribe el nombre del indicador.', 'err'); return; }
+      if(datos.Umbral===''){ pmcMsg_('⚠️ Captura el umbral.', 'err'); return; }
+      pmcMsg_('⏳ Guardando…');
+      const json = await jsonpCall({accion:'pmcGuardarIndicadorCatalogo', usuario:_pmcDoc, datos:JSON.stringify(datos)}, 20000);
+      if(!json || !json.ok){ pmcMsg_('⚠️ '+(json?json.mensaje:'Sin respuesta del servidor.'), 'err'); return; }
+      await pmcCargar_('Indicador agregado ('+(json.id||'')+').');
     }
 
   </script>
@@ -9447,6 +9621,39 @@
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeModal('pmc-login')">Cancelar</button>
         <button class="btn-submit" id="btn-pmc-login" onclick="accederPmc()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DOCENTES > REGISTRO DE ACCESOS (login) -->
+  <div class="modal-overlay" id="modal-bitacora-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🗝️ Acceso — Registro de accesos</h3>
+        <button class="modal-close" onclick="closeModal('bitacora-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">🗝️</div>
+        <p class="modal-desc">Solo la Dirección puede consultar esta bitácora. Ingresa tus credenciales.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="bitacora-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="bitacora-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederBitacora()"/>
+            <span onclick="togglePass('bitacora-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-bitacora-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('bitacora-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-bitacora-login" onclick="accederBitacora()">Entrar</button>
       </div>
     </div>
   </div>
@@ -10547,6 +10754,45 @@
       <div id="pmc-tabnav" style="margin-bottom:1rem"></div>
       <div id="pmc-msg"></div>
       <div id="pmc-vista"></div>
+    </div>
+  </div>
+
+  <!-- ═══ REGISTRO DE ACCESOS (bitácora) — pantalla completa, solo Dirección ═══ -->
+  <div id="bitacora-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <div class="logo-wrap" style="width:34px;height:34px">
+          <img src="logo.png" alt="Logotipo" style="width:100%;height:100%;border-radius:50%;display:block;object-fit:contain"/>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            🗝️ Registro de accesos — EST No. 3
+          </div>
+          <div style="font-size:0.7rem;color:#C8922A">Inicios de sesión por CURP (alumnos) y por Usuario (personal)</div>
+        </div>
+      </div>
+      <button onclick="cerrarBitacoraOverlay()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1180px;margin:0 auto;padding:1.2rem 1rem 3rem">
+      <div class="pmc-card">
+        <h2>Últimas visitas registradas</h2>
+        <p class="pmc-nota">Cada inicio de sesión (exitoso o fallido) queda aquí con fecha, hora, y si fue por CURP de alumno o Usuario de personal. Se muestran hasta las 300 más recientes.</p>
+        <div class="pmc-grid" style="align-items:end;margin-bottom:0.8rem">
+          <div><label>Buscar por CURP, Usuario o Nombre</label><input id="bitacora-filtro" type="text" placeholder="Escribe para filtrar…" oninput="bitacoraPintar_()"></div>
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <button class="pmc-btn pmc-btn-sec" onclick="bitacoraCargar_()">↻ Actualizar</button>
+            <span style="font-size:0.8rem;color:var(--mid)">Total: <b id="bitacora-total">—</b></span>
+          </div>
+        </div>
+        <div id="bitacora-tabla"></div>
+      </div>
     </div>
   </div>
 
