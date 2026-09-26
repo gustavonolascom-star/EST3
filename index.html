@@ -1,4 +1,4 @@
-<!-- Generado: 26/septiembre/2026, 13:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 26/septiembre/2026, 15:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1255,7 +1255,7 @@
         <a href="#" onclick="openModal('datos'); return false;">🔍 Consulta de Alumnos(as)</a>
         -->
         <a href="#" onclick="openModal('alta'); return false;">✏️ Actualización de Alumnos(as)</a>
-        <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva</a>
+        <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva del Alumno</a>
         <a href="#" onclick="openModal('cred-login'); return false;">🪪 Credenciales</a>
         <a href="#" onclick="mostrarEstilo();return false;">🧠 Estilo de Aprendizaje</a>
       </div>
@@ -1924,7 +1924,7 @@
   <div class="modal-overlay" id="modal-ficha">
     <div class="modal">
       <div class="modal-header">
-        <h3>📋 Ficha Descriptiva</h3>
+        <h3>📋 Ficha Descriptiva del Alumno</h3>
         <button class="modal-close" onclick="closeModal('ficha')">✕</button>
       </div>
       <div class="modal-body">
@@ -2595,7 +2595,7 @@
 
     // Nombre "bonito" del módulo para la Bitácora de accesos, según el
     // modal de login de alumno(a) que se haya usado.
-    const MODULOS_ALUMNO_ = { datos: 'Consulta de Alumnos(as)', ficha: 'Ficha Descriptiva' };
+    const MODULOS_ALUMNO_ = { datos: 'Consulta de Alumnos(as)', ficha: 'Ficha Descriptiva del Alumno' };
 
     async function loginAlumno(tipo) {
       const res = document.getElementById('resultado-' + tipo);
@@ -2740,7 +2740,7 @@
       const grupo   = a['Grupo']  || '';
       const genero  = (a['Genero'] || '').toUpperCase();
       const emoji   = genero === 'FEMENINO' || genero === 'F' ? '👩‍🎓' : '👨‍🎓';
-      const tituloSeccion = tipo === 'ficha' ? 'Ficha Descriptiva' : 'Expediente del Alumno(a)';
+      const tituloSeccion = tipo === 'ficha' ? 'Ficha Descriptiva del Alumno' : 'Expediente del Alumno(a)';
 
       // Foto del alumno (con respaldo en FotoImg si "Foto" no se puede resolver)
       const { principal: fotoSrc, respaldo: fotoAlt } = fotosAlumno(a);
@@ -3054,6 +3054,14 @@
     let _fichaAsistDetalle      = [];
     let _fichaFaltasDetalle     = [];
     let _fichaUsaerActual       = null; // respuesta completa de usaerAlumnoFicha (enUsaer + registros + fichaInf + aluUsaer)
+    // Vista semanal ampliada (el clip 📎 junto a "Calificaciones por
+    // Trimestre"): mismo detalle semana a semana que ya trae
+    // resumenCalificacionesFicha (campo "detalle"), solo que aquí se pinta
+    // TODA la lista de materias del alumno(a) en una sola cuadrícula, con
+    // pestañas T1/T2/T3, en vez de una materia a la vez.
+    let _fichaSemanasMaterias = [];
+    let _fichaSemanasDetalle  = {};
+    let _fichaSemanasTrim     = '1';
 
     async function abrirFichaDescriptiva(alumno) {
       const overlay = document.getElementById('ficha-overlay');
@@ -3127,7 +3135,7 @@
           <button onclick="cargarFichaConCiclo()"
             style="background:#C8922A;color:#1a1408;border:none;padding:0.65rem 1.7rem;
                    border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer">
-            📊 Ver Ficha Descriptiva
+            📊 Ver Ficha Descriptiva del Alumno
           </button>
         </div>`;
     }
@@ -3163,7 +3171,7 @@
           ${fotoHtml}
           <div>
             <div class="ficha-nombre">${nombre}</div>
-            <span class="ficha-badge">⏳ Cargando Ficha Descriptiva — Ciclo ${ciclo}…</span>${badgeUsaerHtml}
+            <span class="ficha-badge">⏳ Cargando Ficha Descriptiva del Alumno — Ciclo ${ciclo}…</span>${badgeUsaerHtml}
           </div>
         </div>
         <div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
@@ -3241,6 +3249,15 @@
       // (resumenCalificacionesFicha), no desde la hoja "menu".
       const filasCal = (resumenCal && resumenCal.ok && resumenCal.filas) ? resumenCal.filas : [];
       const materias = filasCal.map(r => r.asignatura);
+
+      // Datos para la vista semanal ampliada (el clip 📎 más abajo): el
+      // mismo detalle semana a semana que ya viene en resumenCal, listo
+      // para pintarse sin pedirlo de nuevo al servidor.
+      _fichaSemanasMaterias = materias;
+      _fichaSemanasDetalle  = (resumenCal && resumenCal.ok && resumenCal.detalle) ? resumenCal.detalle : {};
+      // Pestaña inicial: el trimestre más avanzado que ya tenga algo
+      // capturado (si no hay nada todavía, se queda en el Trimestre 1).
+      _fichaSemanasTrim = filasCal.some(r => r.t3 !== null) ? '3' : filasCal.some(r => r.t2 !== null) ? '2' : '1';
 
       const celdaTrim = (asignatura, valor, trimNum) => {
         if (valor === null || valor === undefined) {
@@ -3365,7 +3382,7 @@
           <div style="flex:1">
             <div class="ficha-nombre">${nombre}</div>
             <span class="ficha-badge">
-              ${val('grado')}° ${val('grupo')} · Ficha Descriptiva · Ciclo ${_fichaCicloActual}
+              ${val('grado')}° ${val('grupo')} · Ficha Descriptiva del Alumno · Ciclo ${_fichaCicloActual}
             </span>${badgeUsaerHtml}
             <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;font-family:monospace">${curp}</div>
           </div>
@@ -3518,7 +3535,14 @@
         </div>
 
         <!-- TABLA DE CALIFICACIONES -->
-        <div class="ficha-section-title">📋 Calificaciones por Trimestre</div>
+        <div class="ficha-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap">
+          <span>📋 Calificaciones por Trimestre</span>
+          <button id="btn-ficha-semanas" onclick="toggleFichaSemanas_()"
+            style="background:transparent;color:#7a6030;border:1.5px solid #C8922A;padding:0.3rem 0.8rem;
+                   border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            📎 Ver semanas
+          </button>
+        </div>
         <div style="overflow-x:auto;margin-bottom:1.5rem">
           <table style="width:100%;border-collapse:collapse;font-size:0.83rem;
                  background:#fff;border-radius:8px;border:1px solid #e8d88a">
@@ -3535,6 +3559,11 @@
             <tbody>${filasTabla}</tbody>
           </table>
         </div>
+
+        <!-- VISTA SEMANAL AMPLIADA (el clip 📎 de arriba) — todas las
+             materias x semanas del trimestre elegido, con semáforo de
+             colores; oculta por defecto para no saturar la Ficha. -->
+        <div id="ficha-semanas-wrap" style="display:none;margin-bottom:1.5rem"></div>
 
         <!-- RESUMEN DE TRIMESTRES (calculado en vivo desde filasCal) -->
         <div class="ficha-section-title">📊 Resumen de Trimestres</div>
@@ -3637,6 +3666,114 @@
 
     function cerrarDetalleTrimestre() {
       document.getElementById('detalle-trim-overlay').style.display = 'none';
+    }
+
+    /* ── Vista semanal ampliada de la Ficha (el clip 📎 junto a
+     * "Calificaciones por Trimestre"): todas las materias del alumno(a) en
+     * una sola cuadrícula, semana a semana, con pestañas T1/T2/T3 — usa
+     * los mismos datos que ya trajo resumenCalificacionesFicha al abrir la
+     * Ficha (_fichaSemanasDetalle), sin pedir nada nuevo al servidor. ── */
+    // Mismo semáforo de 3 colores que ya usa el resto de la Ficha
+    // (colorCal/colorProm: verde ≥9, dorado 7–8.9, rojo <7) — aquí además
+    // con un fondo suave a juego, para que la cuadrícula se lea de un
+    // vistazo como en una hoja de cálculo.
+    function fichaSemanaColor_(v){
+      if(v===undefined || v===null || v==='') return {bg:'', fg:'#bbb'};
+      const n = Number(v);
+      if(isNaN(n)) return {bg:'', fg:'#bbb'};
+      if(n>=9) return {bg:'#dcf3e6', fg:'#1D7A4E'};
+      if(n>=7) return {bg:'#f7ecc6', fg:'#7a6030'};
+      return {bg:'#fbdede', fg:'#C0181A'};
+    }
+
+    function toggleFichaSemanas_(){
+      const wrap = document.getElementById('ficha-semanas-wrap');
+      const btn  = document.getElementById('btn-ficha-semanas');
+      if(!wrap) return;
+      const abierto = wrap.style.display !== 'none';
+      wrap.style.display = abierto ? 'none' : 'block';
+      if(btn) btn.textContent = abierto ? '📎 Ver semanas' : '📎 Ocultar semanas';
+      if(!abierto) pintarFichaSemanas_();
+    }
+
+    function fichaSemanasIr_(t){
+      _fichaSemanasTrim = t;
+      pintarFichaSemanas_();
+    }
+
+    function pintarFichaSemanas_(){
+      const wrap = document.getElementById('ficha-semanas-wrap');
+      if(!wrap) return;
+      const t = _fichaSemanasTrim;
+      const materias = _fichaSemanasMaterias || [];
+      const detalle  = _fichaSemanasDetalle || {};
+      // Mismas columnas de semana que el resto del sistema (semanasT), sin
+      // Diagnóstico ni Puntos Extra: esos van aparte, como en la imagen de
+      // referencia (columnas "Examen", "Promedio" y "Rasgos evaluados").
+      const semCols = semanasT(t).filter(function(c){ return c.v!=='D' && c.v!=='EX' && c.v!=='PE'; });
+
+      const tabsHtml = ['1','2','3'].map(function(tt){
+        const act = tt===t;
+        return '<button onclick="fichaSemanasIr_(\''+tt+'\')" '+
+          'style="padding:0.35rem 0.9rem;border-radius:6px;border:1.5px solid #C8922A;'+
+          'background:'+(act?'#C8922A':'transparent')+';color:'+(act?'#1a1408':'#7a6030')+';'+
+          'font-weight:700;font-size:0.8rem;cursor:pointer;margin-right:0.4rem">Trimestre '+tt+'</button>';
+      }).join('');
+
+      if(!materias.length){
+        wrap.innerHTML = '<div style="margin-bottom:0.8rem">'+tabsHtml+'</div>'+
+          '<p style="text-align:center;color:var(--muted);padding:1.5rem 0">Sin materias con calificaciones registradas todavía.</p>';
+        return;
+      }
+
+      let thead = '<tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">'+
+        '<th style="padding:0.5rem 0.8rem;text-align:left">Materia</th>';
+      semCols.forEach(function(c){
+        thead += '<th style="padding:0.35rem 0.35rem;text-align:center;font-size:0.7rem;white-space:nowrap">'+c.l+'</th>';
+      });
+      thead += '<th style="padding:0.4rem 0.5rem;text-align:center">Examen</th>'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">Promedio</th>'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">Rasgos<br>evaluados</th>'+
+        '<th style="padding:0.4rem 0.5rem;text-align:center">Final<br>Trimestre '+t+'</th></tr>';
+
+      const tbody = materias.map(function(asig){
+        const semObj = (detalle[asig] && detalle[asig][t]) ? detalle[asig][t] : {};
+        const calc = cgCalcularFila_(semObj); // {promedio, pe, final} — misma fórmula de todo el sistema
+
+        let fila = '<tr style="border-bottom:1px solid #f0e8c0">'+
+          '<td style="padding:0.4rem 0.8rem;font-weight:600;color:#3D2B0A;white-space:nowrap">'+cgEsc_(asig)+'</td>';
+
+        semCols.forEach(function(c){
+          const raw = semObj[c.v.toString().toUpperCase()];
+          const vacio = (raw===undefined || raw==='' || raw===null);
+          const col = fichaSemanaColor_(raw);
+          fila += '<td style="padding:0.3rem;text-align:center;font-size:0.8rem;background:'+col.bg+';color:'+col.fg+';font-weight:'+(vacio?'400':'700')+'">'+
+            (vacio ? '—' : Number(raw).toFixed(1))+'</td>';
+        });
+
+        const ex = semObj['EX'];
+        const exVacio = (ex===undefined || ex==='' || ex===null);
+        const colEx = fichaSemanaColor_(ex);
+        fila += '<td style="padding:0.3rem;text-align:center;font-size:0.8rem;background:'+colEx.bg+';color:'+colEx.fg+';font-weight:'+(exVacio?'400':'700')+'">'+
+          (exVacio ? '—' : Number(ex).toFixed(1))+'</td>';
+
+        fila += '<td style="padding:0.3rem;text-align:center;font-size:0.85rem;font-weight:700;color:#3D2B0A">'+
+          (calc.promedio===null ? '—' : calc.promedio.toFixed(2))+'</td>';
+        // Puntos Rasgos Evaluados es un bono (0–10 pero de otra naturaleza,
+        // no una calificación semanal), así que aquí se muestra sin el
+        // semáforo — para no leerse como una calificación baja.
+        fila += '<td style="padding:0.3rem;text-align:center;font-size:0.85rem;color:#7a6030">'+
+          (calc.pe ? calc.pe.toFixed(1) : '—')+'</td>';
+        const colFinal = fichaSemanaColor_(calc.final);
+        fila += '<td style="padding:0.3rem;text-align:center;font-size:0.9rem;font-weight:800;background:'+colFinal.bg+';color:'+colFinal.fg+'">'+
+          (calc.final===null ? '—' : calc.final.toFixed(2))+'</td>';
+        fila += '</tr>';
+        return fila;
+      }).join('');
+
+      wrap.innerHTML = '<div style="margin-bottom:0.8rem">'+tabsHtml+'</div>'+
+        '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;background:#fffdf5;'+
+        'border:1px solid #e8d88a;border-radius:8px"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>';
     }
 
     /* ── Ventana de Intervenciones de Trabajo Social ── */
@@ -3960,6 +4097,9 @@
       _fichaAlumnoActual       = null;
       _fichaCicloActual        = '';
       _fichaDetalleCache       = {};
+      _fichaSemanasMaterias    = [];
+      _fichaSemanasDetalle     = {};
+      _fichaSemanasTrim        = '1';
       _fichaIntervenciones     = [];
       _fichaBitacoraDocentes   = [];
       _fichaConductaRegistros  = [];
@@ -3998,7 +4138,7 @@
       const fechaImpresion = new Date().toLocaleString('es-MX', {dateStyle:'long', timeStyle:'short'});
 
       const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
-        '<title>Ficha Descriptiva</title>' +
+        '<title>Ficha Descriptiva del Alumno</title>' +
         '<style>' +
         ':root{--dark:#1A1208;--mid:#3D2B0A;--gold-deep:#8B6914;--gold-mid:#C49A28;--gold-light:#F0C040;--crimson:#C0121A;--muted:#7A6030}' +
         '@page{ size: letter; margin: 14mm 12mm; }' +
@@ -10130,7 +10270,7 @@
       <p style="font-size:0.8rem;color:#e8d8b0;margin:-0.5rem 0 1.2rem">
         Muestra en pantalla la misma lista de evaluación del trimestre (Diagnóstico, semanas,
         Examen, Promedio, Puntos Rasgos Evaluados y Final), con el nombre del alumno(a) como enlace
-        directo a su Ficha Descriptiva. Las calificaciones pueden editarse directamente en la
+        directo a su Ficha Descriptiva del Alumno. Las calificaciones pueden editarse directamente en la
         tabla; use "💾 Guardar cambios" para registrar lo modificado.
       </p>
 
@@ -10558,7 +10698,7 @@
           </table>
         </div>
         <div style="font-size:0.75rem;color:#c9a96e;margin-top:0.6rem">
-          Haz clic en el encabezado de una columna para ordenar. Haz clic en un alumno para abrir su Ficha Descriptiva completa.
+          Haz clic en el encabezado de una columna para ordenar. Haz clic en un alumno para abrir su Ficha Descriptiva del Alumno completa.
         </div>
       </div>
 
