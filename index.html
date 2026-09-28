@@ -1,4 +1,4 @@
-<!-- Generado: 27/septiembre/2026, 21:27 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 27/septiembre/2026, 22:00 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6260,8 +6260,61 @@
       return 'Credencial_' + (slug || 'alumno') + '_' + fecha + '.png';
     }
 
+    // Ancho/alto REAL del marco de foto de la credencial (".frente
+    // .foto-wrap" — mantener en sincronía si ese CSS cambia). Se usa aquí
+    // para recortar la foto con la MISMA proporción antes de entregarla a
+    // html2canvas.
+    const CRED_FOTO_W_ = 86, CRED_FOTO_H_ = 78;
+
+    // Por qué existe: probado a fondo (ver notas de esta sesión), html2canvas
+    // —solo para el archivo digital/PNG, nunca para imprimir, que no pasa
+    // por html2canvas— dibuja con buena calidad un <img> normal, pero
+    // dibuja con MALA calidad (borroso/"opaco") un fondo puesto con CSS
+    // "background-image" + "background-size:cover", sin importar qué tan
+    // grande sea la foto original. La solución no es agrandar la foto —ya
+    // se probó y no cambia nada—, sino dejar de usar "background-image" y
+    // "object-fit" (que html2canvas simplemente ignora, estirando la foto
+    // completa y deformándola) para esta ruta: aquí se recorta la foto UNA
+    // vez, con esta misma proporción (cabeza a pecho, anclada arriba, igual
+    // que hacía "object-position:center top"), usando el <canvas> del propio
+    // navegador (que sí escala con buena calidad), y el resultado ya es un
+    // <img> normal con la proporción exacta del marco — sin nada que
+    // recortar ni escalar del lado de html2canvas.
+    function recortarFotoParaCredencial_(dataUrl){
+      return new Promise(function(resolve){
+        const FACTOR_CALIDAD = 4; // resolución de sobra para imprimir nítido
+        const destW = CRED_FOTO_W_ * FACTOR_CALIDAD, destH = CRED_FOTO_H_ * FACTOR_CALIDAD;
+        const img = new Image();
+        img.onload = function(){
+          const iw = img.naturalWidth || 0, ih = img.naturalHeight || 0;
+          if(!iw || !ih){ resolve(dataUrl); return; }
+          try{
+            // Mismo cálculo que "object-fit:cover" + "object-position:center
+            // top": se escala la foto para cubrir el marco por completo, se
+            // recortan los lados sobrantes centrados y solo se recorta abajo
+            // (ancla arriba, para no perder la cabeza).
+            const escala = Math.max(destW / iw, destH / ih);
+            const anchoEscalado = iw * escala, altoEscalado = ih * escala;
+            const recorteX = (anchoEscalado - destW) / 2, recorteY = 0;
+            const canvas = document.createElement('canvas');
+            canvas.width = destW; canvas.height = destH;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            if('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img,
+              recorteX / escala, recorteY / escala, destW / escala, destH / escala, // origen (en px de la foto original)
+              0, 0, destW, destH); // destino (ya con la proporción del marco)
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          } catch(e){ resolve(dataUrl); } // ante cualquier problema, se usa la original sin recortar
+        };
+        img.onerror = function(){ resolve(dataUrl); };
+        img.src = dataUrl;
+      });
+    }
+
     // Regresa {alumnos, fallidas} — alumnos es una COPIA con fotoUrl
-    // reemplazada por un data URI base64 cuando es posible. Si falla la
+    // reemplazada por un data URI base64 (ya recortado a la proporción del
+    // marco, ver recortarFotoParaCredencial_) cuando es posible. Si falla la
     // descarga de alguna (por ejemplo porque el Apps Script todavía no se
     // redesplegó con la acción "fotoBase64"), esa tarjeta se queda con la
     // URL original de Drive — que se ve bien como <img> normal, pero un
@@ -6275,7 +6328,10 @@
         if(!url || url.indexOf('http') !== 0) return Object.assign({}, a);
         try{
           const json = await jsonpCall({accion:'fotoBase64', url: url}, 15000);
-          if(json && json.ok && json.dataUrl) return Object.assign({}, a, { fotoUrl: json.dataUrl });
+          if(json && json.ok && json.dataUrl){
+            const recortada = await recortarFotoParaCredencial_(json.dataUrl);
+            return Object.assign({}, a, { fotoUrl: recortada });
+          }
           console.warn('fotoBase64 no pudo resolver la foto de', a.nombre, '—', json && json.mensaje);
         } catch(e){ console.warn('fotoBase64 lanzó un error para', a.nombre, '—', e); }
         fallidas++;
@@ -6459,14 +6515,18 @@
               '<div class="esc">ESCUELA SECUNDARIA<br/>TÉCNICA No. 3</div>' +
             '</div>' +
             '<div class="cuerpo">' +
-              // Antes era <img object-fit:cover>: se ve perfecto al
-              // imprimir (DOM real del navegador), pero html2canvas —usado
-              // solo para el archivo digital/PNG— no respeta "object-fit"
-              // de forma confiable y termina ESTIRANDO la foto para
-              // rellenar la caja (se ve más ancha/deformada). Un div con
-              // "background-size:cover" logra el mismo recorte sin
-              // deformar, y html2canvas sí lo dibuja bien en ambos casos.
-              '<div class="foto-wrap" id="foto-f-'+i+'" style="background-image:url(\''+foto+'\')"></div>' +
+              // Vuelta a <img> normal (no "background-image"): probado a
+              // fondo, html2canvas dibuja un <img> con buena calidad pero un
+              // "background-image" lo dibuja borroso, sin importar la
+              // resolución de la foto (ver notas junto a
+              // recortarFotoParaCredencial_). Para la ruta digital/PNG la
+              // foto YA llega pre-recortada con la proporción exacta del
+              // marco (recortarFotoParaCredencial_, en resolverFotosParaPng_),
+              // así que un simple "estirar a 100%x100%" no deforma nada —
+              // por eso el CSS de abajo NO usa "object-fit" en ese caso
+              // (html2canvas lo ignora de todos modos). Para imprimir sí se
+              // usa "object-fit:cover" normal, que el navegador sí respeta.
+              '<div class="foto-wrap"><img id="foto-f-'+i+'" src="'+foto+'" onerror="this.src=\''+FOTO_PLACEHOLDER+'\'"/></div>' +
               '<div class="acredita">LA PRESENTE ACREDITA A</div>' +
               '<div class="nombre">'+a.nombre+'</div>' +
               '<div class="curp-row"><b>CURP</b> '+a.curp+'</div>' +
@@ -6541,7 +6601,7 @@
         const esParcial = lote.length < CHUNK;
         const cols = Math.min(3, lote.length);
         const rows = Math.ceil(lote.length / cols);
-        const hojaStyle = 'grid-template-columns:repeat('+cols+',2.125in);grid-template-rows:repeat('+rows+',3.375in);';
+        const hojaStyle = 'grid-template-columns:repeat('+cols+',5.3cm);grid-template-rows:repeat('+rows+',8.5cm);';
         const tituloHoja = tituloBase + (totalHojas > 1 ? ' — Hoja ' + (c+1) + ' de ' + totalHojas : '');
         return '<div class="hoja-page' + (esParcial ? ' parcial' : '') + '">' +
           '<div class="hoja-titulo">' + tituloHoja + '</div>' +
@@ -6575,10 +6635,10 @@
            ya usan casi todo el espacio vertical disponible en carta. */
         '.hoja-page.parcial{padding-top:18mm}' +
         '.hoja-titulo{font-size:10px;color:#666;text-align:center;margin:0 0 3px;letter-spacing:0.02em}' +
-        '.hoja{display:grid;grid-template-columns:repeat(3,2.125in);grid-template-rows:repeat(3,3.375in);' +
+        '.hoja{display:grid;grid-template-columns:repeat(3,5.3cm);grid-template-rows:repeat(3,8.5cm);' +
           'gap:0.1in 0.2in;justify-content:center;justify-items:start;align-items:start}' +
         '.hoja .card{page-break-inside:avoid;break-inside:avoid}' +
-        '.card{width:2.125in;height:3.375in;position:relative;overflow:hidden;border-radius:12px;' +
+        '.card{width:5.3cm;height:8.5cm;position:relative;overflow:hidden;border-radius:12px;' +
           'background:#fff;box-shadow:0 0 0 1px #bbb;flex-shrink:0}' +
         '.card .cut{position:absolute;inset:6px;border:1.6px dashed #d63384;border-radius:8px;pointer-events:none;z-index:6}' +
         // Sin opacity/filter aquí a propósito: el desvanecido y el tono ya
@@ -6606,7 +6666,17 @@
         // corrige fotos ya tomadas de muy lejos o muy descentradas — para
         // esos casos habría que recortar/acercar la foto antes de subirla.
         '.frente .foto-wrap{width:86px;height:78px;margin:0 auto 2px;border:3.5px solid #1a1a1a;border-radius:12px;' +
-          'overflow:hidden;background:#e5e1da;background-size:cover;background-position:center top;background-repeat:no-repeat}' +
+          'overflow:hidden;background:#e5e1da}' +
+        // Al imprimir (DOM real del navegador) "object-fit:cover" funciona
+        // perfecto y recorta la foto (que aquí SÍ puede venir con cualquier
+        // proporción). Para el archivo digital/PNG, html2canvas ignora
+        // "object-fit" de todos modos, así que en ese caso la foto ya llega
+        // pre-recortada a la proporción exacta del marco (ver
+        // recortarFotoParaCredencial_) y solo hace falta un "estirar a
+        // 100%x100%" — que con esa proporción ya no deforma nada.
+        (incluirHtml2Canvas
+          ? '.frente .foto-wrap img{width:100%;height:100%;display:block}'
+          : '.frente .foto-wrap img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}') +
         '.frente .acredita{color:#7a1a1a;font-weight:800;font-size:8px;letter-spacing:0.03em;margin-bottom:0px}' +
         '.frente .nombre{font-weight:800;font-size:11.5px;color:#1a1a1a;line-height:1.14;margin-bottom:1px;' +
           'text-transform:uppercase}' +
@@ -6642,29 +6712,12 @@
         '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
         cuerpoHtml +
         '<script>' +
-        // FOTO_PLACEHOLDER vive en el script de la app (fuera de este
-        // documento generado); se incrusta ya resuelto como texto (vía
-        // JSON.stringify) para que el script de abajo —que corre en OTRO
-        // documento/ventana— no dependa de esa variable externa.
-        '  var _fotoPlaceholderCss = ' + JSON.stringify("url('" + FOTO_PLACEHOLDER + "')") + ';' +
         'window.addEventListener("load", function(){' +
         '  var n = ' + alumnos.length + ';' +
         '  var curps = ' + JSON.stringify(alumnos.map(function(a){return a.curp||'';})) + ';' +
-        '  var fotos = ' + JSON.stringify(alumnos.map(function(a){return a.fotoUrl || '';})) + ';' +
         '  for (var i=0;i<n;i++){' +
         '    var el = document.getElementById("qr-f-"+i);' +
         '    if(el && curps[i] && window.QRCode){ new QRCode(el, {text: curps[i], width:54, height:54, correctLevel: QRCode.CorrectLevel.M}); }' +
-        // Verifica que la foto sí cargó (equivalente al onerror que tenía
-        // el <img> anterior); si falla, se cambia a la silueta de repuesto.
-        '    (function(idx){' +
-        '      if(!fotos[idx]) return;' +
-        '      var probe = new Image();' +
-        '      probe.onerror = function(){' +
-        '        var fw = document.getElementById("foto-f-"+idx);' +
-        '        if(fw) fw.style.backgroundImage = _fotoPlaceholderCss;' +
-        '      };' +
-        '      probe.src = fotos[idx];' +
-        '    })(i);' +
         '  }' +
         '});' +
         '<\/script>' +
