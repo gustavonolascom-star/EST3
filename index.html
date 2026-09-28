@@ -1,4 +1,4 @@
-<!-- Generado: 26/septiembre/2026, 15:01 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 27/septiembre/2026, 21:27 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -761,10 +761,12 @@
       margin-bottom: 1rem;
     }
 
-    /* ── FOTO ALUMNO — mismo recorte/proporción que en la Credencial
-         (ver .frente .foto-wrap / .frente .foto-wrap img en
-         abrirImpresionCredenciales): cuadrada, con object-position
-         "center top" para que no se corte la cabeza. ─────────────────── */
+    /* ── FOTO ALUMNO — mismo criterio de recorte que en la Credencial
+         (ver .frente .foto-wrap en construirHtmlCredenciales_): recorte
+         tipo "cover" anclado arriba ("object-position:center top" aquí,
+         que en la Credencial es "background-position:center top" por la
+         limitación de html2canvas con object-fit) para que no se corte
+         la cabeza. ─────────────────────────────────────────────────── */
     .ficha-foto-wrap {
       width: 96px;
       height: 96px;
@@ -6227,6 +6229,30 @@
      * en blanco en el PNG). Se resuelve primero descargándola en el
      * servidor (accion=fotoBase64) y convirtiéndola a data URI — eso sí es
      * seguro para canvas — antes de generar el documento a rasterizar. */
+    // Espera a que terminen de cargar TODAS las imágenes de un documento
+    // (tanto <img> normales —escudo, QR ya dibujado como canvas no aplica—
+    // como los "background-image" de los marcos de foto) antes de
+    // rasterizar con html2canvas. Da hasta 8s por imagen; si una tarda más
+    // o falla, no bloquea el resto (se sigue adelante con lo que sí cargó).
+    function esperarImagenesListas_(idoc){
+      const urls = new Set();
+      idoc.querySelectorAll('img').forEach(function(img){ if(img.src) urls.add(img.src); });
+      idoc.querySelectorAll('[style*="background-image"]').forEach(function(el){
+        const m = /url\(["']?([^"')]+)["']?\)/.exec(el.style.backgroundImage || '');
+        if(m && m[1]) urls.add(m[1]);
+      });
+      const esperas = Array.from(urls).map(function(url){
+        return new Promise(function(resolve){
+          const probe = new Image();
+          const listo = function(){ resolve(); };
+          probe.onload = listo; probe.onerror = listo;
+          probe.src = url;
+          setTimeout(listo, 8000);
+        });
+      });
+      return Promise.all(esperas);
+    }
+
     function nombreArchivoPngUnaCredencial_(alumno, fecha){
       const slug = (alumno.nombre||'alumno').toString().trim()
         .normalize('NFD').replace(/[̀-ͯ]/g,'')
@@ -6293,13 +6319,6 @@
           iframe.srcdoc = html;
         });
 
-        // Margen de seguridad: el listener "load" interno del documento (que
-        // dibuja los códigos QR) corre como parte del mismo evento load que
-        // dispara este iframe.onload, pero se deja un pequeño respiro para
-        // que cualquier dibujo async (canvas del QR, decodificación de las
-        // fotos base64) termine de pintarse.
-        await new Promise(function(r){ setTimeout(r, 300); });
-
         const iwin = iframe.contentWindow;
         const idoc = iframe.contentDocument;
         if(!iwin || !idoc || !iwin.html2canvas){
@@ -6307,6 +6326,14 @@
         }
         const tarjetas = idoc.querySelectorAll('.hoja .card');
         if(!tarjetas || !tarjetas.length) throw new Error('No se encontró el contenido de la credencial a exportar.');
+
+        // Espera EXPLÍCITA a que terminen de cargar todas las imágenes antes
+        // de rasterizar (el escudo de fondo, las fotos como background-image
+        // y el escudo del reverso): el evento "load" del iframe ya debería
+        // garantizar esto, pero por si acaso (fotos pesadas o descarga
+        // lenta) más vale confirmarlo en vez de solo esperar un tiempo fijo,
+        // para no arriesgarse a rasterizar con algo todavía a medio cargar.
+        await esperarImagenesListas_(idoc);
 
         const fecha = new Date().toISOString().slice(0,10);
         let generadas = 0;
@@ -6395,7 +6422,15 @@
     function construirHtmlCredenciales_(alumnos, modo, meta, incluirHtml2Canvas){
       modo = modo || 'individual';
       meta = meta || {};
-      const escudoUrl = assetUrlCred('escudo_fondo.png');
+      // "escudo_marca_agua.png" ya trae horneados en el propio archivo el
+      // desvanecido (antes era opacity:0.16 en CSS) y el tono cálido (antes
+      // filter:grayscale()/sepia() en CSS): html2canvas —usado solo para el
+      // archivo digital/PNG— no soporta bien "opacity" ni "filter" en
+      // elementos posicionados encima de otro contenido, y eso hacía que la
+      // marca de agua casi no se viera y a veces se mezclara de forma rara
+      // sobre la foto. Con el desvanecido ya resuelto en los píxeles, no
+      // queda ninguna propiedad CSS de la que depender en tiempo real.
+      const escudoUrl = assetUrlCred('escudo_marca_agua.png');
       const firmaUrl  = assetUrlCred('firma_director.png');
       const selloUrl  = assetUrlCred('sello_gob_zac.png');
 
@@ -6407,12 +6442,31 @@
             '<div class="cut"></div>' +
             '<div class="escudo-wm"><img src="'+escudoUrl+'"/></div>' +
             '<div class="top">' +
+              // El corte diagonal de la franja roja se dibuja con un SVG
+              // (en vez de CSS clip-path): html2canvas —usado para exportar
+              // el PNG— no soporta clip-path de forma confiable y la franja
+              // salía rectangular en el archivo digital aunque en la
+              // impresión sí se viera bien; un polígono SVG sí lo dibuja
+              // igual en ambos casos.
+              '<svg class="top-bg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<defs><linearGradient id="topgrad'+i+'" x1="0%" y1="0%" x2="100%" y2="100%">' +
+                  '<stop offset="0%" stop-color="#8a1f1f"/><stop offset="100%" stop-color="#6e1414"/>' +
+                '</linearGradient></defs>' +
+                '<polygon points="0,0 100,0 100,76 0,100" fill="url(#topgrad'+i+')"/>' +
+              '</svg>' +
               '<div class="gob">Gobierno de Zacatecas</div>' +
               '<div class="dep">SECRETARÍA DE EDUCACIÓN</div>' +
               '<div class="esc">ESCUELA SECUNDARIA<br/>TÉCNICA No. 3</div>' +
             '</div>' +
             '<div class="cuerpo">' +
-              '<div class="foto-wrap"><img src="'+foto+'" onerror="this.src=\''+FOTO_PLACEHOLDER+'\'"/></div>' +
+              // Antes era <img object-fit:cover>: se ve perfecto al
+              // imprimir (DOM real del navegador), pero html2canvas —usado
+              // solo para el archivo digital/PNG— no respeta "object-fit"
+              // de forma confiable y termina ESTIRANDO la foto para
+              // rellenar la caja (se ve más ancha/deformada). Un div con
+              // "background-size:cover" logra el mismo recorte sin
+              // deformar, y html2canvas sí lo dibuja bien en ambos casos.
+              '<div class="foto-wrap" id="foto-f-'+i+'" style="background-image:url(\''+foto+'\')"></div>' +
               '<div class="acredita">LA PRESENTE ACREDITA A</div>' +
               '<div class="nombre">'+a.nombre+'</div>' +
               '<div class="curp-row"><b>CURP</b> '+a.curp+'</div>' +
@@ -6527,31 +6581,48 @@
         '.card{width:2.125in;height:3.375in;position:relative;overflow:hidden;border-radius:12px;' +
           'background:#fff;box-shadow:0 0 0 1px #bbb;flex-shrink:0}' +
         '.card .cut{position:absolute;inset:6px;border:1.6px dashed #d63384;border-radius:8px;pointer-events:none;z-index:6}' +
-        '.card .escudo-wm{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:70%;' +
-          'opacity:0.10;filter:grayscale(0.3) sepia(0.4);z-index:0;text-align:center}' +
+        // Sin opacity/filter aquí a propósito: el desvanecido y el tono ya
+        // vienen horneados en escudo_marca_agua.png (ver comentario junto a
+        // "const escudoUrl" más arriba) para que html2canvas lo dibuje igual
+        // que un navegador normal.
+        '.card .escudo-wm{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:88%;' +
+          'z-index:0;text-align:center}' +
         '.card .escudo-wm img{width:100%}' +
-        '.frente .top{position:relative;z-index:1;background:linear-gradient(135deg,#8a1f1f,#6e1414);color:#fff;' +
-          'padding:9px 13px 20px;clip-path:polygon(0 0,100% 0,100% 76%,0 100%)}' +
+        '.frente .top{position:relative;z-index:1;color:#fff;padding:9px 13px 20px;overflow:hidden}' +
+        '.frente .top .top-bg{position:absolute;inset:0;width:100%;height:100%;z-index:-1;display:block}' +
         '.frente .top .gob{font-size:7.6px;opacity:0.92;margin-bottom:3px}' +
         '.frente .top .dep{font-weight:800;font-size:10.5px;letter-spacing:0.02em;line-height:1.15}' +
         '.frente .top .esc{font-weight:800;font-size:12px;line-height:1.2;margin-top:5px}' +
         '.frente .cuerpo{position:relative;z-index:1;padding:0 12px;text-align:center;margin-top:-4px}' +
-        '.frente .foto-wrap{width:88px;height:88px;margin:0 auto 4px;border:3.5px solid #1a1a1a;border-radius:12px;' +
-          'overflow:hidden;background:#e5e1da}' +
-        '.frente .foto-wrap img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}' +
-        '.frente .acredita{color:#7a1a1a;font-weight:800;font-size:8px;letter-spacing:0.03em;margin-bottom:1px}' +
-        '.frente .nombre{font-weight:800;font-size:11.5px;color:#1a1a1a;line-height:1.14;margin-bottom:3px;' +
+        // El marco de foto usa "object-fit:cover" anclado arriba
+        // ("object-position:center top"): entre más ALTO sea este marco en
+        // proporción a su ancho, MÁS cuerpo se alcanza a ver (se acerca
+        // menos la imagen); entre más BAJO, más se acerca y menos cuerpo
+        // se ve. Una prueba anterior (88x88 → 80x100, más alto) mostró
+        // demasiado cuerpo — hasta la cintura/manos — en vez de solo
+        // cabeza-a-pecho. Se corrige aquí reduciendo el alto por debajo del
+        // original (88 → 78) para un recorte más cercano, dejando el ancho
+        // casi igual (88 → 86) para no angostar demasiado la cara. Esto no
+        // corrige fotos ya tomadas de muy lejos o muy descentradas — para
+        // esos casos habría que recortar/acercar la foto antes de subirla.
+        '.frente .foto-wrap{width:86px;height:78px;margin:0 auto 2px;border:3.5px solid #1a1a1a;border-radius:12px;' +
+          'overflow:hidden;background:#e5e1da;background-size:cover;background-position:center top;background-repeat:no-repeat}' +
+        '.frente .acredita{color:#7a1a1a;font-weight:800;font-size:8px;letter-spacing:0.03em;margin-bottom:0px}' +
+        '.frente .nombre{font-weight:800;font-size:11.5px;color:#1a1a1a;line-height:1.14;margin-bottom:1px;' +
           'text-transform:uppercase}' +
-        '.frente .curp-row{font-size:8.3px;color:#333;margin-bottom:4px}' +
+        '.frente .curp-row{font-size:8.3px;color:#333;margin-bottom:2px}' +
         '.frente .curp-row b{color:#7a1a1a}' +
         '.frente .pill{display:inline-block;background:#7a1a1a;color:#fff;font-weight:800;font-size:9px;' +
-          'padding:4px 13px;border-radius:20px;margin-bottom:3px}' +
-        '.frente .gold-line{height:2px;background:linear-gradient(90deg,transparent,#C8922A,transparent);margin:3px 20px}' +
+          'padding:4px 13px;border-radius:20px;margin-bottom:1px}' +
+        '.frente .gold-line{height:2px;background:linear-gradient(90deg,transparent,#C8922A,transparent);margin:1px 20px}' +
         '.frente .foot{position:absolute;left:0;right:0;bottom:0;background:#7a1a1a;padding:4px 10px 6px;' +
           'text-align:center;z-index:1}' +
         '.frente .qr-box{width:58px;height:58px;background:#fff;border-radius:4px;margin:0 auto 2px;padding:2px;' +
           'display:flex;align-items:center;justify-content:center;overflow:hidden}' +
-        '.frente .vig{color:#fff;font-size:7.4px;font-weight:700}' +
+        // Vigencia: antes casi ilegible (7.4px, blanco simple). Se agranda
+        // y se pasa a dorado (mismo tono institucional que ya usa el
+        // sistema, #F0C040) para que resalte sobre el rojo del pie.
+        '.frente .vig{color:#F0C040;font-size:9.5px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase}' +
         '.reverso .topgold{height:12px;background:linear-gradient(90deg,#C8922A,#F0C040,#C8922A)}' +
         '.reverso .topline{height:3.5px;background:#7a1a1a}' +
         '.reverso .cuerpo{position:absolute;z-index:1;top:15.5px;left:0;right:0;bottom:0;padding:12px 14px 0}' +
@@ -6571,12 +6642,29 @@
         '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>' +
         cuerpoHtml +
         '<script>' +
+        // FOTO_PLACEHOLDER vive en el script de la app (fuera de este
+        // documento generado); se incrusta ya resuelto como texto (vía
+        // JSON.stringify) para que el script de abajo —que corre en OTRO
+        // documento/ventana— no dependa de esa variable externa.
+        '  var _fotoPlaceholderCss = ' + JSON.stringify("url('" + FOTO_PLACEHOLDER + "')") + ';' +
         'window.addEventListener("load", function(){' +
         '  var n = ' + alumnos.length + ';' +
         '  var curps = ' + JSON.stringify(alumnos.map(function(a){return a.curp||'';})) + ';' +
+        '  var fotos = ' + JSON.stringify(alumnos.map(function(a){return a.fotoUrl || '';})) + ';' +
         '  for (var i=0;i<n;i++){' +
         '    var el = document.getElementById("qr-f-"+i);' +
         '    if(el && curps[i] && window.QRCode){ new QRCode(el, {text: curps[i], width:54, height:54, correctLevel: QRCode.CorrectLevel.M}); }' +
+        // Verifica que la foto sí cargó (equivalente al onerror que tenía
+        // el <img> anterior); si falla, se cambia a la silueta de repuesto.
+        '    (function(idx){' +
+        '      if(!fotos[idx]) return;' +
+        '      var probe = new Image();' +
+        '      probe.onerror = function(){' +
+        '        var fw = document.getElementById("foto-f-"+idx);' +
+        '        if(fw) fw.style.backgroundImage = _fotoPlaceholderCss;' +
+        '      };' +
+        '      probe.src = fotos[idx];' +
+        '    })(i);' +
         '  }' +
         '});' +
         '<\/script>' +
