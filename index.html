@@ -1,4 +1,4 @@
-<!-- Generado: 28/septiembre/2026, 21:09 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 28/septiembre/2026, 21:36 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1260,6 +1260,7 @@
         <a href="#" onclick="openModal('ficha'); return false;">📋 Ficha Descriptiva del Alumno</a>
         <a href="#" onclick="openModal('cred-login'); return false;">🪪 Credenciales</a>
         <a href="#" onclick="mostrarEstilo();return false;">🧠 Estilo de Aprendizaje</a>
+        <a href="#" onclick="openModal('club-curp');return false;">🏆 Club</a>
       </div>
     </div>
     <a href="#" onclick="mostrarPadres();return false;">Padres de Familia</a>
@@ -1274,6 +1275,7 @@
         <a href="#" onclick="openModal('qrchk-login');return false;">📷 Checador QR</a>
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
+        <a href="#" onclick="openModal('detclub-login');return false;">🏆 Detalle del Club</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
         <a href="#" onclick="openModal('pmc-login');return false;">🟧 Mejora Continua (PMC)</a>
         <a href="#" onclick="openModal('bitacora-login');return false;">🗝️ Registro de accesos</a>
@@ -6261,6 +6263,279 @@
       }, 700);
     }
 
+    /* ── Módulo Alumnos > Club (elección por CURP, sin clave) y
+       Docentes > Detalle del Club (integrantes + club definitivo).
+       Reutiliza ensureJsQR() ya definido arriba (Checador QR) para el
+       lector de QR de la credencial. ── */
+    let _clubesCache = null;
+    async function ensureClubesCache(){
+      if(_clubesCache) return _clubesCache;
+      const json = await jsonpCall({accion:'listarClubes'}, 15000);
+      _clubesCache = (json && json.ok) ? json.clubes.map(function(c){ return c.nombre; }) : [];
+      return _clubesCache;
+    }
+
+    // -- Escáner de QR dentro del modal de acceso (opcional: también se
+    //    puede capturar la CURP a mano) --
+    let _clubScanStream=null, _clubScanRAF=null, _clubScanActivo=false;
+
+    async function club_toggleScanner(){
+      const wrap = document.getElementById('club-scan-wrap');
+      const btn = document.getElementById('club-scan-btn');
+      if(_clubScanActivo){
+        club_detenerScanner();
+        wrap.style.display='none';
+        btn.textContent='📷 Escanear QR de mi credencial';
+        return;
+      }
+      wrap.style.display='block';
+      btn.textContent='✕ Cancelar escaneo';
+      const estado = document.getElementById('club-scan-estado');
+      estado.textContent='⏳ Preparando cámara…';
+      try{
+        await ensureJsQR();
+      }catch(e){
+        estado.textContent='⚠️ '+e.message;
+        return;
+      }
+      try{
+        _clubScanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }catch(e){
+        estado.textContent='⚠️ No se pudo acceder a la cámara. Revisa los permisos del navegador.';
+        return;
+      }
+      const video = document.getElementById('club-scan-video');
+      video.srcObject = _clubScanStream;
+      try{ await video.play(); }catch(e){}
+      estado.textContent='🔎 Apunta al QR de tu credencial…';
+      _clubScanActivo = true;
+      club_scanTick();
+    }
+
+    function club_detenerScanner(){
+      _clubScanActivo = false;
+      if(_clubScanRAF) cancelAnimationFrame(_clubScanRAF);
+      _clubScanRAF = null;
+      if(_clubScanStream){
+        _clubScanStream.getTracks().forEach(function(t){ t.stop(); });
+        _clubScanStream = null;
+      }
+    }
+
+    function club_scanTick(){
+      if(!_clubScanActivo) return;
+      _clubScanRAF = requestAnimationFrame(club_scanTick);
+      const video = document.getElementById('club-scan-video');
+      if(!video.videoWidth) return;
+      const canvas = document.getElementById('club-scan-canvas');
+      const escala = Math.min(1, 480 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * escala);
+      canvas.height = Math.round(video.videoHeight * escala);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let img;
+      try{ img = ctx.getImageData(0, 0, canvas.width, canvas.height); }catch(e){ return; }
+      const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if(code && code.data){
+        document.getElementById('club-curp-input').value = code.data.trim().toUpperCase();
+        club_toggleScanner(); // detiene la cámara y oculta el visor
+        accederClubAlumno_();
+      }
+    }
+
+    // -- Acceso del alumno (SOLO CURP) y formulario de las 3 opciones --
+    let _clubAlumnoActual = null;
+
+    async function accederClubAlumno_(){
+      const curp = (document.getElementById('club-curp-input').value||'').trim().toUpperCase();
+      const res = document.getElementById('res-club-curp');
+      const btn = document.getElementById('btn-club-curp');
+      if(!curp){ res.innerHTML='<div class="result-error">⚠️ Captura tu CURP.</div>'; return; }
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await jsonpCall({accion:'accederClubAlumno', curp: curp}, 15000);
+      btn.disabled=false;
+      if(!json){ res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(json.ok){
+        _clubAlumnoActual = json.alumno;
+        closeModal('club-curp');
+        document.getElementById('club-curp-input').value='';
+        res.innerHTML='';
+        document.getElementById('club-alumno-label').textContent = json.alumno.nombre+' — '+json.alumno.grado+'°'+json.alumno.grupo;
+        document.getElementById('club-editando-aviso').style.display = json.registro ? 'block' : 'none';
+        document.getElementById('res-club-guardar').innerHTML='';
+        document.getElementById('club-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        await ensureClubesCache();
+        if(!_clubesCache.length){
+          document.getElementById('res-club-guardar').innerHTML='<div class="result-error">⚠️ No se pudo cargar el catálogo de clubes. Intenta de nuevo más tarde.</div>';
+        }
+        club_prellenarSelects(json.registro);
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo verificar la CURP.')+'</div>';
+      }
+    }
+
+    function cerrarClubAlumno(){
+      club_detenerScanner();
+      document.getElementById('club-overlay').style.display='none';
+      document.body.style.overflow='';
+      _clubAlumnoActual = null;
+    }
+
+    // Llena un <select> con el catálogo de clubes, excluyendo los que ya se
+    // eligieron en las opciones anteriores; conserva el valor ya elegido si
+    // sigue siendo válido (o usa valorActual la primera vez, al precargar).
+    function club_poblarSelect(id, excluir, valorActual){
+      const sel = document.getElementById(id);
+      const anterior = (valorActual !== undefined) ? valorActual : sel.value;
+      sel.innerHTML = '<option value="">-- Selecciona --</option>' +
+        _clubesCache.filter(function(c){ return excluir.indexOf(c) === -1; })
+          .map(function(c){ return '<option value="'+c.replace(/"/g,'&quot;')+'"'+(c===anterior?' selected':'')+'>'+c+'</option>'; })
+          .join('');
+      if (excluir.indexOf(anterior) !== -1) sel.value = ''; // ya no es válido (se eligió en otra opción)
+    }
+
+    function club_prellenarSelects(registro){
+      club_poblarSelect('club-opcion1', [], registro ? registro.opcion1 : '');
+      const v1 = document.getElementById('club-opcion1').value;
+      club_poblarSelect('club-opcion2', v1 ? [v1] : [], registro ? registro.opcion2 : '');
+      const v2 = document.getElementById('club-opcion2').value;
+      club_poblarSelect('club-opcion3', [v1, v2].filter(Boolean), registro ? registro.opcion3 : '');
+    }
+
+    // Se llama cada vez que cambia una opción, para recalcular las
+    // siguientes (opción 2 sin lo ya elegido en la 1, opción 3 sin lo ya
+    // elegido en la 1 y la 2).
+    function club_actualizarSelects(){
+      const v1 = document.getElementById('club-opcion1').value;
+      club_poblarSelect('club-opcion2', v1 ? [v1] : []);
+      const v2 = document.getElementById('club-opcion2').value;
+      club_poblarSelect('club-opcion3', [v1, v2].filter(Boolean));
+    }
+
+    async function guardarClubAlumno_(){
+      const o1 = document.getElementById('club-opcion1').value;
+      const o2 = document.getElementById('club-opcion2').value;
+      const o3 = document.getElementById('club-opcion3').value;
+      const res = document.getElementById('res-club-guardar');
+      if(!o1 || !o2 || !o3){ res.innerHTML='<div class="result-error">⚠️ Selecciona tus 3 opciones de club.</div>'; return; }
+      if(!_clubAlumnoActual){ res.innerHTML='<div class="result-error">⚠️ Sesión no válida, vuelve a capturar tu CURP.</div>'; return; }
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Guardando…</div>';
+      const json = await jsonpCall({accion:'guardarClubAlumno', curp:_clubAlumnoActual.curp, opcion1:o1, opcion2:o2, opcion3:o3}, 15000);
+      if(json && json.ok){
+        res.innerHTML='<div class="result-error" style="background:#e3f5e6;border-color:#8fd0a0;color:#1c7a34">✅ ¡Guardado! Opción 1: '+o1+' · Opción 2: '+o2+' · Opción 3: '+o3+'</div>';
+        document.getElementById('club-editando-aviso').style.display='block';
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+((json&&json.mensaje)||'No se pudo guardar. Intenta de nuevo.')+'</div>';
+      }
+    }
+
+    // -- Docentes > Detalle del Club (integrantes + club definitivo) --
+    async function accederDetalleClub(){
+      const user=(document.getElementById('detclub-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('detclub-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-detclub-login');
+      const btn=document.getElementById('btn-detclub-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass, 'Detalle del Club');
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        closeModal('detclub-login');
+        document.getElementById('detclub-doc-label').textContent='Docente: '+(json.usuario.nombre||user);
+        document.getElementById('detclub-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('detclub-user').value='';
+        document.getElementById('detclub-pass').value='';
+        document.getElementById('res-detclub').innerHTML='';
+        document.getElementById('detclub-reporte').innerHTML='';
+        await ensureClubesCache();
+        const sel = document.getElementById('detclub-select');
+        sel.innerHTML = '<option value="">-- Selecciona un club --</option>' +
+          _clubesCache.map(function(c){ return '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>'; }).join('');
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('detclub-pass').value='';
+        document.getElementById('detclub-pass').focus();
+      }
+    }
+
+    function cerrarDetalleClub(){
+      document.getElementById('detclub-overlay').style.display='none';
+      document.body.style.overflow='';
+    }
+
+    const DETCLUB_ESTATUS_ESTILO = {
+      aqui: {bg:'#e3f5e6', color:'#1c7a34', icono:'✅', texto:'Confirmado aquí'},
+      otro: {bg:'#fff3d6', color:'#8a6200', icono:'⚠️'},
+      sin:  {bg:'#eee', color:'#555', icono:'—', texto:'Sin definir'}
+    };
+
+    async function detclub_consultar(){
+      const club = document.getElementById('detclub-select').value;
+      const res = document.getElementById('res-detclub');
+      const rep = document.getElementById('detclub-reporte');
+      rep.innerHTML='';
+      if(!club){ res.innerHTML=''; return; }
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Consultando…</div>';
+      const json = await jsonpCall({accion:'detalleClub', club: club}, 20000);
+      if(!json || json.timeout || json.networkError){ res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo consultar.')+'</div>'; return; }
+      res.innerHTML='';
+
+      const filas = (json.candidatos||[]).map(function(c){
+        let est;
+        if(c.clubDefinitivo === club) est = DETCLUB_ESTATUS_ESTILO.aqui;
+        else if(c.clubDefinitivo) est = Object.assign({}, DETCLUB_ESTATUS_ESTILO.otro, {texto:'Confirmado en: '+c.clubDefinitivo});
+        else est = DETCLUB_ESTATUS_ESTILO.sin;
+        // Escapamos primero la comilla simple (para que la cadena de JS
+        // dentro del onclick quede válida) y luego la comilla doble (para
+        // que, al ir todo dentro de un atributo onclick="..." delimitado
+        // por comillas dobles, un nombre de club con " no rompa el HTML).
+        const clubEscapado = club.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const accionBtn = (c.clubDefinitivo === club)
+          ? '<button onclick="detclub_definir(\''+c.curp+'\',\'\')" style="background:transparent;color:#a11f1f;border:1px solid #a11f1f;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer">✖ Quitar</button>'
+          : '<button onclick="detclub_definir(\''+c.curp+'\',\''+clubEscapado+'\')" style="background:#1A1208;color:#F0C040;border:1px solid #C8922A;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer">✅ Confirmar aquí</button>';
+        return '<tr>'+
+          '<td style="padding:0.45rem 0.5rem;font-size:0.85rem;color:#2d1f08">'+c.nombre+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">'+c.grado+'°'+c.grupo+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">Opción '+c.preferencia+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center">'+
+            '<span style="background:'+est.bg+';color:'+est.color+';padding:0.25rem 0.6rem;border-radius:12px;font-size:0.72rem;font-weight:700;white-space:nowrap">'+est.icono+' '+est.texto+'</span></td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center">'+accionBtn+'</td>'+
+        '</tr>';
+      }).join('');
+
+      rep.innerHTML =
+        '<div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem">'+
+          '<h4 style="font-family:\'Cinzel\',serif;color:#3D2B0A;font-size:0.9rem;margin:0 0 0.9rem">'+
+            club+' — '+(json.candidatos||[]).length+' interesado(s)</h4>'+
+          (json.candidatos && json.candidatos.length
+            ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+              '<thead><tr style="border-bottom:2px solid #C8922A">'+
+                '<th style="padding:0.4rem 0.5rem;text-align:left;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Alumno(a)</th>'+
+                '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Grupo</th>'+
+                '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Prefirió</th>'+
+                '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Estatus</th>'+
+                '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Club definitivo</th>'+
+              '</tr></thead><tbody>'+filas+'</tbody></table></div>'
+            : '<p style="color:#7a6030;font-size:0.82rem;margin:0">Nadie ha puesto este club entre sus opciones todavía.</p>')+
+        '</div>';
+    }
+
+    async function detclub_definir(curp, club){
+      const json = await jsonpCall({accion:'establecerClubDefinitivo', curp: curp, club: club}, 15000);
+      if(!json || !json.ok){
+        alert((json&&json.mensaje) || 'No se pudo actualizar. Intenta de nuevo.');
+        return;
+      }
+      detclub_consultar(); // refresca la tabla con el nuevo estatus
+    }
+
     /* ── Módulo Alumnos: Credenciales (frente/reverso, formato aprobado) ── */
     let _credDoc='', _credTab='individual', _credAlumnoActual=null;
 
@@ -10044,6 +10319,76 @@
     </div>
   </div>
 
+  <!-- MODAL ALUMNOS > CLUB (acceso SOLO con CURP, sin clave) -->
+  <div class="modal-overlay" id="modal-club-curp">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🏆 Club</h3>
+        <button class="modal-close" onclick="closeModal('club-curp')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">🏆</div>
+        <p class="modal-desc">Captura tu CURP para elegir (o modificar) tus opciones de club — no necesitas contraseña.</p>
+        <div class="form-group">
+          <label class="form-label">CURP</label>
+          <input type="text" id="club-curp-input" class="form-input" placeholder="Tu CURP" maxlength="18"
+            oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')accederClubAlumno_()"/>
+        </div>
+        <button onclick="club_toggleScanner()" id="club-scan-btn"
+          style="width:100%;background:transparent;color:#C8922A;border:1.5px dashed #C8922A;padding:0.6rem;
+                 border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;margin-bottom:0.8rem">
+          📷 Escanear QR de mi credencial
+        </button>
+        <div id="club-scan-wrap" style="display:none;margin-bottom:0.8rem">
+          <div style="position:relative;width:100%;max-width:260px;aspect-ratio:1/1;margin:0 auto;
+               background:#000;border-radius:12px;overflow:hidden;border:2px solid #C8922A">
+            <video id="club-scan-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+          </div>
+          <canvas id="club-scan-canvas" style="display:none"></canvas>
+          <div id="club-scan-estado" style="text-align:center;font-size:0.75rem;color:#C8922A;margin-top:0.4rem"></div>
+        </div>
+        <div id="res-club-curp"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('club-curp')">Cancelar</button>
+        <button class="btn-submit" id="btn-club-curp" onclick="accederClubAlumno_()">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DOCENTES > DETALLE DEL CLUB (login) -->
+  <div class="modal-overlay" id="modal-detclub-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>🏆 Acceso — Detalle del Club</h3>
+        <button class="modal-close" onclick="closeModal('detclub-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="detclub-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="detclub-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederDetalleClub()"/>
+            <span onclick="togglePass('detclub-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-detclub-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('detclub-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-detclub-login" onclick="accederDetalleClub()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DOCENTES > GENERAR LISTAS (EXCEL) (login) -->
   <div class="modal-overlay" id="modal-xls-login">
     <div class="modal modal-login">
@@ -10585,6 +10930,97 @@
         <div id="qrchk-lista" style="background:#241b0e;border:1px solid #4a3a1e;border-radius:8px;
              max-height:260px;overflow-y:auto;font-size:0.82rem"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- PANEL ALUMNOS > CLUB (elegir/editar las 3 opciones de club) -->
+  <div id="club-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">🏆</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Club — EST No. 3
+          </div>
+          <div id="club-alumno-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarClubAlumno()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:480px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <p id="club-editando-aviso" style="display:none;background:#3a2f14;border:1px solid #8a7020;color:#e0c88f;
+           padding:0.6rem 0.9rem;border-radius:6px;font-size:0.78rem;margin-bottom:1rem">
+        ✎ Ya tenías opciones guardadas — puedes modificarlas y volver a guardar.
+      </p>
+
+      <p style="font-size:0.8rem;color:#C8922A;margin:0 0 1.1rem">
+        Elige tus 3 opciones de club, en orden de preferencia. La Opción 1 es tu club de mayor preferencia.
+      </p>
+
+      <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem">
+        <div class="form-group">
+          <label class="form-label">Opción 1 (mayor preferencia)</label>
+          <select id="club-opcion1" class="form-input" onchange="club_actualizarSelects()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Opción 2</label>
+          <select id="club-opcion2" class="form-input" onchange="club_actualizarSelects()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Opción 3</label>
+          <select id="club-opcion3" class="form-input" onchange="club_actualizarSelects()"></select>
+        </div>
+        <div id="res-club-guardar" style="margin-bottom:0.8rem"></div>
+        <button onclick="guardarClubAlumno_()"
+          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                 font-size:0.92rem;cursor:pointer">💾 Guardar mis opciones</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DOCENTES > DETALLE DEL CLUB (integrantes + club definitivo) -->
+  <div id="detclub-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">🏆</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Detalle del Club — EST No. 3
+          </div>
+          <div id="detclub-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarDetalleClub()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:820px;margin:0 auto;padding:1.5rem 1rem 3rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.9rem;margin-bottom:1.1rem">
+        <div>
+          <label style="color:#C8922A;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Club</label>
+          <select id="detclub-select" onchange="detclub_consultar()"
+            style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+            <option value="">-- Selecciona un club --</option>
+          </select>
+        </div>
+      </div>
+      <div id="res-detclub"></div>
+      <div id="detclub-reporte" style="margin-top:1rem"></div>
     </div>
   </div>
 
