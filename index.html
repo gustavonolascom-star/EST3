@@ -1,4 +1,4 @@
-<!-- Generado: 28/septiembre/2026, 19:10 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 28/septiembre/2026, 20:07 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6126,7 +6126,7 @@
       return new Promise(function(resolve, reject){
         if(window.jsQR){ _jsQRCargado=true; resolve(); return; }
         const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js';
+        s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
         s.onload=function(){ _jsQRCargado=true; resolve(); };
         s.onerror=function(){ reject(new Error('No se pudo cargar el lector de QR. Revisa tu conexión a internet e intenta de nuevo.')); };
         document.head.appendChild(s);
