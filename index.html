@@ -1,4 +1,4 @@
-<!-- Generado: 27/septiembre/2026, 22:00 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 28/septiembre/2026, 19:10 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1271,6 +1271,7 @@
         <a href="#" onclick="openModal('calgrupo-login');return false;">📈 Consulta de Calificaciones por Grupo</a>
         <a href="#" onclick="openModal('lista-asis-login');return false;">📋 Lista de Asistencia</a>
         <a href="#" onclick="openModal('rasis-login');return false;">📅 Control de Asistencia</a>
+        <a href="#" onclick="openModal('qrchk-login');return false;">📷 Checador QR</a>
         <a href="#" onclick="openModal('xls-login');return false;">📊 Generar Listas (Excel)</a>
         <a href="#" onclick="openModal('grupo-ficha-login');return false;">📊 Ficha Descriptiva de Grupo</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
@@ -6062,6 +6063,199 @@
       w.document.open(); w.document.write(html); w.document.close();
     }
 
+    /* ── Módulo Docentes: Checador QR (checador nativo, alternativa a la
+       app externa — escanea el mismo QR/CURP de la credencial y escribe
+       directo en Asistencias > "Asistencia" vía registrarChecadaQR) ── */
+    let _qrchkDoc='', _qrchkStream=null, _qrchkRAF=null, _qrchkActivo=false, _qrchkOcupado=false, _qrchkContador=0;
+    const _qrchkRecientes = {}; // CURP -> timestamp(ms) del último escaneo en pantalla (antiduplicado local)
+
+    async function accederChecadorQR(){
+      const user=(document.getElementById('qrchk-user').value||'').trim().toUpperCase();
+      const pass=(document.getElementById('qrchk-pass').value||'').trim().toUpperCase();
+      const res=document.getElementById('res-qrchk-login');
+      const btn=document.getElementById('btn-qrchk-login');
+      if(!user||!pass){res.innerHTML='<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>';return;}
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled=true;
+      const json = await consultarUsuario(user, pass, 'Checador QR');
+      btn.disabled=false;
+      if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
+      if(json.ok){
+        _qrchkDoc=json.usuario.nombre||user;
+        closeModal('qrchk-login');
+        document.getElementById('qrchk-doc-label').textContent='Docente: '+_qrchkDoc;
+        document.getElementById('qrchk-overlay').style.display='block';
+        document.body.style.overflow='hidden';
+        res.innerHTML='';
+        document.getElementById('qrchk-user').value='';
+        document.getElementById('qrchk-pass').value='';
+        _qrchkContador=0;
+        document.getElementById('qrchk-contador').textContent='0';
+        document.getElementById('qrchk-lista').innerHTML='';
+        qrchkMostrarBotonActivar();
+      } else {
+        res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('qrchk-pass').value='';
+        document.getElementById('qrchk-pass').focus();
+      }
+    }
+
+    function cerrarChecadorQR(){
+      detenerChecadorQR();
+      document.getElementById('qrchk-overlay').style.display='none';
+      document.body.style.overflow='';
+      _qrchkDoc='';
+    }
+
+    function qrchkMostrarBotonActivar(mensajeError){
+      const estado = document.getElementById('qrchk-estado');
+      estado.style.background='#2a2010'; estado.style.borderColor='#C8922A'; estado.style.color='#C8922A';
+      estado.innerHTML =
+        (mensajeError ? '<div style="color:#ffb0b0;margin-bottom:0.6rem">⚠️ '+mensajeError+'</div>' : '') +
+        '<button onclick="iniciarChecadorQR()" '+
+        'style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;'+
+        'border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;'+
+        'font-size:0.92rem;cursor:pointer">📷 Activar cámara para empezar</button>';
+    }
+
+    // Carga jsQR (CDN) una sola vez, solo cuando el docente realmente abre
+    // el checador — así el resto del sitio no paga ese costo.
+    let _jsQRCargado = false;
+    function ensureJsQR(){
+      if(window.jsQR && _jsQRCargado) return Promise.resolve();
+      return new Promise(function(resolve, reject){
+        if(window.jsQR){ _jsQRCargado=true; resolve(); return; }
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js';
+        s.onload=function(){ _jsQRCargado=true; resolve(); };
+        s.onerror=function(){ reject(new Error('No se pudo cargar el lector de QR. Revisa tu conexión a internet e intenta de nuevo.')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    function qrchkBeep(ok){
+      try{
+        const ctx = new (window.AudioContext||window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type='sine';
+        osc.frequency.value = ok ? 880 : 220;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.25);
+        osc.start(); osc.stop(ctx.currentTime+0.25);
+      }catch(e){ /* si el navegador bloquea audio, seguimos sin sonido */ }
+    }
+
+    // Se activa desde un tap explícito del operador (botón "Activar
+    // cámara"), NUNCA automáticamente, para que getUserMedia siempre
+    // cuente con un gesto de usuario fresco (algunos navegadores, sobre
+    // todo en celular, lo exigen o si no bloquean el permiso).
+    async function iniciarChecadorQR(){
+      const estado = document.getElementById('qrchk-estado');
+      estado.style.background='#2a2010'; estado.style.borderColor='#C8922A'; estado.style.color='#C8922A';
+      estado.innerHTML = '⏳ Preparando cámara y lector de QR…';
+      try{
+        await ensureJsQR();
+      }catch(e){
+        qrchkMostrarBotonActivar(e.message);
+        return;
+      }
+      try{
+        _qrchkStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }catch(e){
+        qrchkMostrarBotonActivar('No se pudo acceder a la cámara. Revisa los permisos del navegador e intenta de nuevo.');
+        return;
+      }
+      const video = document.getElementById('qrchk-video');
+      video.srcObject = _qrchkStream;
+      try{ await video.play(); }catch(e){ /* algunos navegadores ya la reproducen solos */ }
+      estado.innerHTML = '🔎 Buscando código QR…';
+      _qrchkActivo = true;
+      _qrchkTickLoop();
+    }
+
+    function detenerChecadorQR(){
+      _qrchkActivo = false;
+      if(_qrchkRAF) cancelAnimationFrame(_qrchkRAF);
+      _qrchkRAF = null;
+      if(_qrchkStream){
+        _qrchkStream.getTracks().forEach(function(t){ t.stop(); });
+        _qrchkStream = null;
+      }
+    }
+
+    // Lee cuadros de video y busca un QR — reduce el cuadro a 480px de
+    // ancho antes de decodificar (de sobra para leer el QR de la
+    // credencial a distancia normal) para no exigir tanto al celular.
+    function _qrchkTickLoop(){
+      if(!_qrchkActivo) return;
+      _qrchkRAF = requestAnimationFrame(_qrchkTickLoop);
+      if(_qrchkOcupado) return;
+      const video = document.getElementById('qrchk-video');
+      if(!video.videoWidth) return;
+      const canvas = document.getElementById('qrchk-canvas');
+      const escala = Math.min(1, 480 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * escala);
+      canvas.height = Math.round(video.videoHeight * escala);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let img;
+      try{ img = ctx.getImageData(0, 0, canvas.width, canvas.height); }catch(e){ return; }
+      const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if(code && code.data){
+        procesarCodigoQR_(code.data.trim());
+      }
+    }
+
+    async function procesarCodigoQR_(curp){
+      curp = (curp||'').toUpperCase();
+      if(!curp) return;
+      const ahoraMs = Date.now();
+      // Antiduplicado local inmediato: mientras la cámara sigue apuntando
+      // al mismo código, no lo reenvía cada cuadro.
+      if(_qrchkRecientes[curp] && (ahoraMs - _qrchkRecientes[curp]) < 4000) return;
+      _qrchkRecientes[curp] = ahoraMs;
+      _qrchkOcupado = true;
+
+      const estado = document.getElementById('qrchk-estado');
+      estado.style.background='#2a2010'; estado.style.borderColor='#C8922A'; estado.style.color='#C8922A';
+      estado.innerHTML = '⏳ Registrando…';
+
+      const json = await jsonpCall({ accion:'registrarChecadaQR', curp: curp }, 15000);
+
+      if(json && json.ok){
+        qrchkBeep(true);
+        estado.style.background='#173a1c'; estado.style.borderColor='#2f7a45'; estado.style.color='#8fe0a0';
+        estado.innerHTML = '✅ '+json.alumno.nombre+' — '+json.tipo+' registrada ('+json.hora+')';
+        _qrchkContador++;
+        document.getElementById('qrchk-contador').textContent = String(_qrchkContador);
+        const lista = document.getElementById('qrchk-lista');
+        const fila = document.createElement('div');
+        fila.style.cssText='padding:0.5rem 0.7rem;border-bottom:1px solid #3a2e18;color:#e8d8b0;display:flex;justify-content:space-between;gap:0.6rem';
+        fila.innerHTML = '<span>'+json.alumno.nombre+' <span style="color:#8a7550;font-size:0.75rem">('+json.alumno.grado+'°'+json.alumno.grupo+')</span></span>'+
+          '<span style="color:'+(json.tipo==='Entrada'?'#8fe0a0':'#e0c88f')+';white-space:nowrap">'+json.tipo+' · '+json.hora+'</span>';
+        lista.insertBefore(fila, lista.firstChild);
+      } else if(json && json.duplicado){
+        qrchkBeep(false);
+        estado.style.background='#3a2f14'; estado.style.borderColor='#8a7020'; estado.style.color='#e0c88f';
+        estado.innerHTML = '↺ '+(json.mensaje||'Ya se había registrado.');
+      } else {
+        qrchkBeep(false);
+        estado.style.background='#4a1414'; estado.style.borderColor='#8a2a2a'; estado.style.color='#ffb0b0';
+        estado.innerHTML = '⚠️ '+((json&&json.mensaje)||'No se pudo registrar. Intenta de nuevo.');
+      }
+
+      setTimeout(function(){
+        _qrchkOcupado = false;
+        if(_qrchkActivo){
+          const est = document.getElementById('qrchk-estado');
+          est.style.background='#2a2010'; est.style.borderColor='#C8922A'; est.style.color='#C8922A';
+          est.innerHTML = '🔎 Buscando código QR…';
+        }
+      }, 1800);
+    }
+
     /* ── Módulo Alumnos: Credenciales (frente/reverso, formato aprobado) ── */
     let _credDoc='', _credTab='individual', _credAlumnoActual=null;
 
@@ -9812,6 +10006,39 @@
     </div>
   </div>
 
+  <!-- MODAL DOCENTES > CHECADOR QR (login) -->
+  <div class="modal-overlay" id="modal-qrchk-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📷 Acceso — Checador QR</h3>
+        <button class="modal-close" onclick="closeModal('qrchk-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">👨‍🏫</div>
+        <p class="modal-desc">Ingresa tus credenciales de docente.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="qrchk-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="qrchk-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederChecadorQR()"/>
+            <span onclick="togglePass('qrchk-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-qrchk-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('qrchk-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-qrchk-login" onclick="accederChecadorQR()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DOCENTES > GENERAR LISTAS (EXCEL) (login) -->
   <div class="modal-overlay" id="modal-xls-login">
     <div class="modal modal-login">
@@ -10299,6 +10526,60 @@
       </div>
 
       <div id="rasis-reporte" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+
+  <!-- PANEL DOCENTES > CHECADOR QR (checador nativo, alternativa a la app externa) -->
+  <div id="qrchk-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <!-- Topbar -->
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <span style="font-size:1.3rem">📷</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            Checador QR — EST No. 3
+          </div>
+          <div id="qrchk-doc-label" style="font-size:0.7rem;color:#C8922A"></div>
+        </div>
+      </div>
+      <button onclick="cerrarChecadorQR()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:520px;margin:0 auto;padding:1.2rem 1rem 3rem">
+      <p style="font-size:0.8rem;color:#C8922A;text-align:center;margin:0 0 1rem">
+        Apunta la cámara al código QR de la credencial del alumno. Se registra solo — no hace falta presionar nada.
+      </p>
+
+      <div id="qrchk-camwrap" style="position:relative;width:100%;aspect-ratio:1/1;max-width:420px;margin:0 auto;
+           background:#000;border-radius:14px;overflow:hidden;border:2px solid #C8922A">
+        <video id="qrchk-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+        <div style="position:absolute;inset:12%;border:3px solid rgba(240,192,64,0.85);border-radius:12px;pointer-events:none"></div>
+      </div>
+      <canvas id="qrchk-canvas" style="display:none"></canvas>
+
+      <div id="qrchk-estado" style="margin-top:1rem;min-height:64px;border-radius:10px;padding:0.9rem 1rem;
+           text-align:center;font-size:0.9rem;font-weight:700;background:#2a2010;color:#C8922A;
+           border:1px solid #C8922A">
+        <button onclick="iniciarChecadorQR()"
+          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                 font-size:0.92rem;cursor:pointer">📷 Activar cámara para empezar</button>
+      </div>
+
+      <div style="margin-top:1.3rem">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem">
+          <h4 style="font-family:'Cinzel',serif;color:#F0C040;font-size:0.85rem;margin:0">Registrados en esta sesión</h4>
+          <span id="qrchk-contador" style="color:#C8922A;font-size:0.78rem">0</span>
+        </div>
+        <div id="qrchk-lista" style="background:#241b0e;border:1px solid #4a3a1e;border-radius:8px;
+             max-height:260px;overflow-y:auto;font-size:0.82rem"></div>
+      </div>
     </div>
   </div>
 
