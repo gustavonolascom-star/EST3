@@ -1,4 +1,4 @@
-<!-- Generado: 28/septiembre/2026, 20:07 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 28/septiembre/2026, 21:09 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6246,6 +6246,11 @@
         estado.innerHTML = '⚠️ '+((json&&json.mensaje)||'No se pudo registrar. Intenta de nuevo.');
       }
 
+      // Antes esperaba 1800ms antes de aceptar el siguiente escaneo — eso
+      // frenaba la fila cuando llegan varios alumnos seguidos. Se acorta a
+      // 700ms (de sobra para oír el sonido y ver el color, pero sin
+      // detener al que sigue) — junto con quitar la lectura de toda la
+      // hoja en el backend, es lo que agiliza el checado en hora pico.
       setTimeout(function(){
         _qrchkOcupado = false;
         if(_qrchkActivo){
@@ -6253,7 +6258,7 @@
           est.style.background='#2a2010'; est.style.borderColor='#C8922A'; est.style.color='#C8922A';
           est.innerHTML = '🔎 Buscando código QR…';
         }
-      }, 1800);
+      }, 700);
     }
 
     /* ── Módulo Alumnos: Credenciales (frente/reverso, formato aprobado) ── */
