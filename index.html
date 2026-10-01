@@ -1,4 +1,4 @@
-<!-- Generado: 28/septiembre/2026, 21:36 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 30/septiembre/2026, 18:49 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1930,23 +1930,46 @@
     <div class="modal">
       <div class="modal-header">
         <h3>📋 Ficha Descriptiva del Alumno</h3>
-        <button class="modal-close" onclick="closeModal('ficha')">✕</button>
+        <button class="modal-close" onclick="cerrarModalFicha()">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-subtitle">Ingresa los siguientes datos para generar la ficha descriptiva del alumno(a).</p>
-        <div class="form-group">
-          <label>CURP</label>
-          <input type="text" id="curp-ficha" placeholder="Ej. GOML020315HZSNPR01" maxlength="18"/>
+
+        <!-- PASO 1: CURP, a mano o escaneando el QR de la credencial -->
+        <div id="ficha-paso1">
+          <p class="modal-subtitle">Captura la CURP del alumno(a) (puedes escanear el QR de su credencial).</p>
+          <div class="form-group">
+            <label>CURP</label>
+            <input type="text" id="curp-ficha" placeholder="Ej. GOML020315HZSNPR01" maxlength="18"
+                   oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter'){event.preventDefault();ficha_siguientePaso();}"/>
+          </div>
+          <button type="button" onclick="ficha_toggleScanner()" id="ficha-scan-btn"
+                  style="width:100%;margin:0 0 0.9rem;padding:0.55rem;background:#1A1208;color:#F0C040;border:1px solid #C8922A;border-radius:8px;font-weight:700;cursor:pointer">
+            📷 Escanear QR de la credencial
+          </button>
+          <div id="ficha-scan-wrap" style="display:none;margin-bottom:0.8rem">
+            <video id="ficha-scan-video" autoplay playsinline muted style="width:100%;border-radius:8px;background:#000"></video>
+            <canvas id="ficha-scan-canvas" style="display:none"></canvas>
+            <div id="ficha-scan-estado" style="text-align:center;font-size:0.8rem;color:#7a6030;margin-top:0.4rem"></div>
+          </div>
+          <div id="res-ficha-paso1"></div>
         </div>
-        <div class="form-group">
-          <label>Clave del Alumno</label>
-          <input type="text" id="clave-ficha" placeholder="Ej. 32EST0003A001"/>
+
+        <!-- PASO 2: Clave del alumno — se pide SOLO después de tener la CURP -->
+        <div id="ficha-paso2" style="display:none">
+          <p class="modal-subtitle">CURP: <strong id="ficha-curp-confirmada"></strong> · <a href="#" onclick="ficha_regresarPaso1();return false;" style="color:#8a6200;text-decoration:underline">cambiar</a></p>
+          <p class="modal-subtitle">Ahora ingresa la Clave del Alumno(a) para continuar.</p>
+          <div class="form-group">
+            <label>Clave del Alumno</label>
+            <input type="text" id="clave-ficha" placeholder="Ej. 32EST0003A001" onkeydown="if(event.key==='Enter'){event.preventDefault();loginAlumno('ficha');}"/>
+          </div>
         </div>
+
       </div>
       <div id="resultado-ficha"></div>
       <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeModal('ficha')">Cancelar</button>
-        <button class="btn-submit" id="btn-ficha" onclick="loginAlumno('ficha')">Generar Ficha</button>
+        <button class="btn-cancel" onclick="cerrarModalFicha()">Cancelar</button>
+        <button class="btn-submit" id="btn-ficha-siguiente" onclick="ficha_siguientePaso()">Siguiente</button>
+        <button class="btn-submit" id="btn-ficha" style="display:none" onclick="loginAlumno('ficha')">Generar Ficha</button>
       </div>
     </div>
   </div>
@@ -2386,12 +2409,14 @@
     }
 
     function ocultarEstilo(){
+      estilo_detenerScanner();
       document.getElementById('sec-estilo').style.display='none';
       document.getElementById('sec-hero').style.display='block';
       window.scrollTo({top:0,behavior:'smooth'});
     }
 
     function pintarEstiloPasoCurp(errorMsg){
+      estilo_detenerScanner(); // por si venía de un re-render con la cámara abierta
       const cont = document.getElementById('est-contenido');
       cont.innerHTML =
         '<div style="text-align:center;margin-bottom:1.8rem">'+
@@ -2406,6 +2431,14 @@
             'style="width:100%;padding:0.6rem 0.8rem;border:1.5px solid #C8922A;border-radius:6px;font-size:0.95rem;'+
             'background:#fffdf5;color:#1a1408;text-transform:uppercase;text-align:center;letter-spacing:0.05em;margin-bottom:0.9rem;box-sizing:border-box"/>'+
           (errorMsg ? '<div style="background:rgba(155,28,28,0.15);border:1px solid #9B1C1C;color:#ff9a9a;border-radius:6px;padding:0.6rem 0.8rem;font-size:0.82rem;margin-bottom:0.9rem">⚠️ '+errorMsg+'</div>' : '')+
+          '<button type="button" onclick="estilo_toggleScanner()" id="est-scan-btn" '+
+            'style="width:100%;margin-bottom:0.9rem;padding:0.55rem;background:#1A1208;color:#F0C040;border:1px solid #C8922A;border-radius:6px;font-size:0.85rem;font-weight:700;cursor:pointer">'+
+            '📷 Escanear QR de mi credencial</button>'+
+          '<div id="est-scan-wrap" style="display:none;margin-bottom:0.9rem">'+
+            '<video id="est-scan-video" autoplay playsinline muted style="width:100%;border-radius:6px;background:#000"></video>'+
+            '<canvas id="est-scan-canvas" style="display:none"></canvas>'+
+            '<div id="est-scan-estado" style="text-align:center;font-size:0.78rem;color:#c9a96e;margin-top:0.4rem"></div>'+
+          '</div>'+
           '<button id="est-btn-curp" onclick="accederEstilo()" '+
             'style="background:#C8922A;color:#1a1408;border:none;padding:0.65rem 1.7rem;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer">Continuar</button>'+
         '</div>';
@@ -2414,6 +2447,7 @@
     }
 
     async function accederEstilo(){
+      estilo_detenerScanner();
       const curp = document.getElementById('est-curp').value.trim().toUpperCase();
       if (!curp) { pintarEstiloPasoCurp('Ingresa tu CURP para continuar.'); return; }
       const btn = document.getElementById('est-btn-curp');
@@ -2425,6 +2459,76 @@
       _estCurpActual   = json.curp;
       _estAlumnoActual = json;
       pintarEstiloConfirmacion(json);
+    }
+
+    // -- Escáner de QR del paso de CURP (mismo patrón que Checador QR / Club
+    //    / Ficha Descriptiva: reutiliza ensureJsQR(), la cámara solo arranca
+    //    con un tap explícito del alumno, y al detectar el código se detiene
+    //    sola y avanza automáticamente). --
+    let _estScanStream = null, _estScanRAF = null, _estScanActivo = false;
+
+    async function estilo_toggleScanner(){
+      const wrap = document.getElementById('est-scan-wrap');
+      const btn = document.getElementById('est-scan-btn');
+      if(_estScanActivo){
+        estilo_detenerScanner();
+        wrap.style.display='none';
+        btn.textContent='📷 Escanear QR de mi credencial';
+        return;
+      }
+      wrap.style.display='block';
+      btn.textContent='✕ Cancelar escaneo';
+      const estado = document.getElementById('est-scan-estado');
+      estado.textContent='⏳ Preparando cámara…';
+      try{
+        await ensureJsQR();
+      }catch(e){
+        estado.textContent='⚠️ '+e.message;
+        return;
+      }
+      try{
+        _estScanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }catch(e){
+        estado.textContent='⚠️ No se pudo acceder a la cámara. Revisa los permisos del navegador.';
+        return;
+      }
+      const video = document.getElementById('est-scan-video');
+      video.srcObject = _estScanStream;
+      try{ await video.play(); }catch(e){}
+      estado.textContent='🔎 Apunta al QR de tu credencial…';
+      _estScanActivo = true;
+      estilo_scanTick();
+    }
+
+    function estilo_detenerScanner(){
+      _estScanActivo = false;
+      if(_estScanRAF) cancelAnimationFrame(_estScanRAF);
+      _estScanRAF = null;
+      if(_estScanStream){
+        _estScanStream.getTracks().forEach(function(t){ t.stop(); });
+        _estScanStream = null;
+      }
+    }
+
+    function estilo_scanTick(){
+      if(!_estScanActivo) return;
+      _estScanRAF = requestAnimationFrame(estilo_scanTick);
+      const video = document.getElementById('est-scan-video');
+      if(!video || !video.videoWidth) return;
+      const canvas = document.getElementById('est-scan-canvas');
+      const escala = Math.min(1, 480 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * escala);
+      canvas.height = Math.round(video.videoHeight * escala);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let img;
+      try{ img = ctx.getImageData(0, 0, canvas.width, canvas.height); }catch(e){ return; }
+      const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if(code && code.data){
+        document.getElementById('est-curp').value = code.data.trim().toUpperCase();
+        estilo_detenerScanner(); // detiene la cámara (el wrap se queda, pero ya no importa: viene el re-render de accederEstilo)
+        accederEstilo(); // avanza automático, igual que Club/Ficha
+      }
     }
 
     function pintarEstiloConfirmacion(json){
@@ -2636,6 +2740,12 @@
       if (json.ok) {
         closeModal(tipo);
         if (tipo === 'ficha') {
+          // El modal de Ficha ya se cerró (closeModal genérico); dejamos su
+          // flujo de 2 pasos (CURP -> Clave) listo en el paso 1 para la
+          // próxima vez que se abra, y nos aseguramos de que la cámara (si
+          // se usó para escanear el QR) quede apagada.
+          ficha_detenerScanner();
+          ficha_mostrarPaso1();
           abrirFichaDescriptiva(json.alumno);
         } else {
           abrirFichaCompleta(json.alumno, tipo);
@@ -2648,6 +2758,119 @@
         </div>`;
         document.getElementById('clave-' + tipo).value = '';
         document.getElementById('clave-' + tipo).focus();
+      }
+    }
+
+    /* ── Ficha Descriptiva del Alumno: acceso en 2 pasos ──
+       Paso 1: CURP (a mano o escaneando el QR de la credencial, reutiliza
+       ensureJsQR() ya definido para el Checador QR). Paso 2: Clave del
+       Alumno — se pide hasta tener la CURP, para que el operador no tenga
+       que escribir ambos datos a la vez. loginAlumno('ficha') (arriba) NO
+       cambia: sigue leyendo curp-ficha y clave-ficha tal cual, solo que
+       ahora esos valores se capturan en 2 pantallas en vez de 1. ── */
+    function ficha_mostrarPaso1() {
+      document.getElementById('ficha-paso1').style.display = 'block';
+      document.getElementById('ficha-paso2').style.display = 'none';
+      document.getElementById('btn-ficha-siguiente').style.display = 'inline-block';
+      document.getElementById('btn-ficha').style.display = 'none';
+      document.getElementById('res-ficha-paso1').innerHTML = '';
+    }
+
+    function ficha_mostrarPaso2() {
+      document.getElementById('ficha-paso1').style.display = 'none';
+      document.getElementById('ficha-paso2').style.display = 'block';
+      document.getElementById('btn-ficha-siguiente').style.display = 'none';
+      document.getElementById('btn-ficha').style.display = 'inline-block';
+      document.getElementById('ficha-curp-confirmada').textContent = document.getElementById('curp-ficha').value;
+      document.getElementById('clave-ficha').focus();
+    }
+
+    function ficha_siguientePaso() {
+      const curp = (document.getElementById('curp-ficha').value || '').trim().toUpperCase();
+      const res = document.getElementById('res-ficha-paso1');
+      if (!curp) { res.innerHTML = '<div class="result-error">⚠️ Captura la CURP del alumno(a).</div>'; return; }
+      if (curp.length < 18) { res.innerHTML = '<div class="result-error">⚠️ La CURP debe tener 18 caracteres (tiene ' + curp.length + ').</div>'; return; }
+      document.getElementById('curp-ficha').value = curp;
+      ficha_detenerScanner();
+      ficha_mostrarPaso2();
+    }
+
+    function ficha_regresarPaso1() {
+      document.getElementById('clave-ficha').value = '';
+      document.getElementById('resultado-ficha').innerHTML = '';
+      ficha_mostrarPaso1();
+    }
+
+    function cerrarModalFicha() {
+      ficha_detenerScanner();
+      closeModal('ficha');
+      ficha_mostrarPaso1(); // listo en el paso 1 para la próxima vez que se abra
+    }
+
+    // -- Escáner de QR dentro del paso 1 (igual patrón que Checador QR / Club) --
+    let _fichaScanStream = null, _fichaScanRAF = null, _fichaScanActivo = false;
+
+    async function ficha_toggleScanner() {
+      const wrap = document.getElementById('ficha-scan-wrap');
+      const btn = document.getElementById('ficha-scan-btn');
+      if (_fichaScanActivo) {
+        ficha_detenerScanner();
+        wrap.style.display = 'none';
+        btn.textContent = '📷 Escanear QR de la credencial';
+        return;
+      }
+      wrap.style.display = 'block';
+      btn.textContent = '✕ Cancelar escaneo';
+      const estado = document.getElementById('ficha-scan-estado');
+      estado.textContent = '⏳ Preparando cámara…';
+      try {
+        await ensureJsQR();
+      } catch (e) {
+        estado.textContent = '⚠️ ' + e.message;
+        return;
+      }
+      try {
+        _fichaScanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      } catch (e) {
+        estado.textContent = '⚠️ No se pudo acceder a la cámara. Revisa los permisos del navegador.';
+        return;
+      }
+      const video = document.getElementById('ficha-scan-video');
+      video.srcObject = _fichaScanStream;
+      try { await video.play(); } catch (e) {}
+      estado.textContent = '🔎 Apunta al QR de la credencial…';
+      _fichaScanActivo = true;
+      ficha_scanTick();
+    }
+
+    function ficha_detenerScanner() {
+      _fichaScanActivo = false;
+      if (_fichaScanRAF) cancelAnimationFrame(_fichaScanRAF);
+      _fichaScanRAF = null;
+      if (_fichaScanStream) {
+        _fichaScanStream.getTracks().forEach(function (t) { t.stop(); });
+        _fichaScanStream = null;
+      }
+    }
+
+    function ficha_scanTick() {
+      if (!_fichaScanActivo) return;
+      _fichaScanRAF = requestAnimationFrame(ficha_scanTick);
+      const video = document.getElementById('ficha-scan-video');
+      if (!video.videoWidth) return;
+      const canvas = document.getElementById('ficha-scan-canvas');
+      const escala = Math.min(1, 480 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * escala);
+      canvas.height = Math.round(video.videoHeight * escala);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let img;
+      try { img = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) { return; }
+      const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) {
+        document.getElementById('curp-ficha').value = code.data.trim().toUpperCase();
+        ficha_toggleScanner(); // detiene la cámara y oculta el visor
+        ficha_siguientePaso(); // avanza automático al paso de la Clave
       }
     }
 
