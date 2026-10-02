@@ -1278,6 +1278,7 @@
         <a href="#" onclick="openModal('detclub-login');return false;">🏆 Detalle del Club</a>
         <a href="#" onclick="openModal('personal-login');return false;">🗂️ Personal</a>
         <a href="#" onclick="openModal('pmc-login');return false;">🟧 Mejora Continua (PMC)</a>
+        <a href="#" onclick="openModal('cumplev-login');return false;">📝 Control de Evaluación Semanal</a>
         <a href="#" onclick="openModal('bitacora-login');return false;">🗝️ Registro de accesos</a>
       </div>
     </div>
@@ -3749,7 +3750,7 @@
         </div>
         <div style="font-size:0.78rem;color:var(--muted);margin:-0.6rem 0 1.2rem">
           ${asisOk
-            ? `${av('totalUnRegistro')} día(s) con un solo registro (entrada o salida) · ${av('justificadas')} falta(s) justificada(s) descontada(s) del total.`
+            ? `${av('totalUnRegistro')} día(s) con un solo registro (entrada o salida) · ${av('justificadas')} falta(s) justificada(s) · ${av('aDistancia')} día(s) en Educación a Distancia descontado(s) del total.`
             : `⚠️ ${resumenAsis ? (resumenAsis.mensaje || 'No se pudo calcular la asistencia.') : 'Sin respuesta del servidor.'}`}
         </div>
         ${registroHoyHtml}
@@ -5843,6 +5844,31 @@
     //    expedientes con varias incidencias con foto.
     let _personalCurpIncidenciasActual = '';
 
+    // Las dos incidencias del Control de Cumplimiento de Evaluación Semanal
+    // (ver TEXTO_RECONOCIMIENTO_EVAL_SEMANAL_/TEXTO_EVALUACION_SEMANAL_ en el
+    // servidor) se resaltan en el expediente: verde = reconocimiento por
+    // cumplir, rojo = invitación al cumplimiento (antes se mostraba en
+    // amarillo; el Director pidió que el caso de NO cumplir se vea en rojo,
+    // para que resalte con más claridad). También se reconocen los textos
+    // ANTERIORES ("Reconocimiento por Evaluación Semanal"/"Evaluación
+    // Semanal", usados antes de este cambio de redacción) para que las
+    // incidencias ya registradas con esos textos se seleccionen igual en
+    // su expediente. El resto de incidencias (Permiso Económico,
+    // Incapacidad, etc.) se muestran igual que antes, sin colorear.
+    function personalIncidenciaBadge_(texto){
+      const t = (texto||'').toString().trim();
+      if(!t) return '<span style="color:#c0b48a">—</span>';
+      if(t === 'Reconocimiento al Trabajo y Compromiso por Cumplir en Tiempo y Forma con la Evaluación Semanal' ||
+         t === 'Reconocimiento por Evaluación Semanal'){
+        return '<span class="pmc-sem pmc-sem-VERDE">'+personalEsc_(t)+'</span>';
+      }
+      if(t === 'Invitación al Cumplimiento de la Evaluación Semanal' ||
+         t === 'Evaluación Semanal'){
+        return '<span class="pmc-sem pmc-sem-ROJO">'+personalEsc_(t)+'</span>';
+      }
+      return personalEsc_(t);
+    }
+
     function personalIncidenciaFilaHtml_(inc){
       const fecha = inc.fecPermiso || inc.fecha || '—';
       const numInsEsc = (inc.numIns||'').toString().replace(/'/g,"\\'");
@@ -5853,7 +5879,7 @@
         : '<span style="color:#c0b48a">—</span>';
       return '<tr style="border-top:1px solid #f0e6c0">'+
         '<td style="padding:0.5rem 0.7rem;white-space:nowrap;color:#5a4a1a">'+personalEsc_(fecha)+'</td>'+
-        '<td style="padding:0.5rem 0.7rem;font-weight:600;color:#5a4a1a">'+personalEsc_(inc.incidencia||'—')+'</td>'+
+        '<td style="padding:0.5rem 0.7rem;font-weight:600;color:#5a4a1a">'+personalIncidenciaBadge_(inc.incidencia)+'</td>'+
         '<td style="padding:0.5rem 0.7rem;color:#5a4a1a">'+(inc.comentarios ? personalEsc_(inc.comentarios) : '<span style="color:#c0b48a">—</span>')+'</td>'+
         '<td style="padding:0.5rem 0.7rem;text-align:center">'+comp+'</td>'+
       '</tr>';
@@ -5912,11 +5938,34 @@
       if(!overlay.style.display || overlay.style.display === 'none') return; // se cerró mientras cargaba
 
       const esPdf = /^data:application\/pdf/i.test(json.comprobante);
-      cont.innerHTML = esPdf
-        ? '<iframe src="'+json.comprobante+'" style="width:min(92vw,900px);height:88vh;border:0;'+
-          'border-radius:8px;background:#fff;box-shadow:0 16px 48px rgba(0,0,0,0.5)"></iframe>'
-        : '<img src="'+json.comprobante+'" alt="Comprobante" '+
+      if(!esPdf){
+        cont.innerHTML = '<img src="'+json.comprobante+'" alt="Comprobante" '+
           'style="max-width:92vw;max-height:92vh;border-radius:8px;background:#fff;box-shadow:0 16px 48px rgba(0,0,0,0.5)">';
+        return;
+      }
+      // Los PDF (como los oficios, más pesados por traer imágenes del
+      // membrete) NO se ponen directo como data: URI en el iframe: varios
+      // navegadores (Chrome entre ellos) simplemente no renderizan un PDF
+      // así — se ve la ventana en blanco que reportó el Director. En vez
+      // de eso, se convierte a un Blob real en el navegador y se usa esa
+      // liga (blob:), que sí abre el visor de PDF normal de forma
+      // confiable. Se arma aquí mismo, sin pedir nada más al servidor.
+      let blobUrl = '';
+      try {
+        const base64 = json.comprobante.split(',')[1] || '';
+        const bytes = atob(base64);
+        const arr = new Uint8Array(bytes.length);
+        for(let i=0;i<bytes.length;i++) arr[i] = bytes.charCodeAt(i);
+        blobUrl = URL.createObjectURL(new Blob([arr], {type:'application/pdf'}));
+      } catch(e){ /* si falla, se intenta igual con el data: URI original abajo */ }
+      const liga = blobUrl || json.comprobante;
+      cont.innerHTML =
+        '<div style="display:flex;flex-direction:column;gap:0.5rem;align-items:center">'+
+          '<iframe src="'+liga+'" style="width:min(92vw,900px);height:84vh;border:0;'+
+            'border-radius:8px;background:#fff;box-shadow:0 16px 48px rgba(0,0,0,0.5)"></iframe>'+
+          '<a href="'+liga+'" target="_blank" rel="noopener" style="color:#fffdf5;font-size:0.85rem;text-decoration:underline">'+
+            '⬇️ Abrir/descargar el PDF en una pestaña nueva</a>'+
+        '</div>';
     }
 
     async function personalGuardarCambios(){
@@ -6157,6 +6206,7 @@
       'Presente':    {bg:'#e3f5e6', color:'#1c7a34', icono:'✅'},
       'Incompleto':  {bg:'#fff3d6', color:'#8a6200', icono:'⚠️'},
       'Justificada': {bg:'#e3ecf9', color:'#22528f', icono:'📄'},
+      'A Distancia': {bg:'#ece3f9', color:'#5a2c9c', icono:'💻'},
       'Falta':       {bg:'#fbe3e3', color:'#a11f1f', icono:'❌'}
     };
 
@@ -6186,6 +6236,7 @@
         {l:'Presentes', v:r.presentes, c:'#1c7a34'},
         {l:'Incompletos', v:r.incompletos, c:'#8a6200'},
         {l:'Justificadas', v:r.justificadas, c:'#22528f'},
+        {l:'A Distancia', v:r.aDistancia, c:'#5a2c9c'},
         {l:'Faltas', v:r.faltas, c:'#a11f1f'}
       ].map(x=>'<div style="flex:1;min-width:90px;background:#fff;border:1px solid #e8d88a;border-radius:8px;'+
         'padding:0.6rem;text-align:center">'+
@@ -6278,6 +6329,7 @@
           '<div>Presentes: <strong>'+r.presentes+'</strong></div>'+
           '<div>Incompletos: <strong>'+r.incompletos+'</strong></div>'+
           '<div>Justificadas: <strong>'+r.justificadas+'</strong></div>'+
+          '<div>A Distancia: <strong>'+(r.aDistancia||0)+'</strong></div>'+
           '<div>Faltas: <strong>'+r.faltas+'</strong></div>'+
         '</div>'+
         '<table><thead><tr><th>#</th><th>Alumno(a)</th><th>Estatus</th><th>Entrada</th><th>Salida</th></tr></thead>'+
@@ -7661,6 +7713,7 @@
         tarjetaGF_('Conducta', r.conductaPromedio !== null ? r.conductaPromedio.toFixed(1) : '—', colorGF_(r.conductaPromedio,'cond')),
         tarjetaGF_('Bitácora Docentes', r.totalBitacora, r.totalBitacora>0 ? '#C07A00' : '#1D7A4E'),
         tarjetaGF_('Trabajo Social', r.totalTrabajoSocial, r.totalTrabajoSocial>0 ? '#C07A00' : '#1D7A4E'),
+        tarjetaGF_('💻 A Distancia', r.totalADistancia, r.totalADistancia>0 ? '#5a2c9c' : '#1D7A4E'),
         tarjetaGF_('⭐ Apoyo USAER', r.totalUsaer, r.totalUsaer>0 ? '#9333ea' : '#6b7280')
       ].join('');
     }
@@ -7797,7 +7850,8 @@
       { campo: 'conductaTotal', label: 'Conducta', align: 'center', tipo: 'cond' },
       { campo: 'estiloAprendizaje', label: 'Estilo Aprendizaje', align: 'center' },
       { campo: 'bitacoraCount', label: 'Bitácora', align: 'center' },
-      { campo: 'trabajoSocialCount', label: 'Trab. Social', align: 'center' }
+      { campo: 'trabajoSocialCount', label: 'Trab. Social', align: 'center' },
+      { campo: 'aDistancia', label: 'A Distancia', align: 'center' }
     ];
 
     function ordenarGF(campo){
@@ -7849,6 +7903,9 @@
             color = colorGF_(val, c.tipo);
           } else if(c.campo === 'estiloAprendizaje'){
             txt = val || '—';
+          } else if(c.campo === 'aDistancia'){
+            txt = (val !== null && val !== undefined) ? val : 0;
+            if(Number(txt) > 0) color = '#5a2c9c';
           } else {
             txt = (val !== null && val !== undefined) ? val : 0;
             if(Number(txt) > 0) color = '#C07A00';
@@ -9757,6 +9814,275 @@
         '<th>CURP / Usuario</th><th>Nombre / Puesto</th><th>Resultado</th><th>Detalle</th></tr>'+filasHtml+'</table></div>';
     }
 
+    // ── Docentes > Control de Cumplimiento de Evaluación Semanal — solo
+    //    Dirección. Dos pestañas: "Consulta de Cumplimiento" (calcula y
+    //    confirma la semana vencida, generando los oficios de felicitación/
+    //    invitación) e "Incidencia Manual" (da de alta a mano cualquier otra
+    //    incidencia ya existente en el catálogo TipIns, para cualquier
+    //    empleado). Reusa jsonpCall/consultarUsuario/openModal/closeModal
+    //    igual que PMC y Bitácora. ──
+    let _cumplevDoc = '', _cumplevData = null, _cumplevTab = 'consulta';
+    let _cumplevFiltroUsuario = ''; // '' = todos los maestros; si no, usuario (login) del maestro elegido en el selector
+    let _cumplevPersonal = [], _cumplevTipos = [];
+    function cumplevEsc_(s){ return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function cumplevVal_(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+
+    async function accederCumplEv(){
+      const user = document.getElementById('cumplev-user').value.trim().toUpperCase();
+      const pass = document.getElementById('cumplev-pass').value.trim().toUpperCase();
+      const res = document.getElementById('res-cumplev-login');
+      const btn = document.getElementById('btn-cumplev-login');
+      if(!user || !pass){ res.innerHTML = '<div class="result-error">⚠️ Ingresa usuario y contraseña.</div>'; return; }
+      res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Verificando…</div>';
+      btn.disabled = true;
+      const json = await consultarUsuario(user, pass, 'Control de Evaluación Semanal');
+      btn.disabled = false;
+      if(!json){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+(json.mensaje||'Credenciales incorrectas.')+'</div>';
+        document.getElementById('cumplev-pass').value=''; document.getElementById('cumplev-pass').focus();
+        return;
+      }
+      _cumplevDoc = (json.usuario.curp || user);
+      closeModal('cumplev-login');
+      document.getElementById('cumplev-overlay').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      res.innerHTML=''; document.getElementById('cumplev-user').value=''; document.getElementById('cumplev-pass').value='';
+      _cumplevTab = 'consulta';
+      cumplevPintarTabs_();
+      await cumplevCargarConsulta_();
+    }
+    function cerrarCumplevOverlay(){
+      document.getElementById('cumplev-overlay').style.display = 'none';
+      document.body.style.overflow = '';
+      _cumplevDoc = ''; _cumplevData = null; _cumplevPersonal = []; _cumplevTipos = []; _cumplevFiltroUsuario = '';
+    }
+
+    function cumplevPintarTabs_(){
+      ['consulta','manual'].forEach(function(t){
+        const b = document.getElementById('cumplev-tab-'+t);
+        if(b) b.className = 'pmc-tabbtn' + (t===_cumplevTab ? ' act' : '');
+      });
+    }
+    function cumplevIrTab_(t){
+      _cumplevTab = t;
+      cumplevPintarTabs_();
+      if(t === 'manual') cumplevCargarManual_(); else cumplevCargarConsulta_();
+      document.getElementById('cumplev-overlay').scrollTop = 0;
+    }
+
+    async function cumplevCargarConsulta_(){
+      const vista = document.getElementById('cumplev-vista');
+      vista.innerHTML = '<div class="pmc-card">⏳ Calculando cumplimiento…</div>';
+      const json = await jsonpCall({accion:'cumplimientoEvaluacionSemanal', usuario:_cumplevDoc}, 25000);
+      if(!json || json.timeout || json.networkError){ vista.innerHTML = '<div class="pmc-card">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ vista.innerHTML = '<div class="pmc-card">⚠️ '+cumplevEsc_(json.mensaje||'No se pudo calcular el cumplimiento.')+'</div>'; return; }
+      _cumplevData = json;
+      cumplevPintarConsulta_();
+    }
+
+    function cumplevPintarConsulta_(){
+      const vista = document.getElementById('cumplev-vista');
+      const d = _cumplevData;
+      const semanas = (d && d.semanas) || [];
+      if(!d || !semanas.length){
+        vista.innerHTML = '<div class="pmc-card"><p style="text-align:center;color:var(--muted);padding:1.5rem">'+
+          cumplevEsc_((d && d.mensaje) || 'Todavía no hay ninguna semana con el plazo de captura ya vencido.')+'</p></div>';
+        return;
+      }
+      const docentes = d.docentes || [];
+
+      // Lista de maestros distintos (usuario->nombre), para el selector de
+      // "confirmar maestro por maestro" — se arma del mismo cálculo ya
+      // cargado, sin pedir nada nuevo al servidor.
+      const porUsuario = {};
+      docentes.forEach(function(f){ if(f.usuario && !porUsuario[f.usuario]) porUsuario[f.usuario] = f.nombre || f.usuario; });
+      const listaMaestros = Object.keys(porUsuario).map(function(u){ return {usuario:u, nombre:porUsuario[u]}; })
+        .sort(function(a,b){ return a.nombre.localeCompare(b.nombre, 'es'); });
+
+      // Si el maestro antes elegido ya no aparece en el cálculo (p.ej. tras
+      // recalcular tras una semana nueva), se vuelve a "Todos".
+      if(_cumplevFiltroUsuario && !porUsuario[_cumplevFiltroUsuario]) _cumplevFiltroUsuario = '';
+
+      const docentesVisibles = _cumplevFiltroUsuario
+        ? docentes.filter(function(f){ return f.usuario === _cumplevFiltroUsuario; })
+        : docentes;
+
+      const evaluables = docentesVisibles.filter(function(f){ return !f.sinAlumnos; });
+      const cumplieron = evaluables.filter(function(f){ return f.cumplio; }).length;
+      const noCumplieron = evaluables.length - cumplieron;
+      const filasHtml = docentesVisibles.map(function(f){
+        const estado = f.sinAlumnos
+          ? '<span style="color:var(--muted)">— Sin alumnos —</span>'
+          : (f.cumplio
+              ? '<span style="color:#1D7A4E;font-weight:700">✔ Cumplió</span>'
+              : '<span style="color:var(--crimson);font-weight:700">✖ No cumplió</span>');
+        return '<tr><td>Semana '+cumplevEsc_(f.semana)+' (Trim '+cumplevEsc_(f.trimestre)+')</td><td>'+cumplevEsc_(f.nombre)+'</td><td>'+cumplevEsc_(f.grado)+'°'+cumplevEsc_(f.grupo)+'</td>'+
+          '<td>'+cumplevEsc_(f.asignatura)+'</td><td>'+f.capturados+' / '+f.totalAlumnos+'</td><td>'+estado+'</td></tr>';
+      }).join('');
+
+      const opcionesMaestros = listaMaestros.map(function(m){
+        return '<option value="'+cumplevEsc_(m.usuario)+'"'+(m.usuario===_cumplevFiltroUsuario?' selected':'')+'>'+cumplevEsc_(m.nombre)+'</option>';
+      }).join('');
+
+      const nombreElegido = _cumplevFiltroUsuario ? (porUsuario[_cumplevFiltroUsuario] || '') : '';
+      const etiquetaBoton = _cumplevFiltroUsuario
+        ? '✅ Confirmar cumplimiento de '+cumplevEsc_(nombreElegido)
+        : '✅ Confirmar cumplimiento (todos los pendientes)';
+
+      const semanasHtml = semanas.map(function(s){
+        return '<li>Semana '+cumplevEsc_(s.semana)+' · '+cumplevEsc_(s.trimestre)+'° trimestre — plazo vencido: '+cumplevEsc_(s.fechaLimiteTexto)+'</li>';
+      }).join('');
+
+      vista.innerHTML =
+        '<div class="pmc-card">'+
+          '<h2>📋 Control de Cumplimiento de Evaluación Semanal</h2>'+
+          '<p style="color:var(--muted);font-size:0.85rem">'+semanas.length+' semana(s) pendiente(s) de revisión (desde la semana 1):</p>'+
+          '<ul style="margin:0.2rem 0 0.6rem 1.2rem;color:var(--muted);font-size:0.85rem">'+semanasHtml+'</ul>'+
+          '<p style="color:var(--muted);font-size:0.85rem">'+cumplieron+' cumplieron, '+noCumplieron+' no cumplieron'+(_cumplevFiltroUsuario?' (de '+cumplevEsc_(nombreElegido)+')':'')+' en total.</p>'+
+          (listaMaestros.length
+            ? '<div style="max-width:360px;margin-top:0.6rem">'+
+                '<label>Procesar solo a un maestro (recomendado para no saturar)</label>'+
+                '<select id="cumplev-filtro-maestro" onchange="cumplevFiltrarMaestro_(this.value)">'+
+                  '<option value=""'+(_cumplevFiltroUsuario?'':' selected')+'>— Todos los maestros pendientes —</option>'+
+                  opcionesMaestros+
+                '</select>'+
+              '</div>'
+            : '')+
+          (docentesVisibles.length
+            ? '<div class="pmc-tw" style="margin-top:0.6rem"><table><tr><th>Semana</th><th>Docente</th><th>Grupo</th><th>Asignatura</th><th>Capturados</th><th>Estado</th></tr>'+filasHtml+'</table></div>'
+            : '<p style="text-align:center;color:var(--muted);padding:1.5rem">No hay docentes asignados para evaluar.</p>')+
+          '<div style="margin-top:1rem;display:flex;gap:0.6rem;flex-wrap:wrap">'+
+            '<button class="btn-submit" id="btn-cumplev-confirmar" onclick="cumplevConfirmar_()"'+(docentes.length?'':' disabled')+'>'+etiquetaBoton+'</button>'+
+            '<button class="btn-cancel" onclick="cumplevCargarConsulta_()">🔄 Recalcular</button>'+
+          '</div>'+
+          '<div id="cumplev-confirmar-res"></div>'+
+        '</div>';
+    }
+    function cumplevFiltrarMaestro_(usuario){
+      _cumplevFiltroUsuario = usuario || '';
+      cumplevPintarConsulta_();
+    }
+
+    async function cumplevConfirmar_(){
+      const resDiv = document.getElementById('cumplev-confirmar-res');
+      const btn = document.getElementById('btn-cumplev-confirmar');
+      const filtro = _cumplevFiltroUsuario;
+      const nombreElegido = (function(){
+        if(!filtro || !_cumplevData || !_cumplevData.docentes) return '';
+        const f = _cumplevData.docentes.find(function(x){ return x.usuario === filtro; });
+        return f ? f.nombre : '';
+      })();
+      const mensajeConfirm = filtro
+        ? '¿Confirmar el cumplimiento pendiente SOLO para '+nombreElegido+'?\n\nQuedará registrada en su expediente (Incidencias) la incidencia correspondiente de cada semana/grupo pendiente: Reconocimiento (si cumplió) o Invitación al Cumplimiento (si no).\n\nEsta acción es segura de repetir: lo ya registrado no se duplica.'
+        : '¿Confirmar el cumplimiento pendiente para TODOS los maestros?\n\nQuedará registrada en el expediente de cada docente la incidencia correspondiente de cada semana/grupo pendiente: Reconocimiento (si cumplió) o Invitación al Cumplimiento (si no).\n\nSi son muchos, procesarlos puede tardar un poco — si prefieres ir viendo el avance de uno en uno, cancela y usa el selector de "Procesar solo a un maestro".\n\nEsta acción es segura de repetir: lo ya registrado no se duplica.';
+      if(!confirm(mensajeConfirm)) return;
+      if(btn) btn.disabled = true;
+      resDiv.innerHTML = '<p style="color:var(--muted);padding:0.8rem 0">⏳ Registrando cumplimiento'+(filtro?' de '+cumplevEsc_(nombreElegido):'')+'… si hay varias semanas/grupos pendientes esto puede tardar unos momentos, no cierres esta pantalla.</p>';
+      const params = {accion:'confirmarCumplimientoEvaluacionSemanal', usuario:_cumplevDoc};
+      if(filtro) params.filtroUsuario = filtro;
+      const json = await jsonpCall(params, 340000);
+      if(btn) btn.disabled = false;
+      if(!json || json.timeout || json.networkError){ resDiv.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor tras varios minutos de espera. Revisa en Apps Script (Ejecuciones) si el proceso sigue corriendo o si marcó un error; si ya terminó ahí, vuelve a dar clic en "Confirmar" — lo ya registrado no se repite, solo reintenta lo que faltó.</div>'; return; }
+      if(!json.ok){ resDiv.innerHTML = '<div class="result-error">⚠️ '+cumplevEsc_(json.mensaje||'No se pudo confirmar.')+'</div>'; return; }
+      if(!json.semanas || !json.semanas.length){ resDiv.innerHTML = '<p style="color:var(--muted)">'+cumplevEsc_(json.mensaje||'No hay ninguna semana pendiente de confirmar.')+'</p>'; return; }
+      const procesados = json.procesados || [], omitidos = json.omitidos || [], errores = json.errores || [], pendientes = json.pendientes || 0;
+      let html = '<div class="pmc-aviso pmc-aviso-ok" style="margin-top:0.8rem">✔ '+(pendientes ? 'Proceso parcial' : 'Proceso terminado')+': '+procesados.length+' registrado(s)'+
+        (omitidos.length ? ', '+omitidos.length+' ya registrado(s) previamente' : '')+
+        (errores.length ? ', '+errores.length+' con error' : '')+'.</div>';
+      if(pendientes){
+        html += '<div class="pmc-aviso pmc-aviso-info" style="margin-top:0.6rem">⏳ Quedaron '+pendientes+' caso(s) sin procesar por esta vez (son muchos para una sola pasada) — vuelve a dar clic en "Confirmar cumplimiento" para continuar con el resto; lo ya registrado no se repite.</div>';
+      }
+      if(procesados.length){
+        html += '<div class="pmc-tw" style="margin-top:0.6rem"><table><tr><th>Semana</th><th>Docente</th><th>Grupo</th><th>Asignatura</th><th>Resultado</th></tr>'+
+          procesados.map(function(p){
+            return '<tr><td>Semana '+cumplevEsc_(p.semana)+' (Trim '+cumplevEsc_(p.trimestre)+')</td><td>'+cumplevEsc_(p.nombre)+'</td><td>'+cumplevEsc_(p.grado)+'°'+cumplevEsc_(p.grupo)+'</td><td>'+cumplevEsc_(p.asignatura)+'</td>'+
+              '<td>'+(p.cumplio?'<span style="color:#1D7A4E;font-weight:700">✔ Reconocimiento</span>':'<span style="color:var(--crimson);font-weight:700">✖ Invitación al Cumplimiento</span>')+'</td></tr>';
+          }).join('')+'</table></div>';
+        const fallidosIncidencia = procesados.filter(function(p){ return p.incidenciaRegistrada === false; });
+        if(fallidosIncidencia.length){
+          html += '<div class="result-error" style="margin-top:0.6rem">⚠️ En estos casos NO se pudo registrar la incidencia en el expediente (MovIns) — no van a aparecer en la Ficha de Personal hasta corregir esto:<ul style="margin:0.4rem 0 0 1.2rem">'+
+            fallidosIncidencia.map(function(p){ return '<li>'+cumplevEsc_(p.nombre)+' — Semana '+cumplevEsc_(p.semana)+' '+cumplevEsc_(p.grado)+'°'+cumplevEsc_(p.grupo)+' '+cumplevEsc_(p.asignatura)+': '+cumplevEsc_(p.incidenciaError)+'</li>'; }).join('')+
+            '</ul></div>';
+        }
+      }
+      if(errores.length){
+        html += '<div class="result-error" style="margin-top:0.6rem">⚠️ Con error:<ul style="margin:0.4rem 0 0 1.2rem">'+
+          errores.map(function(e){ return '<li>'+cumplevEsc_(e.usuario)+' — Semana '+cumplevEsc_(e.semana)+' '+cumplevEsc_(e.grado)+'°'+cumplevEsc_(e.grupo)+' '+cumplevEsc_(e.asignatura)+': '+cumplevEsc_(e.mensaje)+'</li>'; }).join('')+
+          '</ul></div>';
+      }
+      resDiv.innerHTML = html;
+    }
+
+    async function cumplevCargarManual_(){
+      const vista = document.getElementById('cumplev-vista');
+      vista.innerHTML = '<div class="pmc-card">⏳ Cargando personal y catálogo de incidencias…</div>';
+      const resPersonal = await jsonpCall({accion:'personalListar', usuario:_cumplevDoc, busqueda:''}, 20000);
+      if(!resPersonal || !resPersonal.ok){ vista.innerHTML = '<div class="pmc-card">⚠️ '+cumplevEsc_((resPersonal&&resPersonal.mensaje)||'No se pudo cargar el personal.')+'</div>'; return; }
+      const resTipos = await jsonpCall({accion:'catalogoTipIns', usuario:_cumplevDoc}, 20000);
+      if(!resTipos || !resTipos.ok){ vista.innerHTML = '<div class="pmc-card">⚠️ '+cumplevEsc_((resTipos&&resTipos.mensaje)||'No se pudo cargar el catálogo de incidencias.')+'</div>'; return; }
+      _cumplevPersonal = (resPersonal.personal || []).filter(function(p){ return p.activo; });
+      _cumplevTipos = resTipos.tipos || [];
+      cumplevPintarManual_();
+    }
+
+    function cumplevPintarManual_(){
+      const vista = document.getElementById('cumplev-vista');
+      const opcionesPersonal = _cumplevPersonal.map(function(p){
+        return '<option value="'+cumplevEsc_(p.nombre)+'" data-curp="'+cumplevEsc_(p.curp)+'">';
+      }).join('');
+      const opcionesTipo = _cumplevTipos.map(function(t){
+        return '<option value="'+cumplevEsc_(t.nombre)+'">'+cumplevEsc_(t.nombre)+'</option>';
+      }).join('');
+      vista.innerHTML =
+        '<div class="pmc-card">'+
+          '<h2>➕ Dar de alta una incidencia manual</h2>'+
+          '<p style="color:var(--muted);font-size:0.85rem">Registra, para cualquier empleado del personal, una incidencia ya existente en el catálogo (Permiso Económico, Incapacidad, Retardo, etc.). Quedará visible en su expediente.</p>'+
+          '<label>Empleado</label>'+
+          '<input type="text" id="cumplev-manual-persona" list="cumplev-manual-personas" placeholder="Escribe el nombre…" autocomplete="off" oninput="cumplevManualCurp_()"/>'+
+          '<datalist id="cumplev-manual-personas">'+opcionesPersonal+'</datalist>'+
+          '<input type="hidden" id="cumplev-manual-curp"/>'+
+          '<label>Tipo de incidencia</label>'+
+          '<select id="cumplev-manual-tipo"><option value="">— Selecciona —</option>'+opcionesTipo+'</select>'+
+          '<label>Comentarios (opcional)</label>'+
+          '<textarea id="cumplev-manual-comentarios" placeholder="Detalle de la incidencia…"></textarea>'+
+          '<p style="color:var(--muted);font-size:0.78rem">Nota: este formulario no sube archivos; un comprobante, si aplica, puede adjuntarse después directamente desde Drive.</p>'+
+          '<div id="res-cumplev-manual"></div>'+
+          '<div style="margin-top:0.8rem"><button class="btn-submit" id="btn-cumplev-manual" onclick="cumplevGuardarManual_()">💾 Registrar incidencia</button></div>'+
+        '</div>';
+    }
+    function cumplevManualCurp_(){
+      const input = document.getElementById('cumplev-manual-persona');
+      const dl = document.getElementById('cumplev-manual-personas');
+      let curp = '';
+      if(input && dl){
+        for(let i=0;i<dl.options.length;i++){
+          if(dl.options[i].value === input.value){ curp = dl.options[i].getAttribute('data-curp') || ''; break; }
+        }
+      }
+      document.getElementById('cumplev-manual-curp').value = curp;
+    }
+    async function cumplevGuardarManual_(){
+      const res = document.getElementById('res-cumplev-manual');
+      const btn = document.getElementById('btn-cumplev-manual');
+      const curp = cumplevVal_('cumplev-manual-curp');
+      const tipo = cumplevVal_('cumplev-manual-tipo');
+      const comentarios = cumplevVal_('cumplev-manual-comentarios');
+      if(!curp){ res.innerHTML = '<div class="result-error">⚠️ Selecciona un empleado válido de la lista.</div>'; return; }
+      if(!tipo){ res.innerHTML = '<div class="result-error">⚠️ Selecciona el tipo de incidencia.</div>'; return; }
+      res.innerHTML = '<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Guardando…</div>';
+      btn.disabled = true;
+      const json = await jsonpCall({accion:'registrarIncidenciaManual', usuario:_cumplevDoc, curpObjetivo:curp, tipoIncidencia:tipo, comentarios:comentarios}, 20000);
+      btn.disabled = false;
+      if(!json || json.timeout || json.networkError){ res.innerHTML = '<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ res.innerHTML = '<div class="result-error">⚠️ '+cumplevEsc_(json.mensaje||'No se pudo registrar la incidencia.')+'</div>'; return; }
+      res.innerHTML = '<div class="pmc-aviso pmc-aviso-ok">✔ Incidencia registrada (No. '+cumplevEsc_(json.numIns)+').</div>';
+      document.getElementById('cumplev-manual-persona').value = '';
+      document.getElementById('cumplev-manual-curp').value = '';
+      document.getElementById('cumplev-manual-tipo').value = '';
+      document.getElementById('cumplev-manual-comentarios').value = '';
+    }
+
     async function pmcCargar_(msgOk){
       const vista = document.getElementById('pmc-vista');
       vista.innerHTML = '<div class="pmc-card">⏳ Cargando información…</div>';
@@ -10707,6 +11033,39 @@
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeModal('pmc-login')">Cancelar</button>
         <button class="btn-submit" id="btn-pmc-login" onclick="accederPmc()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DOCENTES > CONTROL DE EVALUACIÓN SEMANAL (login) -->
+  <div class="modal-overlay" id="modal-cumplev-login">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📝 Acceso — Control de Evaluación Semanal</h3>
+        <button class="modal-close" onclick="closeModal('cumplev-login')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-icon">📝</div>
+        <p class="modal-desc">Solo la Dirección puede consultar y confirmar el Control de Cumplimiento de Evaluación Semanal. Ingresa tus credenciales.</p>
+        <div class="form-group">
+          <label class="form-label">USUARIO</label>
+          <input type="text" id="cumplev-user" class="form-input" placeholder="Usuario"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CONTRASEÑA</label>
+          <div style="position:relative">
+            <input type="password" id="cumplev-pass" class="form-input" placeholder="Contraseña"
+              onkeydown="if(event.key==='Enter')accederCumplEv()"/>
+            <span onclick="togglePass('cumplev-pass',this)"
+              style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+          </div>
+        </div>
+        <div id="res-cumplev-login"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('cumplev-login')">Cancelar</button>
+        <button class="btn-submit" id="btn-cumplev-login" onclick="accederCumplEv()">Entrar</button>
       </div>
     </div>
   </div>
@@ -11989,6 +12348,37 @@
   </div>
 
   <!-- ═══ REGISTRO DE ACCESOS (bitácora) — pantalla completa, solo Dirección ═══ -->
+  <div id="cumplev-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+    background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
+
+    <div style="background:linear-gradient(135deg,#1A1208,#3D2B0A);padding:0.75rem 1.2rem;
+         display:flex;align-items:center;justify-content:space-between;
+         position:sticky;top:0;z-index:10;border-bottom:2px solid #C8922A">
+      <div style="display:flex;align-items:center;gap:0.7rem">
+        <div class="logo-wrap" style="width:34px;height:34px">
+          <img src="logo.png" alt="Logotipo" style="width:100%;height:100%;border-radius:50%;display:block;object-fit:contain"/>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;color:#F0C040;font-weight:700;font-size:0.88rem">
+            📝 Control de Evaluación Semanal — EST No. 3
+          </div>
+          <div style="font-size:0.7rem;color:#C8922A">Cumplimiento semanal de captura de calificaciones por docente</div>
+        </div>
+      </div>
+      <button onclick="cerrarCumplevOverlay()"
+        style="background:rgba(155,28,28,0.8);border:none;color:#fff;padding:0.35rem 0.9rem;
+               border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer">✕ Salir</button>
+    </div>
+
+    <div style="max-width:1180px;margin:0 auto;padding:1.2rem 1rem 3rem">
+      <div class="pmc-tabnav" id="cumplev-tabnav" style="margin-bottom:1rem;display:flex;gap:0.5rem">
+        <button class="pmc-tabbtn act" id="cumplev-tab-consulta" onclick="cumplevIrTab_('consulta')">📋 Consulta de Cumplimiento</button>
+        <button class="pmc-tabbtn" id="cumplev-tab-manual" onclick="cumplevIrTab_('manual')">➕ Incidencia Manual</button>
+      </div>
+      <div id="cumplev-vista"></div>
+    </div>
+  </div>
+
   <div id="bitacora-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
     background:#1a1408;overflow-y:auto;font-family:'Inter',sans-serif">
 
