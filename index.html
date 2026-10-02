@@ -3748,11 +3748,17 @@
             <div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:${asisOk ? colorAsisPct : '#aaa'}">${asisOk ? asisPct + '%' : '—'}</div>
           </div>
         </div>
-        <div style="font-size:0.78rem;color:var(--muted);margin:-0.6rem 0 1.2rem">
+        <div style="font-size:0.78rem;color:var(--muted);margin:-0.6rem 0 0.5rem">
           ${asisOk
             ? `${av('totalUnRegistro')} día(s) con un solo registro (entrada o salida) · ${av('justificadas')} falta(s) justificada(s) · ${av('aDistancia')} día(s) en Educación a Distancia descontado(s) del total.`
             : `⚠️ ${resumenAsis ? (resumenAsis.mensaje || 'No se pudo calcular la asistencia.') : 'Sin respuesta del servidor.'}`}
         </div>
+        ${asisOk && resumenAsis.periodoADistanciaTexto ? `
+        <div style="display:inline-flex;align-items:center;gap:0.4rem;background:#ece3f9;color:#5a2c9c;
+             border:1px solid #d4c0f0;border-radius:8px;padding:0.4rem 0.8rem;font-size:0.78rem;
+             font-weight:700;margin:0 0 1.2rem">
+          💻 Educación a Distancia — ${resumenAsis.periodoADistanciaTexto}
+        </div>` : '<div style="margin-bottom:1.2rem"></div>'}
         ${registroHoyHtml}
 
         <!-- GRÁFICA DE CALIFICACIONES -->
@@ -9917,8 +9923,16 @@
           : (f.cumplio
               ? '<span style="color:#1D7A4E;font-weight:700">✔ Cumplió</span>'
               : '<span style="color:var(--crimson);font-weight:700">✖ No cumplió</span>');
+        // Si hay calificaciones capturadas FUERA de plazo (ej. captura tardía),
+        // "Capturados" puede mostrar 0/N aunque el docente sí haya capturado
+        // — solo que después del plazo. Para que esto no se confunda con "no
+        // capturó nada", se muestra debajo la fecha de la última captura
+        // encontrada (a tiempo o no) cuando no coincide con el total.
+        const avisoCapturaTardia = (!f.sinAlumnos && f.capturados < f.totalAlumnos && f.ultimaCapturaTexto)
+          ? '<br><span style="font-size:0.72rem;color:var(--muted);font-weight:400">última captura: '+cumplevEsc_(f.ultimaCapturaTexto)+' (fuera de plazo)</span>'
+          : '';
         return '<tr><td>Semana '+cumplevEsc_(f.semana)+' (Trim '+cumplevEsc_(f.trimestre)+')</td><td>'+cumplevEsc_(f.nombre)+'</td><td>'+cumplevEsc_(f.grado)+'°'+cumplevEsc_(f.grupo)+'</td>'+
-          '<td>'+cumplevEsc_(f.asignatura)+'</td><td>'+f.capturados+' / '+f.totalAlumnos+'</td><td>'+estado+'</td></tr>';
+          '<td>'+cumplevEsc_(f.asignatura)+'</td><td>'+f.capturados+' / '+f.totalAlumnos+avisoCapturaTardia+'</td><td>'+estado+'</td></tr>';
       }).join('');
 
       const opcionesMaestros = listaMaestros.map(function(m){
