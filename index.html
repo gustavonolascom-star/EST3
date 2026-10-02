@@ -6140,7 +6140,7 @@
     }
 
     /* ── Módulo Docentes: Control de Asistencia (reporte real del checador) ── */
-    let _rasisDoc='', _rasisTab='diaria';
+    let _rasisDoc='', _rasisUsuario='', _rasisTab='diaria';
 
     async function accederReporteAsis(){
       const user=(document.getElementById('rasis-user').value||'').trim().toUpperCase();
@@ -6155,6 +6155,7 @@
       if(!json){res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>';return;}
       if(json.ok){
         _rasisDoc=json.usuario.nombre||user;
+        _rasisUsuario=(json.usuario.curp||user);
         closeModal('rasis-login');
         document.getElementById('rasis-doc-label').textContent='Docente: '+_rasisDoc;
         document.getElementById('rasis-overlay').style.display='block';
@@ -6178,31 +6179,48 @@
     function cerrarReporteAsis(){
       document.getElementById('rasis-overlay').style.display='none';
       document.body.style.overflow='';
-      _rasisDoc='';
+      _rasisDoc=''; _rasisUsuario='';
     }
 
     function tabRasis(tab){
       _rasisTab=tab;
       const btnD=document.getElementById('rasis-tab-diaria');
       const btnF=document.getElementById('rasis-tab-fecha');
+      const btnI=document.getElementById('rasis-tab-incompletos');
       const wrapFecha=document.getElementById('rasis-fecha-wrap');
       const desc=document.getElementById('rasis-tab-desc');
-      if(tab==='diaria'){
-        btnD.style.background='#F0C040'; btnD.style.color='#1A1208';
-        btnF.style.background='transparent'; btnF.style.color='#C8922A';
-        wrapFecha.style.display='none';
-        desc.textContent='Muestra la asistencia registrada el día de hoy para el grado y grupo que elijas.';
-      } else {
-        btnF.style.background='#F0C040'; btnF.style.color='#1A1208';
-        btnD.style.background='transparent'; btnD.style.color='#C8922A';
-        wrapFecha.style.display='';
-        desc.textContent='Elige el grado, grupo y la fecha que quieras consultar.';
-        const fi=document.getElementById('rasis-fecha');
-        if(!fi.value){
-          const hoy=new Date();
-          const iso=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
-          fi.value=iso;
+      const bloqueGrupo=document.getElementById('rasis-bloque-grupo');
+      const bloqueIncomp=document.getElementById('rasis-bloque-incompletos');
+      [btnD,btnF,btnI].forEach(function(b){ b.style.background='transparent'; b.style.color='#C8922A'; });
+      if(tab==='diaria' || tab==='fecha'){
+        bloqueGrupo.style.display=''; bloqueIncomp.style.display='none';
+        if(tab==='diaria'){
+          btnD.style.background='#F0C040'; btnD.style.color='#1A1208';
+          wrapFecha.style.display='none';
+          desc.textContent='Muestra la asistencia registrada el día de hoy para el grado y grupo que elijas.';
+        } else {
+          btnF.style.background='#F0C040'; btnF.style.color='#1A1208';
+          wrapFecha.style.display='';
+          desc.textContent='Elige el grado, grupo y la fecha que quieras consultar.';
+          const fi=document.getElementById('rasis-fecha');
+          if(!fi.value){
+            const hoy=new Date();
+            const iso=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+            fi.value=iso;
+          }
         }
+      } else {
+        // 'incompletos' — Dirección: revisar y justificar alumnos con un
+        // solo registro ese día, de toda la escuela a la vez.
+        btnI.style.background='#F0C040'; btnI.style.color='#1A1208';
+        bloqueGrupo.style.display='none'; bloqueIncomp.style.display='';
+        desc.textContent='Solo Dirección: elige una fecha y el sistema lista, de toda la escuela, a quienes tuvieron un solo registro ese día (probable falla del checador), para justificarlos si corresponde.';
+        const fiI=document.getElementById('rasis-incomp-fecha');
+        if(!fiI.value){
+          const hoy=new Date();
+          fiI.value=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+        }
+        document.getElementById('rasis-incomp-reporte').innerHTML='';
       }
       document.getElementById('res-rasis').innerHTML='';
       document.getElementById('rasis-reporte').innerHTML='';
@@ -6252,6 +6270,12 @@
 
       const filas = (json.alumnos||[]).map(function(a,i){
         const est = RASIS_ESTATUS_ESTILO[a.estatus] || {bg:'#eee',color:'#333',icono:''};
+        const curpEsc=(a.curp||'').replace(/'/g,"\\'"), nombreEsc=(a.nombre||'').replace(/'/g,"\\'");
+        const accion = (a.estatus==='Falta' || a.estatus==='Incompleto')
+          ? '<button onclick="justAsisAbrir_(_rasisUsuario,\''+curpEsc+'\',\''+nombreEsc+'\',\''+json.grado+'\',\''+json.grupo+'\',\''+json.fechaISO+'\',\''+json.fecha.replace(/'/g,"\\'")+'\',rasisJustificarRefrescar_,\''+a.estatus+'\')" '+
+              'style="background:#fff;color:#5a2c9c;border:1px solid #c8a8f0;padding:0.3rem 0.6rem;border-radius:6px;'+
+              'font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">✍️ Justificar</button>'
+          : '';
         return '<tr>'+
           '<td style="padding:0.45rem 0.5rem;color:#7a6030;font-size:0.78rem">'+(i+1)+'</td>'+
           '<td style="padding:0.45rem 0.5rem;font-size:0.85rem;color:#2d1f08">'+a.nombre+'</td>'+
@@ -6260,6 +6284,7 @@
             'font-size:0.75rem;font-weight:700;white-space:nowrap">'+est.icono+' '+a.estatus+'</span></td>'+
           '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">'+(a.horaEntrada||'—')+'</td>'+
           '<td style="padding:0.45rem 0.5rem;text-align:center;font-size:0.78rem;color:#7a6030">'+(a.horaSalida||'—')+'</td>'+
+          '<td style="padding:0.45rem 0.5rem;text-align:center">'+accion+'</td>'+
         '</tr>';
       }).join('');
 
@@ -6282,12 +6307,164 @@
               '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Estatus</th>'+
               '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Entrada</th>'+
               '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Salida</th>'+
+              '<th style="padding:0.4rem 0.5rem;text-align:center;font-size:0.7rem;color:#7a6030;text-transform:uppercase">Acción</th>'+
             '</tr></thead>'+
             '<tbody>'+filas+'</tbody>'+
           '</table></div>'+
+          '<p style="font-size:0.72rem;color:#8a7550;margin-top:0.6rem">El botón "Justificar" es solo para la cuenta de Dirección.</p>'+
         '</div>';
 
       _rasisUltimoReporte = json; // para impresión
+    }
+
+    /* ── Mini-modal: Justificar Asistencia (individual) ── */
+    let _justAsisCtx = null;
+    function justAsisAbrir_(usuario, curp, nombre, grado, grupo, fechaISO, fechaTexto, callback, estatusActual){
+      _justAsisCtx = {usuario:usuario, curp:curp, nombre:nombre, grado:grado, grupo:grupo, fecha:fechaISO, callback:callback};
+      document.getElementById('just-asis-quien').textContent = nombre+' — '+grado+'°'+grupo+' — '+fechaTexto;
+      document.getElementById('just-asis-motivo').value='';
+      // Incompleto (1 registro, probable falla de checador) → se sugiere "Falla de
+      // Checador" por defecto; Falta (0 registros) → se sugiere "Otro motivo", ya
+      // que lo más común en ese caso es una ausencia real. La Dirección puede
+      // cambiar la selección según el caso.
+      document.getElementById('just-asis-tipo').value =
+        (estatusActual==='Incompleto') ? 'Falla de Checador' : 'Otro motivo';
+      document.getElementById('res-just-asis').innerHTML='';
+      document.getElementById('just-asis-overlay').style.display='flex';
+    }
+    function justAsisCerrar_(){
+      document.getElementById('just-asis-overlay').style.display='none';
+      _justAsisCtx=null;
+    }
+    async function justAsisGuardar_(){
+      if(!_justAsisCtx) return;
+      const motivo=(document.getElementById('just-asis-motivo').value||'').trim();
+      const tipo=(document.getElementById('just-asis-tipo').value||'Falla de Checador');
+      const res=document.getElementById('res-just-asis');
+      const btn=document.getElementById('btn-just-asis-guardar');
+      if(!motivo){ res.innerHTML='<div class="result-error">⚠️ Escribe el motivo de la justificación.</div>'; return; }
+      btn.disabled=true;
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Guardando…</div>';
+      const c=_justAsisCtx;
+      const json = await jsonpCall({accion:'justificarAsistenciaIndividual', usuario:c.usuario, curp:c.curp, nombre:c.nombre, grado:c.grado, grupo:c.grupo, fecha:c.fecha, motivo:motivo, tipo:tipo}, 20000);
+      btn.disabled=false;
+      if(!json || json.timeout || json.networkError){ res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo registrar la justificación.')+'</div>'; return; }
+      const callback=c.callback;
+      justAsisCerrar_();
+      if(typeof callback==='function') callback();
+    }
+    function rasisJustificarRefrescar_(){
+      generarReporteAsistencia();
+    }
+
+    /* ── Dirección > Control de Asistencia > Revisar Incompletos ── */
+    let _rasisIncompData = null;
+    const _rasisIncompSeleccion = {}; // curp -> {curp,nombre,grado,grupo}
+
+    async function rasisCargarIncompletos_(){
+      const fecha=(document.getElementById('rasis-incomp-fecha').value||'');
+      const res=document.getElementById('res-rasis-incomp');
+      const repDiv=document.getElementById('rasis-incomp-reporte');
+      repDiv.innerHTML='';
+      if(!fecha){ res.innerHTML='<div class="result-error">⚠️ Selecciona la fecha a revisar.</div>'; return; }
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Buscando…</div>';
+
+      const json = await jsonpCall({accion:'revisionAsistenciaIncompleta', usuario:_rasisUsuario, fecha:fecha}, 25000);
+      if(!json || json.timeout || json.networkError){ res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo generar la revisión.')+'</div>'; return; }
+      res.innerHTML='';
+      _rasisIncompData = json;
+      Object.keys(_rasisIncompSeleccion).forEach(function(k){ delete _rasisIncompSeleccion[k]; });
+      rasisPintarIncompletos_();
+    }
+
+    function rasisPintarIncompletos_(){
+      const json=_rasisIncompData;
+      const repDiv=document.getElementById('rasis-incomp-reporte');
+      if(!json || !json.alumnos || !json.alumnos.length){
+        repDiv.innerHTML='<div class="pmc-card"><p style="text-align:center;color:var(--muted);padding:1.2rem">'+
+          '✅ No hay alumnos con un solo registro sin resolver para el '+((json&&json.fecha)||'esa fecha')+'.</p></div>';
+        return;
+      }
+      const avisoDia = json.esDiaClase ? '' :
+        '<div style="background:#fff3d6;border:1px solid #e0c060;color:#8a6200;padding:0.6rem 0.9rem;'+
+        'border-radius:6px;font-size:0.78rem;margin-bottom:1rem">⚠️ El '+json.fecha+' no está registrado como día de clase.</div>';
+      const avisoMasivo = json.alumnos.length>=8
+        ? '<div style="background:#fbe3e3;border:1px solid #e0a0a0;color:#a11f1f;padding:0.6rem 0.9rem;'+
+          'border-radius:6px;font-size:0.78rem;margin-bottom:1rem">⚠️ Se encontraron '+json.alumnos.length+
+          ' alumnos(as) con un solo registro ese día — si son de varios grupos, probablemente fue una falla '+
+          'general del checador esa jornada, no un problema de cada alumno(a).</div>'
+        : '';
+      const filas = json.alumnos.map(function(a){
+        const marcado = !!_rasisIncompSeleccion[a.curp];
+        const curpEsc=a.curp.replace(/'/g,"\\'"), nombreEsc=a.nombre.replace(/'/g,"\\'");
+        return '<tr>'+
+          '<td style="padding:0.4rem 0.5rem;text-align:center">'+
+            '<input type="checkbox" '+(marcado?'checked':'')+' onchange="rasisIncompToggle_(this,\''+curpEsc+'\',\''+nombreEsc+'\',\''+a.grado+'\',\''+a.grupo+'\')"/></td>'+
+          '<td style="padding:0.4rem 0.5rem;font-size:0.82rem;color:#2d1f08">'+a.nombre+'</td>'+
+          '<td style="padding:0.4rem 0.5rem;text-align:center;font-size:0.8rem;color:#7a6030">'+a.grado+'°'+a.grupo+'</td>'+
+          '<td style="padding:0.4rem 0.5rem;text-align:center;font-size:0.8rem;color:#7a6030">'+(a.hora||'—')+'</td>'+
+          '<td style="padding:0.4rem 0.5rem;text-align:center;font-size:0.75rem;color:#8a6200">'+a.tipoProbable+'</td>'+
+        '</tr>';
+      }).join('');
+
+      repDiv.innerHTML =
+        '<div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:8px;padding:1.2rem">'+
+          '<h4 style="font-family:\'Cinzel\',serif;color:#3D2B0A;font-size:0.92rem;margin:0 0 0.7rem">'+
+            'Un solo registro — '+json.fecha+' ('+json.alumnos.length+')</h4>'+
+          avisoDia+avisoMasivo+
+          '<div style="overflow-x:auto;margin-bottom:1rem">'+
+          '<table style="width:100%;border-collapse:collapse">'+
+            '<thead><tr style="border-bottom:2px solid #C8922A">'+
+              '<th style="padding:0.35rem 0.5rem;text-align:center;font-size:0.68rem;color:#7a6030;text-transform:uppercase">'+
+                '<input type="checkbox" onchange="rasisIncompToggleTodos_(this)"/></th>'+
+              '<th style="padding:0.35rem 0.5rem;text-align:left;font-size:0.68rem;color:#7a6030;text-transform:uppercase">Alumno(a)</th>'+
+              '<th style="padding:0.35rem 0.5rem;text-align:center;font-size:0.68rem;color:#7a6030;text-transform:uppercase">Grupo</th>'+
+              '<th style="padding:0.35rem 0.5rem;text-align:center;font-size:0.68rem;color:#7a6030;text-transform:uppercase">Hora</th>'+
+              '<th style="padding:0.35rem 0.5rem;text-align:center;font-size:0.68rem;color:#7a6030;text-transform:uppercase">Probable</th>'+
+            '</tr></thead>'+
+            '<tbody>'+filas+'</tbody>'+
+          '</table></div>'+
+          '<label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Motivo (para todos los seleccionados)</label>'+
+          '<textarea id="rasis-incomp-motivo" rows="2" placeholder="Ej. Falla del checador esa mañana."'+
+            'style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.85rem;'+
+            'font-family:\'Inter\',sans-serif;background:#fff;color:#2d1f08;resize:vertical;margin-bottom:0.8rem"></textarea>'+
+          '<div id="res-rasis-incomp-just" style="margin-bottom:0.6rem"></div>'+
+          '<button class="btn-submit" id="btn-rasis-incomp-just" onclick="rasisJustificarSeleccionados_()" style="width:100%">'+
+            '✍️ Justificar seleccionados ('+Object.keys(_rasisIncompSeleccion).length+')</button>'+
+        '</div>';
+    }
+
+    function rasisIncompToggle_(chk, curp, nombre, grado, grupo){
+      if(chk.checked) _rasisIncompSeleccion[curp]={curp:curp,nombre:nombre,grado:grado,grupo:grupo};
+      else delete _rasisIncompSeleccion[curp];
+      const btn=document.getElementById('btn-rasis-incomp-just');
+      if(btn) btn.textContent='✍️ Justificar seleccionados ('+Object.keys(_rasisIncompSeleccion).length+')';
+    }
+    function rasisIncompToggleTodos_(chkTodos){
+      if(!_rasisIncompData) return;
+      _rasisIncompData.alumnos.forEach(function(a){
+        if(chkTodos.checked) _rasisIncompSeleccion[a.curp]={curp:a.curp,nombre:a.nombre,grado:a.grado,grupo:a.grupo};
+        else delete _rasisIncompSeleccion[a.curp];
+      });
+      rasisPintarIncompletos_();
+    }
+    async function rasisJustificarSeleccionados_(){
+      const res=document.getElementById('res-rasis-incomp-just');
+      const btn=document.getElementById('btn-rasis-incomp-just');
+      const motivo=(document.getElementById('rasis-incomp-motivo').value||'').trim();
+      const seleccion=Object.keys(_rasisIncompSeleccion).map(function(k){ return _rasisIncompSeleccion[k]; });
+      if(!seleccion.length){ res.innerHTML='<div class="result-error">⚠️ Selecciona al menos un alumno(a).</div>'; return; }
+      if(!motivo){ res.innerHTML='<div class="result-error">⚠️ Escribe el motivo de la justificación.</div>'; return; }
+      btn.disabled=true;
+      res.innerHTML='<div class="result-error" style="background:#fffbe8;border-color:#e8d88a;color:#7a6030">⏳ Registrando '+seleccion.length+' justificación(es)…</div>';
+      const json = await jsonpCall({accion:'justificarAsistenciaLote', usuario:_rasisUsuario, fecha:document.getElementById('rasis-incomp-fecha').value, seleccion:JSON.stringify(seleccion), motivo:motivo}, 45000);
+      btn.disabled=false;
+      if(!json || json.timeout || json.networkError){ res.innerHTML='<div class="result-error">⚠️ Sin respuesta del servidor. Intenta de nuevo.</div>'; return; }
+      if(!json.ok){ res.innerHTML='<div class="result-error">⚠️ '+(json.mensaje||'No se pudo registrar.')+'</div>'; return; }
+      res.innerHTML='<div class="pmc-aviso pmc-aviso-ok">✔ '+json.registrados+' justificación(es) registrada(s)'+(json.yaExistian?' ('+json.yaExistian+' ya existían)':'')+'.</div>';
+      await rasisCargarIncompletos_();
     }
 
     let _rasisUltimoReporte = null;
@@ -11429,49 +11606,98 @@
           style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
                  cursor:pointer;border:1px solid #C8922A;border-bottom:none;
                  background:transparent;color:#C8922A">🔎 Consultar Fecha</button>
+        <button id="rasis-tab-incompletos" onclick="tabRasis('incompletos')"
+          style="flex:1;padding:0.65rem;border-radius:8px 8px 0 0;font-weight:700;font-size:0.85rem;
+                 cursor:pointer;border:1px solid #C8922A;border-bottom:none;
+                 background:transparent;color:#C8922A">🛠️ Revisar Incompletos</button>
       </div>
 
       <div style="background:#fffdf5;border:1px solid #e8d88a;border-radius:0 8px 8px 8px;padding:1.2rem">
         <p id="rasis-tab-desc" style="font-size:0.8rem;color:#7a6030;margin:0 0 1rem">
           Muestra la asistencia registrada el día de hoy para el grado y grupo que elijas.
         </p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;margin-bottom:1rem">
-          <div>
-            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
-            <select id="rasis-grado"
-              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
-              <option value="">-- Selecciona --</option>
-              <option value="1">1° Grado</option>
-              <option value="2">2° Grado</option>
-              <option value="3">3° Grado</option>
-            </select>
+        <div id="rasis-bloque-grupo">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;margin-bottom:1rem">
+            <div>
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grado</label>
+              <select id="rasis-grado"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+                <option value="">-- Selecciona --</option>
+                <option value="1">1° Grado</option>
+                <option value="2">2° Grado</option>
+                <option value="3">3° Grado</option>
+              </select>
+            </div>
+            <div>
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
+              <select id="rasis-grupo"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
+                <option value="">-- Selecciona --</option>
+                <option value="A">Grupo A</option>
+                <option value="B">Grupo B</option>
+                <option value="C">Grupo C</option>
+                <option value="D">Grupo D</option>
+                <option value="E">Grupo E</option>
+              </select>
+            </div>
+            <div id="rasis-fecha-wrap" style="display:none">
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Fecha</label>
+              <input type="date" id="rasis-fecha"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer"/>
+            </div>
           </div>
-          <div>
-            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Grupo</label>
-            <select id="rasis-grupo"
-              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer">
-              <option value="">-- Selecciona --</option>
-              <option value="A">Grupo A</option>
-              <option value="B">Grupo B</option>
-              <option value="C">Grupo C</option>
-              <option value="D">Grupo D</option>
-              <option value="E">Grupo E</option>
-            </select>
-          </div>
-          <div id="rasis-fecha-wrap" style="display:none">
-            <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Fecha</label>
-            <input type="date" id="rasis-fecha"
-              style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer"/>
-          </div>
+          <div id="res-rasis" style="margin-bottom:1rem"></div>
+          <button onclick="generarReporteAsistencia()"
+            style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                   border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                   font-size:0.92rem;cursor:pointer">🔎 Consultar</button>
         </div>
-        <div id="res-rasis" style="margin-bottom:1rem"></div>
-        <button onclick="generarReporteAsistencia()"
-          style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
-                 border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
-                 font-size:0.92rem;cursor:pointer">🔎 Consultar</button>
+
+        <div id="rasis-bloque-incompletos" style="display:none">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;margin-bottom:1rem">
+            <div>
+              <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Fecha</label>
+              <input type="date" id="rasis-incomp-fecha"
+                style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.88rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;cursor:pointer"/>
+            </div>
+          </div>
+          <div id="res-rasis-incomp" style="margin-bottom:1rem"></div>
+          <button onclick="rasisCargarIncompletos_()"
+            style="width:100%;background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040;
+                   border:1px solid #C8922A;padding:0.8rem;border-radius:8px;font-weight:700;
+                   font-size:0.92rem;cursor:pointer">🔎 Revisar esa fecha</button>
+        </div>
       </div>
 
       <div id="rasis-reporte" style="margin-top:1.5rem"></div>
+      <div id="rasis-incomp-reporte" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+
+  <!-- Mini-modal: justificar asistencia de un alumno(a) en una fecha (usado
+       tanto desde el pase de lista individual como, de forma masiva, desde
+       Revisar Incompletos) -->
+  <div id="just-asis-overlay" style="display:none;position:fixed;inset:0;z-index:99999;
+    background:rgba(26,18,8,0.65);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#fffdf5;border:1px solid #C8922A;border-radius:10px;max-width:420px;width:100%;
+         padding:1.3rem;font-family:'Inter',sans-serif">
+      <h4 style="font-family:'Cinzel',serif;color:#3D2B0A;font-size:0.9rem;margin:0 0 0.3rem">✍️ Justificar Asistencia</h4>
+      <div id="just-asis-quien" style="font-size:0.82rem;color:#7a6030;margin-bottom:0.8rem"></div>
+      <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Tipo de justificación</label>
+      <select id="just-asis-tipo" style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;
+             font-size:0.85rem;font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;margin-bottom:0.8rem">
+        <option value="Falla de Checador">Falla del checador (cuenta como Presente)</option>
+        <option value="Otro motivo">Otro motivo (falta justificada, no cuenta como asistencia)</option>
+      </select>
+      <label style="color:#7a6030;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:0.35rem">Motivo</label>
+      <textarea id="just-asis-motivo" rows="3" placeholder="Ej. Falla del checador — no se registró la entrada."
+        style="width:100%;padding:0.5rem 0.7rem;border:1.5px solid #e8d88a;border-radius:6px;font-size:0.85rem;
+               font-family:'Inter',sans-serif;background:#fff;color:#2d1f08;resize:vertical"></textarea>
+      <div id="res-just-asis" style="margin:0.6rem 0"></div>
+      <div style="display:flex;gap:0.6rem;margin-top:0.4rem">
+        <button class="btn-cancel" onclick="justAsisCerrar_()" style="flex:1">Cancelar</button>
+        <button class="btn-submit" id="btn-just-asis-guardar" onclick="justAsisGuardar_()" style="flex:1">💾 Justificar</button>
+      </div>
     </div>
   </div>
 
