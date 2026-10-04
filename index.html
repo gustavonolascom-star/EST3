@@ -1,4 +1,11 @@
-<!-- Generado: 30/septiembre/2026, 18:49 (hora Zacatecas) — versión GitHub Pages (assets externos) -->
+<!-- Generado: 05/octubre/2026, 00:15 (hora Zacatecas) — NUEVO, confirmado con el Director: al aplicar un horario de profesores (tarjeta "✅ Aplicar este horario — Fase 2"), el servidor ahora también actualiza "horario 1"/"horario 2" de Control de Asistencia EST3 por NP (ver el comentario de cabecera del .gs: hpActualizarHorarioEscDesdeProfesores_). Este archivo solo necesitó dos cambios: (1) la descripción de la tarjeta de aplicar ahora explica esto; (2) el resultado tras aplicar muestra cuántos maestros se actualizaron ("horarioEscActualizado") y, en amarillo, la lista de nombres cuyo NP no se pudo resolver en la hoja "Personal" ("avisoProfesorSinNP") -- a esos maestros NO se les tocó "horario 1"/"horario 2", para que la Dirección revise el nombre a mano en vez de que el sistema adivine. -->
+<!-- Versión anterior (23:40): CORREGIDA la Fase 1 de "Cargar horarios (PDF)" en el servidor (leerHorarioPdf_): el horario que ahora regresa el servidor ya NO es el rango de hora genérico/ficticio que imprime el PDF de aSc, sino el horario REAL de la escuela (traducido por número de módulo contra horEsc1/horEsc2 de Control de Asistencia EST3 -- ver el comentario de cabecera del .gs). Este archivo NO necesitó cambios estructurales en la vista previa (personalRenderPreviewHorarios_/personalHorarioDiasHtml_ ya mostraban lo que sea que entrada/salida/horaInicio/horaFin traigan); solo se agregó, junto al aviso ya existente de iniciales sin cruzar (avisoNombresNoResueltos), un nuevo aviso en rojo si el servidor regresa "avisoModuloNoResuelto" (algún día de algún profesor/grupo cuyo módulo no se pudo traducir a hora real) -- para que quede a la vista antes de aplicar, en vez de aplicarse en silencio con una hora vacía. -->
+<!-- Versión anterior (23:10): Fase 3 de "Cargar horarios (PDF)", CORREGIDA la misma noche: la tarjeta "⚙️ Generar incidencias automático" (Docentes > Todo el personal) ya no describe el horario como tomado del PDF -- ahora explica que Miércoles/Viernes se comparan contra "horario 1" (horEsc1, sin club) y Lunes/Martes/Jueves contra "horario 2" (horEsc2, con club), ambas de Control de Asistencia EST3, y que esos 3 días no se evalúan mientras "horario 2" siga sin filas capturadas (se avisa aparte, con el nuevo campo "diasSinFuenteHorario2"). También se muestra, si corresponde, el aviso de personal de turno especial (NP 32/33) excluido siempre ("turnoEspecialExcluido"). Sin cambios en personalPrecargarPeriodoIncAuto_; personalGenerarIncidenciasAutomatico_ solo ajustó el renderizado del resultado. -->
+<!-- Versión anterior (20:52): Fase 4 de "Cargar horarios (PDF)": las imágenes de horario (Ficha Descriptiva del Alumno por grupo, Expediente de Personal por maestro) YA NO son archivos fijos subidos a mano al repositorio del sitio — ahora se generan con html2canvas desde el horario ya aplicado (Fase 2) y se guardan en una carpeta de Drive, de donde el sitio las vuelve a pedir cada vez (acción 'horarioImagenBase64'). Nueva tarjeta "🖼️ Generar imágenes de horario" (Docentes > Todo el personal, junto a "Cargar horarios (PDF)"): pide el horario vigente de una fecha (acción 'horarioVigente'), arma una tarjeta por profesor y por grupo en un documento oculto, las rasteriza una por una con html2canvas y las sube en fragmentos (como el PDF) para guardarlas (acción 'guardarHorarioImagen') — las que ya existían con ese nombre se reemplazan, no se duplican. horarioImagenHtml_ (los 3 lugares que ya mostraban el horario: Ficha Descriptiva del Alumno, Ficha Descriptiva de Grupo, Expediente de Personal) cambió de leer un archivo fijo "horarios/Grupo_X.jpg" a pedir la imagen por nombre y mostrarla asíncronamente (horarioImagenCargar_) una vez que el resto de la página ya está pintada. Nuevas funciones: horarioImagenCargar_, horarioTarjetaHtml_, construirHtmlHorarios_, personalGenerarImagenesHorario_. -->
+<!-- Versión anterior (20:32): Fase 2 de "Cargar horarios (PDF)": en la vista previa (Docentes > Todo el personal) se agrega la tarjeta "✅ Aplicar este horario" con un campo de fecha ("Vigente a partir de") y el botón "Aplicar". Al aplicar, se vuelven a leer los <input> de la vista previa (por si se corrigió algo a mano), se suben en fragmentos como el PDF, y el servidor los guarda en el sistema con esa fecha de vigencia — el horario anterior NO se borra, solo queda marcado vigente hasta el día anterior. Si el servidor avisa que ya existe un periodo en conflicto con esa fecha, se muestra el aviso y no se aplica nada. Nuevas funciones de esa versión: personalRecolectarHorarioEditado_, personalAplicarHorarioPdf_ (ésta llama a la acción doGet 'aplicarHorarioPdf'); se agregó la tarjeta correspondiente dentro de personalRenderPreviewHorarios_. -->
+<!-- Versión anterior (20:03): Fase 1 de "Cargar horarios (PDF)" en Docentes > Todo el personal: nueva tarjeta para subir el PDF de horario de profesores y/o de grupos (lo exporta el software de horarios de la escuela), que el servidor lee con un parser de PDF propio y muestra en una vista previa editable por profesor y por grupo (cruzando ya las iniciales de cada maestro contra su nombre completo). El PDF se sube en fragmentos vía jsonpCall, como el resto del sistema, porque una sola URL no puede llevar el archivo completo. Nuevas funciones de esa versión: personalCargarHorarioPdf_, horarioSubirArchivo_, horarioFileToBase64_, horarioChunkString_, personalRenderPreviewHorarios_, personalHorarioDiasHtml_. -->
+<!-- Versión anterior (18:24): corrige el "⚠️ Tiempo agotado" reportado al dar "Actualizar retardos": el botón esperaba como máximo 55 s, muy poco para procesar un mes completo (el backend ya se optimizó también, ver Codigo_Completo_EST3 de la misma fecha). Se sube el límite de espera de "Actualizar retardos" y "Sincronizar asistencia" a 170 s y se avisa en el botón que puede tardar hasta un par de minutos. -->
+<!-- Versión anterior (17:58): resumen de incidencias (Total / Evaluación Semanal / Asistencia / Diversas) en el expediente, desplegable por categoría. -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -3635,7 +3642,7 @@
         <!-- HORARIO DE CLASES (según el grupo del alumno(a)) -->
         <div class="ficha-section-title">🗓️ Horario de clases</div>
         <div style="margin-bottom:1.5rem">
-          ${horarioImagenHtml_('horarios/Grupo_'+((d.grado||'')+(d.grupo||'')).replace(/[^0-9A-Za-z]/g,'').toUpperCase()+'.jpg', val('grado')+'°'+val('grupo'))}
+          ${horarioImagenHtml_('Grupo_'+((d.grado||'')+(d.grupo||'')).replace(/[^0-9A-Za-z]/g,'').toUpperCase(), val('grado')+'°'+val('grupo'))}
         </div>
 
         <!-- APRENDIZAJE Y EMOCIONAL -->
@@ -5658,35 +5665,51 @@
     }
 
     // ── Horario de clases: NO es una lista de datos en el código ni en una
-    //    hoja — son imágenes estáticas (una por grupo, una por maestro),
-    //    exportadas del PDF que genera aSc Horarios y subidas junto con el
-    //    resto del sitio (carpeta "horarios/" del GitHub Pages). El nombre
-    //    del archivo se calcula con la MISMA fórmula en ambos lados (aquí y
-    //    al generar las imágenes), así que no hace falta ninguna tabla de
-    //    equivalencias: para un grupo es "Grupo_" + Grado+Grupo (sin
+    //    hoja — son imágenes, una por grupo y una por maestro, generadas
+    //    con html2canvas desde el horario ya guardado (ver Fase 2) y
+    //    guardadas en una carpeta de Drive (ver personalGenerarImagenesHorario_
+    //    y personalGuardarHorarioImagen_ en el backend). Aquí solo se piden
+    //    de vuelta por nombre (accion 'horarioImagenBase64') y se muestran.
+    //    El nombre del archivo se calcula con la MISMA fórmula en ambos
+    //    lados (aquí y al generarlas), así que no hace falta ninguna tabla
+    //    de equivalencias: para un grupo es "Grupo_" + Grado+Grupo (sin
     //    símbolos); para un maestro es "Maestro_" + sus palabras del nombre
     //    ordenadas alfabéticamente (para que no importe si en Personal está
-    //    "APELLIDOS NOMBRE(S)" y en el horario "Nombre(s) Apellidos").
-    //    Si algún ciclo cambia el horario, solo hay que reemplazar esas
-    //    imágenes (mismo nombre de archivo) — no hay que tocar código.
+    //    "APELLIDOS NOMBRE(S)" y en el horario "Nombre(s) Apellidos") — el
+    //    propio servidor, de todos modos, quita cualquier símbolo del
+    //    nombre de archivo por igual al guardar y al leer.
     function horarioSlugPersona_(nombre){
       return normTxt(nombre).split(/\s+/).filter(Boolean).sort().join('_');
     }
 
-    function horarioImgError_(imgEl, etiqueta){
-      const p = document.createElement('p');
-      p.style.cssText = 'color:#a08040;text-align:center;padding:1rem;font-size:0.85rem';
-      p.textContent = 'No hay horario disponible' + (etiqueta ? ' para ' + etiqueta + '.' : ' registrado.');
-      imgEl.replaceWith(p);
+    let _horarioImgContador_ = 0;
+
+    // Regresa un <div> "cargando…" con un id único, y programa (para
+    // después de que el innerHTML que lo contiene ya haya quedado en el
+    // DOM) la carga real de la imagen — así, quien llama a esta función
+    // solo necesita este único punto, sin tener que acordarse de hacer una
+    // llamada aparte después de pintar su HTML.
+    function horarioImagenHtml_(nombreArchivo, etiqueta, colorTexto){
+      const contId = 'horario-img-' + (++_horarioImgContador_);
+      setTimeout(function(){ horarioImagenCargar_(contId, nombreArchivo, etiqueta, colorTexto); }, 0);
+      return '<div id="'+contId+'" style="text-align:center;min-height:2.2rem">'+
+        '<p style="color:'+(colorTexto||'#a08040')+';padding:0.6rem;font-size:0.85rem">⏳ Cargando horario…</p>'+
+      '</div>';
     }
 
-    function horarioImagenHtml_(rutaImagen, etiqueta){
-      const etiquetaJs = personalEsc_(etiqueta||'').replace(/'/g,"\\'");
-      return '<div style="text-align:center">'+
-        '<img src="'+rutaImagen+'" alt="Horario de clases" loading="lazy" '+
-        'style="max-width:100%;border-radius:8px;border:1px solid #e8d88a;box-shadow:0 2px 6px rgba(0,0,0,0.15)" '+
-        'onerror="horarioImgError_(this,\''+etiquetaJs+'\')">'+
-        '</div>';
+    function horarioImagenCargar_(contId, nombreArchivo, etiqueta, colorTexto){
+      const cont = document.getElementById(contId);
+      if(!cont) return; // la vista ya cambió antes de que esto corriera
+      jsonpCall({accion:'horarioImagenBase64', nombreArchivo:nombreArchivo}, 20000).then(function(json){
+        if(!cont.isConnected) return; // idem, por si tardó en responder
+        if(!json || !json.ok){
+          cont.innerHTML = '<p style="color:'+(colorTexto||'#a08040')+';text-align:center;padding:1rem;font-size:0.85rem">'+
+            'No hay horario disponible'+(etiqueta?' para '+personalEsc_(etiqueta):' registrado')+'.</p>';
+          return;
+        }
+        cont.innerHTML = '<img src="'+json.dataUrl+'" alt="Horario de clases" loading="lazy" '+
+          'style="max-width:100%;border-radius:8px;border:1px solid #e8d88a;box-shadow:0 2px 6px rgba(0,0,0,0.15)">';
+      });
     }
 
     // Visor propio (dentro del sitio) para ampliar una foto/documento de
@@ -5818,8 +5841,8 @@
       html += '<div class="ficha-section-title">📋 '+(esPropio ? 'Mis incidencias' : 'Incidencias')+'</div>'+
         '<div id="personal-incidencias-wrap">'+personalCargandoHtml_()+'</div>';
 
-      html += '<div class="ficha-section-title">🗓️ '+(esPropio ? 'Mi horario de clases' : 'Horario de clases')+'</div>';
-      html += horarioImagenHtml_('horarios/Maestro_'+horarioSlugPersona_(exp['NOMBRE'])+'.jpg', exp['NOMBRE']||'');
+      html += '<div class="ficha-section-title">🗓️ '+(esPropio ? 'Mi horario' : 'Horario de clases')+'</div>'+
+        horarioImagenHtml_('Maestro_'+horarioSlugPersona_(exp['NOMBRE']||''), esPropio ? 'tu horario' : ('el horario de '+(exp['NOMBRE']||'')));
 
       if(_personalEsAdmin && esPropio){
         html += '<div style="margin-top:2rem;padding-top:1.2rem;border-top:2px solid #e8d88a">'+
@@ -5861,16 +5884,28 @@
     // incidencias ya registradas con esos textos se seleccionen igual en
     // su expediente. El resto de incidencias (Permiso Económico,
     // Incapacidad, etc.) se muestran igual que antes, sin colorear.
+    //
+    // NUEVO (02/oct/2026): las incidencias de Puntualidad que registra
+    // "Actualizar retardos" (ver personalActualizarRetardos_) también se
+    // resaltan — verde = Felicitación (llegada puntual), amarillo =
+    // Invitación a la puntualidad (llegada tarde). "Retardo" (el texto
+    // usado antes de este cambio, en los 35 registros de septiembre que
+    // el Director pidió dejar sin modificar) se sigue mostrando en
+    // amarillo, igual que la Invitación a la puntualidad que lo sustituye.
     function personalIncidenciaBadge_(texto){
       const t = (texto||'').toString().trim();
       if(!t) return '<span style="color:#c0b48a">—</span>';
       if(t === 'Reconocimiento al Trabajo y Compromiso por Cumplir en Tiempo y Forma con la Evaluación Semanal' ||
-         t === 'Reconocimiento por Evaluación Semanal'){
+         t === 'Reconocimiento por Evaluación Semanal' ||
+         t === 'Felicitación'){
         return '<span class="pmc-sem pmc-sem-VERDE">'+personalEsc_(t)+'</span>';
       }
       if(t === 'Invitación al Cumplimiento de la Evaluación Semanal' ||
          t === 'Evaluación Semanal'){
         return '<span class="pmc-sem pmc-sem-ROJO">'+personalEsc_(t)+'</span>';
+      }
+      if(t === 'Invitación a la puntualidad' || t === 'Retardo'){
+        return '<span class="pmc-sem pmc-sem-AMARILLO">'+personalEsc_(t)+'</span>';
       }
       return personalEsc_(t);
     }
@@ -5891,29 +5926,90 @@
       '</tr>';
     }
 
-    function personalIncidenciasHtml_(incidencias){
-      if(!incidencias || !incidencias.length){
-        return '<div style="padding:1rem;text-align:center;color:#a08040;font-size:0.85rem;background:#f7f2e0;border-radius:6px;border:1px dashed #d4c07a">Sin incidencias registradas.</div>';
+    // ── NUEVO: resumen de incidencias (positivas/negativas/neutras y su
+    //    diferencia) por categoría — Evaluación Semanal, Asistencia,
+    //    Diversas — más el Total, cada uno como una tarjeta que al dar
+    //    clic despliega abajo el detalle de esa categoría (acordeón: solo
+    //    una categoría abierta a la vez). Antes se mostraba de golpe la
+    //    lista completa; ahora esa lista solo aparece al desplegar.
+    let _personalIncidenciasCache_ = [];
+    let _personalResumenCache_ = null;
+    let _personalResumenTotalCache_ = null;
+    let _personalCategoriaAbierta_ = '';
+
+    function personalResumenCardHtml_(clave, etiqueta, icono, datos){
+      const abierta = _personalCategoriaAbierta_ === clave;
+      const colorDif = datos.diferencia > 0 ? '#1a6b2e' : (datos.diferencia < 0 ? '#9b1c1c' : '#7a6030');
+      const claveEsc = clave.replace(/'/g,"\\'");
+      return '<div onclick="personalToggleResumenIncidencias_(\''+claveEsc+'\')" style="cursor:pointer;padding:0.75rem 1rem;'+
+        'background:'+(abierta?'#fff8e0':'#fffdf5')+';border:1.5px solid '+(abierta?'#d4a017':'#e8d88a')+';border-radius:8px;'+
+        'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.5rem;transition:background 0.15s">'+
+        '<div style="font-weight:700;color:#2d1f08;font-size:0.88rem;white-space:nowrap">'+icono+' '+personalEsc_(etiqueta)+
+          ' <span style="font-weight:400;color:#a08040;font-size:0.78rem">'+(abierta?'▲ ocultar':'▼ ver detalle')+'</span></div>'+
+        '<div style="display:flex;gap:0.9rem;flex-wrap:wrap;font-size:0.8rem">'+
+          '<span style="color:#1a6b2e">✔ Positivas: <b>'+datos.positivas+'</b></span>'+
+          '<span style="color:#9b1c1c">✖ Negativas: <b>'+datos.negativas+'</b></span>'+
+          '<span style="color:#7a6030">● Neutras: <b>'+datos.neutras+'</b></span>'+
+          '<span style="color:'+colorDif+';font-weight:700">Diferencia: '+(datos.diferencia>0?'+':'')+datos.diferencia+'</span>'+
+        '</div></div>';
+    }
+
+    function personalResumenDetalleHtml_(){
+      if(!_personalCategoriaAbierta_) return '';
+      const lista = _personalCategoriaAbierta_ === 'TOTAL'
+        ? _personalIncidenciasCache_
+        : _personalIncidenciasCache_.filter(function(inc){ return inc.categoria === _personalCategoriaAbierta_; });
+      if(!lista.length){
+        return '<div style="padding:0.8rem;text-align:center;color:#a08040;font-size:0.82rem;background:#f7f2e0;'+
+          'border-radius:6px;border:1px dashed #d4c07a;margin-top:0.2rem">Sin incidencias en esta categoría.</div>';
       }
-      return '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;background:#fff;border-radius:8px;border:1px solid #e8d88a">'+
+      return '<div style="overflow-x:auto;margin-top:0.2rem"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;'+
+        'background:#fff;border-radius:8px;border:1px solid #e8d88a">'+
         '<thead><tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">'+
           '<th style="padding:0.55rem 0.7rem;text-align:left">Fecha</th>'+
           '<th style="padding:0.55rem 0.7rem;text-align:left">Incidencia</th>'+
           '<th style="padding:0.55rem 0.7rem;text-align:left">Comentarios</th>'+
           '<th style="padding:0.55rem 0.7rem;text-align:center">Comprobante</th>'+
         '</tr></thead>'+
-        '<tbody>'+incidencias.map(personalIncidenciaFilaHtml_).join('')+'</tbody>'+
+        '<tbody>'+lista.map(personalIncidenciaFilaHtml_).join('')+'</tbody>'+
       '</table></div>';
+    }
+
+    function personalIncidenciasHtml_(incidencias, resumen, resumenTotal){
+      _personalIncidenciasCache_ = incidencias || [];
+      _personalResumenCache_ = resumen || {'Evaluación Semanal':{positivas:0,negativas:0,neutras:0,diferencia:0},'Asistencia':{positivas:0,negativas:0,neutras:0,diferencia:0},'Diversas':{positivas:0,negativas:0,neutras:0,diferencia:0}};
+      _personalResumenTotalCache_ = resumenTotal || {positivas:0,negativas:0,neutras:0,diferencia:0};
+      if(!incidencias || !incidencias.length){
+        return '<div style="padding:1rem;text-align:center;color:#a08040;font-size:0.85rem;background:#f7f2e0;border-radius:6px;border:1px dashed #d4c07a">Sin incidencias registradas.</div>';
+      }
+      const tarjetas = [
+        {clave:'TOTAL', etiqueta:'Total', icono:'📊', datos:_personalResumenTotalCache_},
+        {clave:'Evaluación Semanal', etiqueta:'Evaluación Semanal', icono:'📝', datos:_personalResumenCache_['Evaluación Semanal']},
+        {clave:'Asistencia', etiqueta:'Asistencia', icono:'⏱️', datos:_personalResumenCache_['Asistencia']},
+        {clave:'Diversas', etiqueta:'Diversas', icono:'📁', datos:_personalResumenCache_['Diversas']}
+      ];
+      let html = '<div id="personal-resumen-cards">'+tarjetas.map(function(t){
+        return personalResumenCardHtml_(t.clave, t.etiqueta, t.icono, t.datos);
+      }).join('')+'</div>';
+      html += '<div id="personal-resumen-detalle">'+personalResumenDetalleHtml_()+'</div>';
+      return html;
+    }
+
+    function personalToggleResumenIncidencias_(clave){
+      _personalCategoriaAbierta_ = (_personalCategoriaAbierta_ === clave) ? '' : clave;
+      const cont = document.getElementById('personal-incidencias-wrap');
+      if(cont) cont.innerHTML = personalIncidenciasHtml_(_personalIncidenciasCache_, _personalResumenCache_, _personalResumenTotalCache_);
     }
 
     async function personalCargarIncidencias_(curpObjetivo){
       const cont = document.getElementById('personal-incidencias-wrap');
       if(!cont) return;
       _personalCurpIncidenciasActual = curpObjetivo||'';
+      _personalCategoriaAbierta_ = '';
       const json = await jsonpCall({accion:'personalIncidenciasFicha', usuario:_personalUsuario, curp: curpObjetivo||''}, 20000);
       if(!cont.isConnected) return; // el expediente ya se cerró/cambió antes de que respondiera
       if(!json || !json.ok){ cont.innerHTML = personalErrorHtml_(json && json.mensaje); return; }
-      cont.innerHTML = personalIncidenciasHtml_(json.incidencias);
+      cont.innerHTML = personalIncidenciasHtml_(json.incidencias, json.resumen, json.resumenTotal);
     }
 
     // Se muestra DENTRO de la misma página (visor propio del sitio,
@@ -6030,9 +6126,599 @@
         '<option value="inactivos"'+(_personalFiltroEstado==='inactivos'?' selected':'')+'>Solo dados de baja</option>'+
         '<option value="todos"'+(_personalFiltroEstado==='todos'?' selected':'')+'>Todos</option>'+
         '</select></div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">⏱️ Puntualidad y retardos</div>'+
+        '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Compara el Checador contra el horario de cada persona (tolerancia 5 min) '+
+          'y registra en su expediente, por cada día revisado, una Felicitación (llegada puntual) o una Invitación a la puntualidad (llegada tarde). '+
+          'Si un día sale con muchas personas "tarde" a la vez, se separa aparte para revisarlo a mano, en vez de registrarlo individualmente.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#7a6030">Mes del Checador:</label>'+
+            '<select id="retardos-hoja" style="padding:0.4rem 0.7rem;border:1.5px solid #d4c07a;border-radius:6px;font-size:0.85rem;background:#fff;min-width:140px">'+
+              '<option value="">Cargando…</option></select>'+
+            '<button class="btn-submit" id="btn-retardos-actualizar" onclick="personalActualizarRetardos_()">⏱️ Actualizar retardos</button>'+
+          '</div>'+
+          '<div id="retardos-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
+        '</div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">🔄 Sincronizar asistencia (Control de Asistencia EST3)</div>'+
+        '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Toma lo ya calculado en la hoja "Incidencias" del libro Control de Asistencia EST3 '+
+          '(comparación Checador vs. horario, día por día, ya con el calendario de Días Hábiles aplicado) y lo registra aquí en el expediente de cada '+
+          'quien: cada incidencia negativa con su tipo específico, y una Felicitación para quien no tuvo ninguna en el periodo. Se puede correr las veces '+
+          'que sea sin duplicar — ya sincronizado no se vuelve a registrar.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#7a6030">Periodo (AAAA-MM):</label>'+
+            '<input type="text" id="sinc-asis-periodo" placeholder="2026-09" style="padding:0.4rem 0.7rem;border:1.5px solid #d4c07a;'+
+            'border-radius:6px;font-size:0.85rem;width:110px"/>'+
+            '<label style="font-size:0.82rem;color:#7a6030">Agrupar Felicitación por:</label>'+
+            '<select id="sinc-asis-agrupacion" style="padding:0.4rem 0.7rem;border:1.5px solid #d4c07a;border-radius:6px;font-size:0.85rem;background:#fff">'+
+              '<option value="semanal">Semana</option>'+
+              '<option value="mensual">Mes</option>'+
+            '</select>'+
+            '<button class="btn-submit" id="btn-sinc-asis" onclick="personalSincronizarAsistencia_()">🔄 Sincronizar</button>'+
+          '</div>'+
+          '<div id="sinc-asis-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
+        '</div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">⚙️ Generar incidencias automático — Fase 3</div>'+
+        '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Compara, día por día del periodo elegido, el Checador contra el horario correcto '+
+          'de Control de Asistencia EST3 — Miércoles y Viernes contra "horario 1" (horEsc1, sin club), Lunes/Martes/Jueves contra "horario 2" (horEsc2, '+
+          'con club) — y agrega a la hoja "Incidencias" lo que falte (Retardo, Salida anticipada, Checado incompleto, Falta). Mientras "horario 2" no '+
+          'tenga filas capturadas, esos 3 días no se evalúan (no se adivina con la hora de otro horario). Respeta el calendario de Días Hábiles (NO HABIL '+
+          'se omite; CTE queda "Pendiente de definir", para revisar a mano) y nunca evalúa al personal de turno especial (NP 32 y 33, fin de semana / '+
+          'nocturno — siguen en Revisión manual). A quien no tenga horario capturado, se reporta aparte sin inventarle nada. Se puede correr las veces '+
+          'que sea sin duplicar. Una vez generado, usa "🔄 Sincronizar asistencia" (arriba) para pasarlo al expediente de cada quien.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#7a6030">Periodo (AAAA-MM):</label>'+
+            '<input type="text" id="inc-auto-periodo" placeholder="2026-10" style="padding:0.4rem 0.7rem;border:1.5px solid #d4c07a;'+
+            'border-radius:6px;font-size:0.85rem;width:110px"/>'+
+            '<button class="btn-submit" id="btn-inc-auto" onclick="personalGenerarIncidenciasAutomatico_()">⚙️ Generar incidencias</button>'+
+          '</div>'+
+          '<div id="inc-auto-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
+        '</div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">📄 Cargar horarios (PDF) — Fase 1</div>'+
+        '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Sube aquí el PDF de horario de "profesores" y/o el de "grupos" '+
+          '(los que exporta el software de horarios). El sistema los lee y arma una vista previa de cada maestro y cada grupo, cruzando '+
+          'automáticamente las iniciales del maestro en el PDF de grupos contra su nombre completo en el PDF de profesores. '+
+          '<b>Esta fase solo muestra la vista previa para revisar</b> — todavía no aplica nada al sistema de asistencia '+
+          '(eso será la siguiente fase, con fecha de vigencia).</p>'+
+          '<div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">'+
+            '<div><label style="display:block;font-size:0.78rem;color:#7a6030;margin-bottom:0.2rem">PDF de profesores</label>'+
+            '<input type="file" id="horario-pdf-profesores" accept="application/pdf" style="font-size:0.8rem"/></div>'+
+            '<div><label style="display:block;font-size:0.78rem;color:#7a6030;margin-bottom:0.2rem">PDF de grupos</label>'+
+            '<input type="file" id="horario-pdf-grupos" accept="application/pdf" style="font-size:0.8rem"/></div>'+
+            '<button class="btn-submit" id="btn-horario-cargar" onclick="personalCargarHorarioPdf_()">📄 Cargar y previsualizar</button>'+
+          '</div>'+
+          '<div id="horario-pdf-progreso" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
+          '<div id="horario-pdf-preview" style="margin-top:1rem"></div>'+
+        '</div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">🖼️ Generar imágenes de horario — Fase 4</div>'+
+        '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Genera, a partir del horario ya aplicado arriba (Fase 2), una imagen por cada '+
+          'profesor y cada grupo, y las guarda en la carpeta de Drive — de ahí las toman la Ficha Descriptiva del Alumno (por grupo) y el Expediente '+
+          'de Personal (por maestro). Vuelve a generarlas cada vez que el horario cambie; las anteriores se reemplazan, no se duplican.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#7a6030">Horario vigente en la fecha:</label>'+
+            '<input type="date" id="horario-img-fecha" style="padding:0.4rem 0.7rem;border:1.5px solid #d4c07a;border-radius:6px;font-size:0.85rem"/>'+
+            '<button class="btn-submit" id="btn-horario-generar-img" onclick="personalGenerarImagenesHorario_()">🖼️ Generar y guardar en Drive</button>'+
+          '</div>'+
+          '<div id="horario-generar-img-resultado" style="margin-top:0.8rem;font-size:0.85rem"></div>'+
+        '</div>';
       html += '<div id="personal-lista-tabla">' + personalFilasListaHtml_(personalAplicarFiltros_(lista, '', _personalFiltroEstado)) + '</div>';
       html += '<div style="margin-top:1.5rem"><button class="btn-cancel" onclick="personalAbrirMiExpediente()">← Volver a mi expediente</button></div>';
       document.getElementById('personal-content').innerHTML = html;
+      personalCargarHojasChecador_();
+      personalPrecargarPeriodoSinc_();
+      personalPrecargarPeriodoIncAuto_();
+    }
+
+    // ── NUEVO (02/oct/2026): Puntualidad/Retardos automáticos desde el
+    //    Checador — solo visible aquí, en "Todo el personal" (Director/
+    //    Subdirector/Secretaria). ──
+    async function personalCargarHojasChecador_(){
+      const sel = document.getElementById('retardos-hoja');
+      if(!sel) return;
+      const json = await jsonpCall({accion:'listarHojasChecador', usuario:_personalUsuario}, 15000);
+      if(!sel.isConnected) return;
+      if(!json || !json.ok || !json.hojas || !json.hojas.length){
+        sel.innerHTML = '<option value="">(no disponible)</option>';
+        if(json && !json.ok) sel.title = json.mensaje||'';
+        return;
+      }
+      sel.innerHTML = json.hojas.map(function(h){
+        return '<option value="'+personalEsc_(h)+'">'+personalEsc_(h)+'</option>';
+      }).join('');
+      sel.selectedIndex = sel.options.length - 1; // por defecto, la última pestaña (el mes más reciente)
+    }
+
+    async function personalActualizarRetardos_(){
+      const sel = document.getElementById('retardos-hoja');
+      const btn = document.getElementById('btn-retardos-actualizar');
+      const res = document.getElementById('retardos-resultado');
+      const hoja = sel ? sel.value : '';
+      if(!hoja){ alert('⚠️ Elige el mes del Checador a procesar.'); return; }
+      if(!confirm('¿Procesar el Checador "'+hoja+'" y registrar en MovIns las felicitaciones e invitaciones a la puntualidad nuevas que encuentre? Si es el primer mes que se procesa puede tardar uno o dos minutos; no cierres esta ventana.')) return;
+      btn.disabled = true; btn.textContent = '⏳ Procesando (puede tardar hasta 2 min)…';
+      res.innerHTML = '';
+      const json = await jsonpCall({accion:'actualizarRetardosDesdeChecador', usuario:_personalUsuario, hoja:hoja}, 170000);
+      btn.disabled = false; btn.textContent = '⏱️ Actualizar retardos';
+      if(!json || !json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo actualizar.')+'</div>';
+        return;
+      }
+      let html = '<div style="color:#1a6b2e;font-weight:700">✔ '+json.totalNuevasFelicitaciones+' felicitación(es) y '+
+        json.totalNuevasInvitaciones+' invitación(es) a la puntualidad registrada(s) — ya se ven en el expediente de cada quien.</div>';
+      if(json.diasEspeciales && json.diasEspeciales.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px">'+
+          '⚠️ Días tratados como <b>especiales</b> (muchas personas "tarde" el mismo día — no se registraron solos, revísalos a mano):'+
+          '<ul style="margin:0.4rem 0 0 1.2rem">'+json.diasEspeciales.map(function(d){
+            return '<li>'+personalEsc_(d.fecha)+' — '+d.retardos+' de '+d.presentes+' personas con horario que checaron</li>';
+          }).join('')+'</ul></div>';
+      }
+      if(json.sinTarjeta && json.sinTarjeta.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
+          'IDs del Checador sin Tarjeta asignada en "Personal" (no se procesaron): '+json.sinTarjeta.map(personalEsc_).join(', ')+'</div>';
+      }
+      res.innerHTML = html;
+    }
+
+    // ── NUEVO: sincronizar "Incidencias" de Control de Asistencia EST3
+    //    hacia MovIns (ver sincronizarAsistenciaMovIns en el backend). ──
+    function personalPrecargarPeriodoSinc_(){
+      const inp = document.getElementById('sinc-asis-periodo');
+      if(!inp || inp.value) return;
+      const hoy = new Date();
+      inp.value = hoy.getFullYear() + '-' + ('0'+(hoy.getMonth()+1)).slice(-2);
+    }
+
+    async function personalSincronizarAsistencia_(){
+      const periodo = (document.getElementById('sinc-asis-periodo')||{}).value||'';
+      const agrupacion = (document.getElementById('sinc-asis-agrupacion')||{}).value||'';
+      const btn = document.getElementById('btn-sinc-asis');
+      const res = document.getElementById('sinc-asis-resultado');
+      if(!/^\d{4}-\d{2}$/.test(periodo)){ alert('⚠️ Captura el periodo en formato AAAA-MM, por ejemplo 2026-09.'); return; }
+      if(!confirm('¿Sincronizar las incidencias de asistencia del periodo '+periodo+' hacia el expediente de cada docente, agrupando la Felicitación por '+(agrupacion==='mensual'?'mes':'semana')+'?')) return;
+      btn.disabled = true; btn.textContent = '⏳ Sincronizando (puede tardar hasta 2 min)…';
+      res.innerHTML = '';
+      const json = await jsonpCall({accion:'sincronizarAsistenciaMovIns', usuario:_personalUsuario, periodo:periodo, agrupacion:agrupacion}, 170000);
+      btn.disabled = false; btn.textContent = '🔄 Sincronizar';
+      if(!json || !json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo sincronizar.')+'</div>';
+        return;
+      }
+      let html = '<div style="color:#1a6b2e;font-weight:700">✔ '+json.registrados+' incidencia(s) negativa(s) y '+
+        json.felicitaciones+' felicitación(es) registradas en los expedientes.</div>';
+      if(json.omitidos && json.omitidos.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
+          json.omitidos.length+' fila(s) de "Incidencias" no se sincronizaron (ya estaban sincronizadas antes, o el tipo no se pudo determinar) — revisa la hoja si hace falta.</div>';
+      }
+      if(json.avisoNombresNoEncontrados && json.avisoNombresNoEncontrados.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ Estos nombres no coinciden exactamente con "Personal" (se registraron igual, tal cual venían): '+json.avisoNombresNoEncontrados.map(personalEsc_).join('; ')+'</div>';
+      }
+      if(json.avisoFelicitacionSinNombre && json.avisoFelicitacionSinNombre.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ NP sin nombre resoluble en "horario 1" (no se les generó Felicitación): '+json.avisoFelicitacionSinNombre.map(personalEsc_).join(', ')+'</div>';
+      }
+      res.innerHTML = html;
+    }
+
+    // ── NUEVO (04/oct/2026 noche): Fase 3 de "Cargar horarios (PDF)" --
+    //    motor automático de Incidencias (ver generarIncidenciasAutomatico_
+    //    en el backend). Genera; el paso de pasarlo al expediente de cada
+    //    quien sigue siendo "🔄 Sincronizar asistencia", sin cambios. ──
+    function personalPrecargarPeriodoIncAuto_(){
+      const inp = document.getElementById('inc-auto-periodo');
+      if(!inp || inp.value) return;
+      const hoy = new Date();
+      inp.value = hoy.getFullYear() + '-' + ('0'+(hoy.getMonth()+1)).slice(-2);
+    }
+
+    async function personalGenerarIncidenciasAutomatico_(){
+      const periodo = (document.getElementById('inc-auto-periodo')||{}).value||'';
+      const btn = document.getElementById('btn-inc-auto');
+      const res = document.getElementById('inc-auto-resultado');
+      if(!/^\d{4}-\d{2}$/.test(periodo)){ alert('⚠️ Captura el periodo en formato AAAA-MM, por ejemplo 2026-10.'); return; }
+      if(!confirm('¿Comparar el Checador contra el horario vigente, día por día del periodo '+periodo+', y agregar a "Incidencias" lo que falte? No duplica lo que ya esté.')) return;
+      btn.disabled = true; btn.textContent = '⏳ Generando (puede tardar hasta 2 min)…';
+      res.innerHTML = '';
+      const json = await jsonpCall({accion:'generarIncidenciasAutomatico', usuario:_personalUsuario, periodo:periodo}, 170000);
+      btn.disabled = false; btn.textContent = '⚙️ Generar incidencias';
+      if(!json || !json.ok){
+        res.innerHTML = '<div class="result-error">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo generar.')+'</div>';
+        return;
+      }
+      let html = '<div style="color:#1a6b2e;font-weight:700">✔ '+json.nuevasIncidencias+' incidencia(s) nueva(s) agregada(s) a "Incidencias" '+
+        '(rango evaluado: '+personalEsc_(json.rangoEvaluado.desde)+' al '+personalEsc_(json.rangoEvaluado.hasta)+' — '+
+        json.diasNormalesEvaluados+' día(s) normal(es), '+json.diasCte+' de CTE, '+json.diasNoHabil+' no hábil(es)).</div>';
+      if(json.detalleNuevas && json.detalleNuevas.length){
+        html += '<details style="margin-top:0.6rem"><summary style="cursor:pointer;font-size:0.82rem;color:#7a6030">Ver el detalle de lo agregado</summary>'+
+          '<ul style="margin:0.4rem 0 0 1.2rem;font-size:0.8rem">'+json.detalleNuevas.map(function(d){
+            return '<li>'+personalEsc_(d.fecha)+' ('+personalEsc_(d.dia)+') — '+personalEsc_(d.nombre||'(sin NP, nota de CTE)')+': '+personalEsc_(d.tipo)+
+              (d.diferencia?' — '+personalEsc_(d.diferencia):'')+'</li>';
+          }).join('')+'</ul></details>';
+      }
+      if(json.diasSinCalendario && json.diasSinCalendario.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ Días hábiles sin fila en "Dias Habiles" (no se evaluaron, para no adivinar): '+json.diasSinCalendario.map(personalEsc_).join(', ')+'</div>';
+      }
+      if(json.diasNoReconocidos && json.diasNoReconocidos.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ Días con un "Tipo" no reconocido en "Dias Habiles" (no se evaluaron): '+json.diasNoReconocidos.map(personalEsc_).join(', ')+'</div>';
+      }
+      if(json.diasSinFuenteHorario2 > 0){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ '+json.diasSinFuenteHorario2+' día(s) Lunes/Martes/Jueves no se evaluaron porque "horario 2" (horEsc2, con club) todavía no tiene filas '+
+          'capturadas en Control de Asistencia EST3 — captúrala ahí para que estos días también se evalúen.</div>';
+      }
+      if(json.sinHorarioNuevo && json.sinHorarioNuevo.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
+          'Personal con actividad en el Checador este periodo que no aparece en "horario 1" ni "horario 2" (no se les generó nada; si "horario 2" sigue '+
+          'vacía, esto puede incluir a quien solo tiene clase Lunes/Martes/Jueves): '+
+          json.sinHorarioNuevo.map(function(x){ return personalEsc_(x.nombre)+' (NP '+personalEsc_(x.np)+')'; }).join(', ')+'</div>';
+      }
+      if(json.turnoEspecialExcluido && json.turnoEspecialExcluido.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
+          'Personal de turno especial (NP 32/33) con actividad en el Checador este periodo — excluido siempre de este motor, sigue en Revisión manual: '+
+          json.turnoEspecialExcluido.map(function(x){ return personalEsc_(x.nombre)+' (NP '+personalEsc_(x.np)+')'; }).join(', ')+'</div>';
+      }
+      res.innerHTML = html;
+    }
+
+    // ── NUEVO (04/oct/2026): Docentes > Todo el personal > Cargar
+    //    horarios (PDF) -- Fase 1 (lectura + vista previa editable).
+    //    El PDF se manda en fragmentos vía jsonpCall (GET), igual que todo
+    //    el sistema -- una sola URL no puede llevar un PDF completo -- y el
+    //    servidor los reensambla (ver personalLeerHorarioPreview_). ──
+    let _horarioPreviewData = null; // último resultado de leerHorarioPdf_, para poder re-renderizar tras editar
+
+    function horarioFileToBase64_(file){
+      return new Promise(function(resolve, reject){
+        const fr = new FileReader();
+        fr.onload = function(){ resolve(fr.result.split(',').pop()); };
+        fr.onerror = function(){ reject(new Error('No se pudo leer el archivo.')); };
+        fr.readAsDataURL(file);
+      });
+    }
+
+    function horarioChunkString_(str, size){
+      const out = [];
+      for (let i=0; i<str.length; i+=size) out.push(str.slice(i, i+size));
+      return out;
+    }
+
+    // Sube un PDF (ya en base64) en fragmentos secuenciales de hasta
+    // HORARIO_CHUNK_SIZE caracteres -- de uno en uno, para no exceder el
+    // límite de tamaño de una URL de Apps Script (igual que cualquier otra
+    // llamada jsonpCall de este sistema). Actualiza la barra de progreso.
+    const HORARIO_CHUNK_SIZE = 3000;
+    async function horarioSubirArchivo_(base64, tipo, uploadId, etiqueta, progresoEl){
+      const chunks = horarioChunkString_(base64, HORARIO_CHUNK_SIZE);
+      for (let i=0; i<chunks.length; i++){
+        if (progresoEl) progresoEl.textContent = '⏳ Subiendo '+etiqueta+': fragmento '+(i+1)+' de '+chunks.length+'…';
+        const r = await jsonpCall({accion:'subirHorarioChunk', usuario:_personalUsuario, uploadId:uploadId, tipo:tipo, indice:i, total:chunks.length, datos:chunks[i]}, 20000);
+        if (!r || !r.ok) throw new Error((r&&r.mensaje)||('No se pudo subir el fragmento '+(i+1)+' de '+etiqueta+'.'));
+      }
+      return chunks.length;
+    }
+
+    async function personalCargarHorarioPdf_(){
+      const inpProf = document.getElementById('horario-pdf-profesores');
+      const inpGru  = document.getElementById('horario-pdf-grupos');
+      const btn     = document.getElementById('btn-horario-cargar');
+      const progreso = document.getElementById('horario-pdf-progreso');
+      const preview  = document.getElementById('horario-pdf-preview');
+      const fileProf = inpProf && inpProf.files && inpProf.files[0];
+      const fileGru  = inpGru  && inpGru.files  && inpGru.files[0];
+      if (!fileProf && !fileGru){ alert('⚠️ Selecciona al menos un PDF (profesores o grupos).'); return; }
+
+      btn.disabled = true; btn.textContent = '⏳ Cargando…';
+      preview.innerHTML = '';
+      progreso.textContent = '⏳ Leyendo archivo(s) en el navegador…';
+      try {
+        let uploadIdProf = '', totalProf = 0, uploadIdGru = '', totalGru = 0;
+        const sello = Date.now()+'_'+Math.floor(Math.random()*99999);
+
+        if (fileProf){
+          const b64 = await horarioFileToBase64_(fileProf);
+          uploadIdProf = 'hp_'+sello;
+          totalProf = await horarioSubirArchivo_(b64, 'profesores', uploadIdProf, 'PDF de profesores', progreso);
+        }
+        if (fileGru){
+          const b64 = await horarioFileToBase64_(fileGru);
+          uploadIdGru = 'hg_'+sello;
+          totalGru = await horarioSubirArchivo_(b64, 'grupos', uploadIdGru, 'PDF de grupos', progreso);
+        }
+
+        progreso.textContent = '⏳ Interpretando el horario en el servidor…';
+        const json = await jsonpCall({accion:'leerHorarioPdf', usuario:_personalUsuario, uploadIdProfesores:uploadIdProf, totalProfesores:totalProf, uploadIdGrupos:uploadIdGru, totalGrupos:totalGru}, 60000);
+        if (!json || !json.ok){
+          progreso.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo leer el horario.')+'</span>';
+          return;
+        }
+        progreso.innerHTML = '<span style="color:#1a6b2e;font-weight:700">✔ Horario leído: '+json.profesores.length+' profesor(es), '+json.grupos.length+' grupo(s).</span>';
+        if (json.avisoNombresNoResueltos && json.avisoNombresNoResueltos.length){
+          progreso.innerHTML += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+            '⚠️ Iniciales de maestro en el PDF de grupos que no se pudieron cruzar contra el PDF de profesores: '+json.avisoNombresNoResueltos.map(personalEsc_).join(', ')+'</div>';
+        }
+        if (json.avisoModuloNoResuelto && json.avisoModuloNoResuelto.length){
+          progreso.innerHTML += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fde8e8;border:1px solid #d98c8c;border-radius:6px;font-size:0.8rem">'+
+            '⚠️ No se pudo determinar la hora real (módulo no encontrado en el PDF, o falta esa fila en "horEsc1"/"horEsc2" de Control de Asistencia EST3) para: '+json.avisoModuloNoResuelto.map(personalEsc_).join(', ')+'. Revisa esos horarios a mano antes de aplicar.</div>';
+        }
+        _horarioPreviewData = json;
+        preview.innerHTML = personalRenderPreviewHorarios_(json);
+      } catch (err) {
+        progreso.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_(err.message||'Error al cargar el horario.')+'</span>';
+      } finally {
+        btn.disabled = false; btn.textContent = '📄 Cargar y previsualizar';
+      }
+    }
+
+    // Vista previa editable: un <details> por profesor y por grupo, con los
+    // datos de cada clase en <input> (editable a mano para corregir algo
+    // antes de aplicar -- la aplicación al sistema de asistencia es la
+    // siguiente fase; por ahora esto solo queda en pantalla para revisión).
+    function personalRenderPreviewHorarios_(json){
+      let html = '';
+      if ((json.profesores && json.profesores.length) || (json.grupos && json.grupos.length)){
+        html += '<div style="background:#eef7ea;border:1.5px solid #9cc98a;border-radius:8px;padding:1rem;margin-bottom:1rem">'+
+          '<div style="font-weight:700;color:#1a6b2e;margin-bottom:0.4rem">✅ Aplicar este horario — Fase 2</div>'+
+          '<p style="margin:0 0 0.6rem;font-size:0.8rem;color:#2d1f08">Revise y corrija lo que haga falta en las tablas de abajo, y luego indique desde '+
+          'qué fecha entra en vigor. El horario anterior (si existe) <b>no se borra</b>: solo se marca vigente hasta el día anterior a esta fecha. Si aplica '+
+          'un horario de profesores, además se actualizan "horario 1" y "horario 2" de Control de Asistencia EST3 (por NP, cruzando el nombre contra la hoja '+
+          '"Personal") -- de ahí las toma el generador automático de Incidencias.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#2d1f08">Vigente a partir de:</label>'+
+            '<input type="date" id="horario-vigencia-desde" style="padding:0.4rem 0.7rem;border:1.5px solid #9cc98a;border-radius:6px;font-size:0.85rem"/>'+
+            '<button class="btn-submit" id="btn-horario-aplicar" onclick="personalAplicarHorarioPdf_()">✅ Aplicar</button>'+
+          '</div>'+
+          '<div id="horario-aplicar-resultado" style="margin-top:0.7rem;font-size:0.85rem"></div>'+
+        '</div>';
+      }
+      if (json.profesores && json.profesores.length){
+        html += '<div class="ficha-section-title" style="font-size:0.9rem;margin-top:0.8rem">👨‍🏫 Profesores ('+json.profesores.length+')</div>';
+        html += json.profesores.map(function(p, pi){
+          return '<details style="margin-bottom:0.5rem;border:1px solid #e8d88a;border-radius:6px;background:#fffdf5">'+
+            '<summary style="padding:0.5rem 0.8rem;cursor:pointer;font-weight:600;color:#2d1f08;font-size:0.85rem">'+personalEsc_(p.nombre)+'</summary>'+
+            '<div style="padding:0.6rem 0.9rem">'+personalHorarioDiasHtml_(p.dias, 'prof', pi)+'</div>'+
+          '</details>';
+        }).join('');
+      }
+      if (json.grupos && json.grupos.length){
+        html += '<div class="ficha-section-title" style="font-size:0.9rem;margin-top:0.8rem">🏫 Grupos ('+json.grupos.length+')</div>';
+        html += json.grupos.map(function(g, gi){
+          return '<details style="margin-bottom:0.5rem;border:1px solid #e8d88a;border-radius:6px;background:#fffdf5">'+
+            '<summary style="padding:0.5rem 0.8rem;cursor:pointer;font-weight:600;color:#2d1f08;font-size:0.85rem">Grupo '+personalEsc_(g.grupo)+
+              (g.tutor ? ' · Tutor(a): '+personalEsc_(g.tutor) : '')+'</summary>'+
+            '<div style="padding:0.6rem 0.9rem">'+personalHorarioDiasHtml_(g.dias, 'grp', gi)+'</div>'+
+          '</details>';
+        }).join('');
+      }
+      if (!html) html = '<p style="color:#a08040;font-size:0.82rem">No se extrajo ningún día con clases.</p>';
+      return html;
+    }
+
+    function personalHorarioDiasHtml_(dias, prefijo, idx){
+      return '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'+
+        '<tr style="background:#f7f2e0"><th style="text-align:left;padding:0.3rem 0.5rem;border:1px solid #e8d88a">Día</th>'+
+        '<th style="text-align:left;padding:0.3rem 0.5rem;border:1px solid #e8d88a">Entrada</th>'+
+        '<th style="text-align:left;padding:0.3rem 0.5rem;border:1px solid #e8d88a">Salida</th>'+
+        '<th style="text-align:left;padding:0.3rem 0.5rem;border:1px solid #e8d88a">Clases</th></tr>'+
+        dias.map(function(d, di){
+          const clasesHtml = (d.clases||[]).map(function(c, ci){
+            const principal = (c.grupo !== undefined ? c.grupo : c.materia) || '';
+            const secundario = (c.grupo !== undefined ? c.materia : (c.maestroNombre || c.maestroIniciales)) || '';
+            const idBase = 'hp-'+prefijo+'-'+idx+'-'+di+'-'+ci;
+            return '<span style="display:inline-flex;gap:0.3rem;align-items:center;margin:0.1rem 0.4rem 0.1rem 0;padding:0.2rem 0.4rem;background:#fff;border:1px solid #e0d4a0;border-radius:4px">'+
+              '<span style="color:#7a6030;font-size:0.72rem">'+personalEsc_(c.horaInicio||'')+'-'+personalEsc_(c.horaFin||'')+'</span>'+
+              '<input data-horario-campo="principal" id="'+idBase+'-a" value="'+personalEsc_(principal)+'" style="width:4.2rem;border:1px solid #d4c07a;border-radius:3px;padding:0.1rem 0.3rem;font-size:0.76rem"/>'+
+              '<input data-horario-campo="secundario" id="'+idBase+'-b" value="'+personalEsc_(secundario)+'" style="width:7rem;border:1px solid #d4c07a;border-radius:3px;padding:0.1rem 0.3rem;font-size:0.76rem"/>'+
+            '</span>';
+          }).join('');
+          return '<tr><td style="padding:0.3rem 0.5rem;border:1px solid #eee2b8;font-weight:600">'+personalEsc_(d.diaNombre||d.dia)+'</td>'+
+            '<td style="padding:0.3rem 0.5rem;border:1px solid #eee2b8">'+personalEsc_(d.entrada||'—')+'</td>'+
+            '<td style="padding:0.3rem 0.5rem;border:1px solid #eee2b8">'+personalEsc_(d.salida||'—')+'</td>'+
+            '<td style="padding:0.3rem 0.5rem;border:1px solid #eee2b8">'+(clasesHtml||'<span style="color:#b0a070">(sin clases)</span>')+'</td></tr>';
+        }).join('') +
+      '</table>';
+    }
+
+    // ── NUEVO (04/oct/2026 noche): Fase 2 -- aplicar el horario revisado,
+    //    con fecha de vigencia. Antes de enviarlo, se vuelve a leer cada
+    //    <input> de la vista previa (el usuario pudo haber corregido algo
+    //    a mano) para no perder esas correcciones. ──
+    function personalRecolectarHorarioEditado_(){
+      if (!_horarioPreviewData) return null;
+      const out = { profesores: [], grupos: [] };
+      (_horarioPreviewData.profesores||[]).forEach(function(p, pi){
+        const dias = (p.dias||[]).map(function(d, di){
+          const clases = (d.clases||[]).map(function(c, ci){
+            const a = document.getElementById('hp-prof-'+pi+'-'+di+'-'+ci+'-a');
+            const b = document.getElementById('hp-prof-'+pi+'-'+di+'-'+ci+'-b');
+            return { horaInicio:c.horaInicio, horaFin:c.horaFin, grupo:(a?a.value:c.grupo), materia:(b?b.value:c.materia) };
+          });
+          return { dia:d.dia, diaNombre:d.diaNombre, entrada:d.entrada, salida:d.salida, clases:clases };
+        });
+        out.profesores.push({ nombre:p.nombre, dias:dias });
+      });
+      (_horarioPreviewData.grupos||[]).forEach(function(g, gi){
+        const dias = (g.dias||[]).map(function(d, di){
+          const clases = (d.clases||[]).map(function(c, ci){
+            const a = document.getElementById('hp-grp-'+gi+'-'+di+'-'+ci+'-a');
+            const b = document.getElementById('hp-grp-'+gi+'-'+di+'-'+ci+'-b');
+            return { horaInicio:c.horaInicio, horaFin:c.horaFin, materia:(a?a.value:c.materia), maestroIniciales:c.maestroIniciales, maestroNombre:(b?b.value:c.maestroNombre) };
+          });
+          return { dia:d.dia, diaNombre:d.diaNombre, entrada:d.entrada, salida:d.salida, clases:clases };
+        });
+        out.grupos.push({ grupo:g.grupo, tutor:g.tutor, dias:dias });
+      });
+      return out;
+    }
+
+    async function personalAplicarHorarioPdf_(){
+      const fecha = (document.getElementById('horario-vigencia-desde')||{}).value||'';
+      const btn = document.getElementById('btn-horario-aplicar');
+      const res = document.getElementById('horario-aplicar-resultado');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ alert('⚠️ Indica la fecha a partir de la cual entra en vigor este horario.'); return; }
+      const datos = personalRecolectarHorarioEditado_();
+      if (!datos || (!datos.profesores.length && !datos.grupos.length)){ alert('⚠️ No hay datos de horario para aplicar.'); return; }
+      if (!confirm('¿Aplicar este horario a partir del '+fecha+'? Se guardará para '+datos.profesores.length+' profesor(es) y '+datos.grupos.length+
+        ' grupo(s). El horario anterior se conserva, solo se marca vigente hasta el día anterior.')) return;
+
+      btn.disabled = true; btn.textContent = '⏳ Aplicando…';
+      res.textContent = '⏳ Subiendo los datos revisados…';
+      try {
+        const sello = Date.now()+'_'+Math.floor(Math.random()*99999);
+        let uploadIdProf = '', totalProf = 0, uploadIdGru = '', totalGru = 0;
+        if (datos.profesores.length){
+          uploadIdProf = 'ap_'+sello;
+          totalProf = await horarioSubirArchivo_(JSON.stringify(datos.profesores), 'aplicarProfesores', uploadIdProf, 'datos de profesores', res);
+        }
+        if (datos.grupos.length){
+          uploadIdGru = 'ag_'+sello;
+          totalGru = await horarioSubirArchivo_(JSON.stringify(datos.grupos), 'aplicarGrupos', uploadIdGru, 'datos de grupos', res);
+        }
+        res.textContent = '⏳ Guardando en el sistema…';
+        const json = await jsonpCall({accion:'aplicarHorarioPdf', usuario:_personalUsuario, vigenciaDesde:fecha, uploadIdProfesoresJSON:uploadIdProf, totalProfesoresJSON:totalProf, uploadIdGruposJSON:uploadIdGru, totalGruposJSON:totalGru}, 60000);
+        if (!json || !json.ok){
+          res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo aplicar el horario.')+'</span>';
+          return;
+        }
+        let msg = '✔ Horario aplicado desde el '+personalEsc_(fecha)+'.';
+        if (json.profesores) msg += ' Profesores: '+json.profesores.cerrados+' periodo(s) anterior(es) cerrados, '+json.profesores.insertados+' fila(s) nuevas.';
+        if (json.grupos) msg += ' Grupos: '+json.grupos.cerrados+' periodo(s) anterior(es) cerrados, '+json.grupos.insertados+' fila(s) nuevas.';
+        if (typeof json.horarioEscActualizado === 'number') msg += ' "horario 1"/"horario 2" (Control de Asistencia EST3): '+json.horarioEscActualizado+' maestro(s) actualizado(s) por NP.';
+        res.innerHTML = '<span style="color:#1a6b2e;font-weight:700">'+msg+'</span>';
+        if (json.avisoProfesorSinNP && json.avisoProfesorSinNP.length){
+          res.innerHTML += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+            '⚠️ No se pudo encontrar (o salió ambiguo) el NP en la hoja "Personal" de Control de Asistencia EST3 para: '+json.avisoProfesorSinNP.map(personalEsc_).join(', ')+
+            '. A estos maestros NO se les actualizó "horario 1"/"horario 2" -- revise el nombre a mano en esa hoja.</div>';
+        }
+      } catch (err) {
+        res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_(err.message||'Error al aplicar el horario.')+'</span>';
+      } finally {
+        btn.disabled = false; btn.textContent = '✅ Aplicar';
+      }
+    }
+
+    // ── NUEVO (04/oct/2026 noche): Fase 4 -- generar, desde el horario
+    //    vigente (Fase 2), una imagen por maestro y una por grupo con
+    //    html2canvas (mismo mecanismo que ya usa Ficha Descriptiva para
+    //    exportar a PNG), y guardarlas en Drive para que las lea
+    //    horarioImagenCargar_ (arriba). Se arma UN solo documento oculto
+    //    con todas las tarjetas (en vez de un iframe por imagen) y se
+    //    rasteriza tarjeta por tarjeta -- mismo patrón que
+    //    generarPngCredencialesSeleccion. ──
+    const HORARIO_TARJETA_CSS_ =
+      'body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff}'+
+      '.horario-card{width:900px;background:#fff;padding:1.4rem 1.6rem;box-sizing:border-box}'+
+      '.horario-titulo{font-size:1.25rem;font-weight:800;color:#2d1f08;margin-bottom:0.15rem}'+
+      '.horario-subtitulo{font-size:0.88rem;color:#7a6030;margin-bottom:0.8rem}'+
+      '.horario-tabla{width:100%;border-collapse:collapse;font-size:0.82rem}'+
+      '.horario-tabla th{background:#2d1f08;color:#F0C040;text-align:left;padding:0.5rem 0.7rem}'+
+      '.horario-tabla td{padding:0.5rem 0.7rem;border-bottom:1px solid #e8d88a;vertical-align:top}'+
+      '.dia-col{font-weight:700;color:#2d1f08;white-space:nowrap}'+
+      '.clase-item{margin-bottom:0.25rem}'+
+      '.clase-hora{color:#a08040;font-size:0.78rem}'+
+      '.sin-clases{color:#b0a070}'+
+      '.horario-pie{margin-top:0.8rem;font-size:0.72rem;color:#a08040;text-align:right}';
+
+    function horarioTarjetaHtml_(titulo, subtitulo, dias){
+      const filas = (dias||[]).map(function(d){
+        const clasesTxt = (d.clases||[]).map(function(c){
+          const esGrupo = c.grupo !== undefined;
+          const principal = esGrupo ? c.grupo : c.materia;
+          const secundario = esGrupo ? c.materia : (c.maestroNombre||c.maestroIniciales);
+          return '<div class="clase-item"><span class="clase-hora">'+personalEsc_(c.horaInicio||'')+'–'+personalEsc_(c.horaFin||'')+'</span> '+
+            '<b>'+personalEsc_(principal||'')+'</b>'+(secundario?' · '+personalEsc_(secundario):'')+'</div>';
+        }).join('');
+        return '<tr><td class="dia-col">'+personalEsc_(d.diaNombre||d.dia)+'</td>'+
+          '<td>'+personalEsc_(d.entrada||'—')+'</td><td>'+personalEsc_(d.salida||'—')+'</td>'+
+          '<td>'+(clasesTxt||'<span class="sin-clases">(sin clases)</span>')+'</td></tr>';
+      }).join('');
+      return '<div class="horario-titulo">'+personalEsc_(titulo)+'</div>'+
+        (subtitulo ? '<div class="horario-subtitulo">'+personalEsc_(subtitulo)+'</div>' : '')+
+        '<table class="horario-tabla"><thead><tr><th>Día</th><th>Entrada</th><th>Salida</th><th>Clases</th></tr></thead>'+
+        '<tbody>'+filas+'</tbody></table>';
+    }
+
+    function construirHtmlHorarios_(profesores, grupos){
+      const tarjetasProf = (profesores||[]).map(function(p){
+        const nombreArchivo = 'Maestro_'+horarioSlugPersona_(p.nombre||'');
+        return '<div class="horario-card" data-nombre-archivo="'+personalEsc_(nombreArchivo)+'">'+
+          horarioTarjetaHtml_('👨‍🏫 '+p.nombre, 'Horario del docente — EST3', p.dias)+'</div>';
+      }).join('');
+      const tarjetasGrp = (grupos||[]).map(function(g){
+        const nombreArchivo = 'Grupo_'+(g.grupo||'').toString().replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+        return '<div class="horario-card" data-nombre-archivo="'+personalEsc_(nombreArchivo)+'">'+
+          horarioTarjetaHtml_('🏫 Grupo '+g.grupo+(g.tutor?' — Tutor(a): '+g.tutor:''), 'Horario del grupo — EST3', g.dias)+'</div>';
+      }).join('');
+      return '<!doctype html><html><head><meta charset="utf-8">'+
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'+
+        '<style>'+HORARIO_TARJETA_CSS_+'</style></head><body>'+tarjetasProf+tarjetasGrp+'</body></html>';
+    }
+
+    async function personalGenerarImagenesHorario_(){
+      const fecha = (document.getElementById('horario-img-fecha')||{}).value||'';
+      const btn = document.getElementById('btn-horario-generar-img');
+      const res = document.getElementById('horario-generar-img-resultado');
+      if(!confirm('¿Generar las imágenes de horario de todos los profesores y grupos (según lo vigente'+(fecha?' el '+fecha:' hoy')+') y guardarlas en Drive? Puede tardar varios minutos si son muchas.')) return;
+
+      btn.disabled = true; btn.textContent = '⏳ Generando…';
+      res.textContent = '⏳ Obteniendo el horario vigente…';
+      let iframe = null;
+      try {
+        const datos = await jsonpCall({accion:'horarioVigente', usuario:_personalUsuario, fecha:fecha}, 30000);
+        if(!datos || !datos.ok){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((datos&&datos.mensaje)||'No se pudo obtener el horario vigente.')+'</span>'; return; }
+        if(!datos.profesores.length && !datos.grupos.length){
+          res.innerHTML = '<span style="color:#9b1c1c">⚠️ No hay ningún horario guardado para esa fecha — primero hay que aplicar uno (Fase 2, arriba).</span>';
+          return;
+        }
+
+        const html = construirHtmlHorarios_(datos.profesores, datos.grupos);
+        iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:950px;height:1200px;border:0';
+        iframe.setAttribute('aria-hidden','true');
+        document.body.appendChild(iframe);
+        await new Promise(function(resolve, reject){
+          iframe.onload = function(){ resolve(); };
+          iframe.onerror = function(){ reject(new Error('No se pudo preparar las tarjetas de horario para exportar.')); };
+          iframe.srcdoc = html;
+        });
+        const iwin = iframe.contentWindow, idoc = iframe.contentDocument;
+        if(!iwin || !idoc || !iwin.html2canvas) throw new Error('No se pudo cargar la librería de exportación a imagen.');
+        const tarjetas = idoc.querySelectorAll('.horario-card');
+        if(!tarjetas.length) throw new Error('No se armó ninguna tarjeta de horario para exportar.');
+
+        let generadas = 0, fallidas = [];
+        for (let i=0; i<tarjetas.length; i++){
+          const tarjeta = tarjetas[i];
+          const nombreArchivo = tarjeta.getAttribute('data-nombre-archivo');
+          res.textContent = '⏳ Generando imagen '+(i+1)+' de '+tarjetas.length+' ('+nombreArchivo+')…';
+          try {
+            const canvas = await iwin.html2canvas(tarjeta, { scale:2, backgroundColor:'#ffffff', useCORS:true });
+            const dataUrl = canvas.toDataURL('image/png');
+            const base64 = dataUrl.split(',').pop();
+            const sello = Date.now()+'_'+i+'_'+Math.floor(Math.random()*9999);
+            const uploadId = 'ih_'+sello;
+            const totalChunks = await horarioSubirArchivo_(base64, 'imgHorario', uploadId, 'imagen de '+nombreArchivo, res);
+            const guardado = await jsonpCall({accion:'guardarHorarioImagen', usuario:_personalUsuario, nombreArchivo:nombreArchivo, uploadId:uploadId, total:totalChunks}, 30000);
+            if(!guardado || !guardado.ok) throw new Error((guardado&&guardado.mensaje)||'no se pudo guardar');
+            generadas++;
+          } catch(errUna){
+            fallidas.push(nombreArchivo+' ('+(errUna.message||'error')+')');
+          }
+        }
+
+        let msg = '✔ '+generadas+' de '+tarjetas.length+' imagen(es) generada(s) y guardada(s) en Drive.';
+        if(fallidas.length) msg += ' ⚠️ Fallaron: '+fallidas.join(', ')+'.';
+        res.innerHTML = '<span style="color:'+(fallidas.length?'#C07A00':'#1a6b2e')+';font-weight:700">'+msg+'</span>';
+      } catch(err){
+        res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_(err.message||'Error al generar las imágenes de horario.')+'</span>';
+      } finally {
+        if(iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        btn.disabled = false; btn.textContent = '🖼️ Generar y guardar en Drive';
+      }
     }
 
     function personalAplicarFiltros_(lista, q, estado){
@@ -7882,7 +8568,7 @@
       const etiqueta = (_gfDatos.grado||'')+'°'+(_gfDatos.grupo||'');
       cont.innerHTML = '<div style="background:rgba(26,20,8,0.6);border:1px solid #C8922A;border-radius:10px;padding:0.9rem 1.1rem">'+
         '<div style="font-family:\'Cinzel\',serif;color:#F0C040;font-size:0.85rem;margin-bottom:0.6rem">🗓️ Horario de clases del grupo</div>'+
-        horarioImagenHtml_('horarios/Grupo_'+claveGrupo+'.jpg', etiqueta) +
+        horarioImagenHtml_('Grupo_'+claveGrupo, etiqueta, '#c9a96e') +
         '</div>';
     }
 
