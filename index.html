@@ -1295,6 +1295,8 @@
         <a href="#" onclick="return false;" style="cursor:default;opacity:0.6;font-size:0.7rem;letter-spacing:0.1em;">— USUARIOS —</a>
         <a href="#" onclick="openModal('usu-alu');return false;">🎓 Alumnos</a>
         <a href="#" onclick="openModal('usu-doc');return false;">👨‍🏫 Docentes</a>
+        <a href="#" onclick="return false;" style="cursor:default;opacity:0.6;font-size:0.7rem;letter-spacing:0.1em;">— NOTIFICACIONES —</a>
+        <a href="#" onclick="openModal('notif');return false;">📧 Avisos a familias</a>
       </div>
     </div>
   </nav>
@@ -13342,6 +13344,142 @@
       </div>
     </div>
   </div>
+
+  <!-- ═══ MODAL CONTACTO > NOTIFICACIONES > AVISOS A FAMILIAS (solo Dirección) ═══ -->
+  <div class="modal-overlay" id="modal-notif">
+    <div class="modal modal-login">
+      <div class="modal-header">
+        <h3>📧 Avisos a familias — Notificaciones</h3>
+        <button class="modal-close" onclick="cerrarNotif()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Paso 1: credenciales -->
+        <div id="notif-paso1">
+          <div class="modal-icon">📧</div>
+          <p class="modal-desc">Solo la Dirección puede ejecutar el notificador de movimientos de alumnos. Ingresa tus credenciales.</p>
+          <div class="form-group">
+            <label class="form-label">USUARIO</label>
+            <input type="text" id="notif-user" class="form-input" placeholder="Usuario"
+              oninput="this.value=this.value.toUpperCase()" autocomplete="username"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">CONTRASEÑA</label>
+            <div style="position:relative">
+              <input type="password" id="notif-pass" class="form-input" placeholder="Contraseña"
+                onkeydown="if(event.key==='Enter')accederNotif()"/>
+              <span onclick="togglePass('notif-pass',this)"
+                style="position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem">👁</span>
+            </div>
+          </div>
+          <div id="res-notif-1"></div>
+        </div>
+        <!-- Paso 2: panel -->
+        <div id="notif-paso2" style="display:none">
+          <div id="notif-estado" style="font-size:0.85rem;line-height:1.6;margin-bottom:0.9rem"></div>
+          <div style="display:flex;flex-direction:column;gap:0.55rem">
+            <button class="btn-submit" id="notif-btn-ciclo" onclick="notifEjecutar('ciclo')">🔄 Revisar movimientos y enviar avisos inmediatos</button>
+            <button class="btn-submit" id="notif-btn-resumen" onclick="notifEjecutar('resumen')">📬 Enviar resumen diario y reporte a la Dirección</button>
+            <button class="btn-cancel" id="notif-btn-auditar" onclick="notifEjecutar('auditar')">🔎 Auditar correos de las familias</button>
+            <button class="btn-cancel" id="notif-btn-estado" onclick="notifCargarEstado()">↻ Actualizar estado</button>
+          </div>
+          <div id="res-notif-2" style="margin-top:0.8rem"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="cerrarNotif()">Cerrar</button>
+        <button class="btn-submit" id="notif-btn-entrar" onclick="accederNotif()">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── CONTACTO > NOTIFICACIONES: ejecución manual del notificador (solo Dirección) ──
+  // El servidor (accion 'notifManual') vuelve a validar que el usuario sea Dirección;
+  // esta pantalla solo es la interfaz.
+  let _notifUsr = '', _notifModoPrueba = true, _notifOcupado = false;
+  function notifEsc_(s){ return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function notifMsg_(id, tipo, texto){
+    const el = document.getElementById(id); if(!el) return;
+    const est = tipo==='ok' ? 'background:#eafaf1;border:1px solid #b8e6c9;color:#1D7A4E'
+              : tipo==='info' ? 'background:#fffbe8;border:1px solid #e8d88a;color:#7a6030' : '';
+    el.innerHTML = '<div class="result-error" style="'+est+'">'+texto+'</div>';
+  }
+  function cerrarNotif(){
+    document.getElementById('modal-notif').classList.remove('active');
+    document.getElementById('notif-user').value=''; document.getElementById('notif-pass').value='';
+    document.getElementById('res-notif-1').innerHTML=''; document.getElementById('res-notif-2').innerHTML='';
+    document.getElementById('notif-estado').innerHTML='';
+    document.getElementById('notif-paso1').style.display=''; document.getElementById('notif-paso2').style.display='none';
+    document.getElementById('notif-btn-entrar').style.display='';
+    _notifUsr=''; _notifOcupado=false;
+  }
+  async function accederNotif(){
+    const user = document.getElementById('notif-user').value.trim().toUpperCase();
+    const pass = document.getElementById('notif-pass').value.trim().toUpperCase();
+    const btn = document.getElementById('notif-btn-entrar');
+    if(!user || !pass){ notifMsg_('res-notif-1','err','⚠️ Ingresa usuario y contraseña.'); return; }
+    notifMsg_('res-notif-1','info','⏳ Verificando…');
+    btn.disabled = true;
+    const json = await consultarUsuario(user, pass, 'Notificaciones');
+    btn.disabled = false;
+    if(!json){ notifMsg_('res-notif-1','err','⚠️ Sin respuesta del servidor. Intenta de nuevo.'); return; }
+    if(!json.ok){ notifMsg_('res-notif-1','err','⚠️ '+notifEsc_(json.mensaje||'Credenciales incorrectas.')); document.getElementById('notif-pass').value=''; return; }
+    _notifUsr = (json.usuario.curp || user);
+    document.getElementById('notif-pass').value='';
+    document.getElementById('res-notif-1').innerHTML='';
+    document.getElementById('notif-paso1').style.display='none';
+    document.getElementById('notif-paso2').style.display='';
+    btn.style.display='none';
+    await notifCargarEstado();
+  }
+  function notifPintarEstado_(e){
+    _notifModoPrueba = !!e.modoPrueba;
+    const modo = e.modoPrueba
+      ? '<b style="color:#7a6030">MODO DE PRUEBA</b> — los avisos se envían solo a la cuenta de prueba, no a las familias.'
+      : '<b style="color:#9b1c1c">ENVÍO REAL</b> — los avisos se envían a las familias.';
+    let html = '<div>'+modo+'</div>'
+      + '<div>Destinatarios: <b>'+notifEsc_(e.destinatarios)+'</b>'+(e.destinatarios==='MADRE_PRIMERO'?' (un correo por alumno, a la madre; al padre solo si no hay correo de la madre)':'')+'</div>'
+      + '<div>Módulos activos: <b>'+(e.modulosActivos&&e.modulosActivos.length ? e.modulosActivos.map(notifEsc_).join(', ') : 'ninguno')+'</b></div>'
+      + '<div>Pendientes de envío: <b>'+e.pendientes+'</b> · Sin correo: <b>'+e.sinCorreo+'</b> · Con error: <b>'+e.conError+'</b></div>'
+      + '<div>Cuota de correo disponible hoy: <b>'+e.cuotaDisponible+'</b></div>'
+      + '<div>Disparadores automáticos: <b>'+(e.disparadoresInstalados?'instalados':'NO instalados')+'</b>'
+      + (e.ultimoReporteDirector?' · Último reporte a Dirección: <b>'+notifEsc_(e.ultimoReporteDirector)+'</b>':'')+'</div>';
+    if(e.avisosAnterioresActivos && e.avisosAnterioresActivos.length){
+      html += '<div style="margin-top:0.4rem;color:#9b1c1c">⚠️ Sigue activo el sistema de avisos anterior ('+e.avisosAnterioresActivos.map(notifEsc_).join(', ')+'): las familias podrían recibir avisos duplicados.</div>';
+    }
+    document.getElementById('notif-estado').innerHTML = html;
+  }
+  function notifBloquear_(b){
+    _notifOcupado = b;
+    ['ciclo','resumen','auditar','estado'].forEach(function(k){ const el=document.getElementById('notif-btn-'+k); if(el) el.disabled=b; });
+  }
+  async function notifCargarEstado(){
+    if(_notifOcupado) return;
+    notifBloquear_(true); notifMsg_('res-notif-2','info','⏳ Consultando estado…');
+    const json = await jsonpCall({accion:'notifManual', usuario:_notifUsr, tarea:'estado'}, 30000);
+    notifBloquear_(false);
+    if(!json || json.timeout || json.networkError){ notifMsg_('res-notif-2','err','⚠️ Sin respuesta del servidor. Intenta de nuevo.'); return; }
+    if(!json.ok){ notifMsg_('res-notif-2','err','⚠️ '+notifEsc_(json.mensaje||'No se pudo consultar.')); return; }
+    document.getElementById('res-notif-2').innerHTML=''; notifPintarEstado_(json.estado);
+  }
+  async function notifEjecutar(tarea){
+    if(_notifOcupado) return;
+    const envia = (tarea==='ciclo' || tarea==='resumen');
+    if(envia){
+      const aviso = _notifModoPrueba
+        ? 'El sistema está en MODO DE PRUEBA: los correos se enviarán solo a la cuenta de prueba.\n\n¿Ejecutar ahora?'
+        : 'ATENCIÓN: el sistema está en ENVÍO REAL. Se enviarán correos a las familias.\n\n¿Confirma que desea ejecutarlo ahora?';
+      if(!confirm(aviso)) return;
+    }
+    notifBloquear_(true); notifMsg_('res-notif-2','info','⏳ Ejecutando… puede tardar uno o dos minutos. No cierre esta ventana.');
+    const json = await jsonpCall({accion:'notifManual', usuario:_notifUsr, tarea:tarea}, 170000);
+    notifBloquear_(false);
+    if(!json || json.timeout || json.networkError){ notifMsg_('res-notif-2','err','⚠️ Sin respuesta del servidor. La ejecución pudo haber continuado; actualice el estado en un minuto.'); return; }
+    if(!json.ok){ notifMsg_('res-notif-2','err','⚠️ '+notifEsc_(json.mensaje||'No se pudo ejecutar.')); return; }
+    notifMsg_('res-notif-2','ok','✅ '+notifEsc_(json.mensaje||'Listo.'));
+    if(json.estado) notifPintarEstado_(json.estado);
+  }
+  </script>
 
 </body>
 
