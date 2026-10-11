@@ -5590,6 +5590,26 @@
       res.innerHTML='';
       document.getElementById('personal-overlay').style.display='block';
       document.body.style.overflow='hidden';
+      await personalEntrar_();
+    }
+
+    // Al entrar: la Dirección (y Subdirección/Secretaría) ve directamente la lista del personal
+    // —incluida su propia persona— con el filtro en "Solo activos" (columna Activo = TRUE de la
+    // hoja Personal). El personal regular entra directo a su propio expediente.
+    async function personalEntrar_(){
+      const cont=document.getElementById('personal-content');
+      cont.innerHTML = personalCargandoHtml_();
+      document.getElementById('personal-doc-label').textContent = 'Todo el personal';
+      const json = await jsonpCall({accion:'personalListar', usuario:_personalUsuario, busqueda:''}, 15000);
+      if(json && json.ok){
+        _personalEsAdmin    = true;
+        _personalCurpPropia = json.curpPropia || '';
+        _personalCurpViendo = '';
+        _personalFiltroEstado = 'activos';
+        _personalListaCache = json.personal || [];
+        personalPintarLista_(_personalListaCache);
+        return;
+      }
       await personalAbrirMiExpediente();
     }
 
@@ -6177,6 +6197,21 @@
           '</div>'+
           '<div id="inc-auto-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
         '</div>';
+      html += '<div class="ficha-section-title" style="margin-top:0.5rem">📁 Aplicar horario desde Drive</div>'+
+        '<div style="background:#eef7ea;border:1.5px solid #9cc98a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
+          '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#2d1f08">Los horarios se preparan fuera de la página: suba a la carpeta <b>"horarios"</b> de Drive '+
+          'los PDF (un archivo cuyo nombre contenga <b>"profesores"</b> y otro que contenga <b>"grupos"</b>) y las imágenes (<b>Maestro_…png</b> y <b>Grupo_…png</b>). '+
+          'Aquí solo indique desde qué fecha entra en vigor: el sistema toma de Drive los PDF <b>más recientes</b>, los lee y los aplica. El horario anterior no se borra; '+
+          'queda vigente hasta el día anterior. Este paso <b>no genera imágenes</b>.</p>'+
+          '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">'+
+            '<label style="font-size:0.82rem;color:#2d1f08">Vigente a partir de:</label>'+
+            '<input type="date" id="horario-drive-fecha" style="padding:0.4rem 0.7rem;border:1.5px solid #9cc98a;border-radius:6px;font-size:0.85rem"/>'+
+            '<button class="btn-submit" id="btn-horario-drive-revisar" onclick="personalRevisarHorarioDrive_()">🔍 Revisar archivos en Drive</button>'+
+          '</div>'+
+          '<div id="horario-drive-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#2d1f08"></div>'+
+        '</div>';
+      html += '<details style="margin-bottom:1.2rem"><summary style="cursor:pointer;font-weight:700;color:#7a6030;font-size:0.9rem;padding:0.4rem 0">'+
+        '🛠️ Carga manual desde esta página (PDF con vista previa e imágenes generadas aquí)</summary>';
       html += '<div class="ficha-section-title" style="margin-top:0.5rem">📄 Cargar horarios (PDF) — Fase 1</div>'+
         '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
           '<p style="margin:0 0 0.7rem;font-size:0.8rem;color:#7a6030">Sube aquí el PDF de horario de "profesores" y/o el de "grupos" '+
@@ -6206,6 +6241,7 @@
           '</div>'+
           '<div id="horario-generar-img-resultado" style="margin-top:0.8rem;font-size:0.85rem"></div>'+
         '</div>';
+      html += '</details>';
       html += '<div id="personal-lista-tabla">' + personalFilasListaHtml_(personalAplicarFiltros_(lista, '', _personalFiltroEstado)) + '</div>';
       html += '<div style="margin-top:1.5rem"><button class="btn-cancel" onclick="personalAbrirMiExpediente()">← Volver a mi expediente</button></div>';
       document.getElementById('personal-content').innerHTML = html;
@@ -6658,6 +6694,73 @@
       return '<!doctype html><html><head><meta charset="utf-8">'+
         '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'+
         '<style>'+HORARIO_TARJETA_CSS_+'</style></head><body>'+tarjetasProf+tarjetasGrp+'</body></html>';
+    }
+
+    // ── NUEVO: aplicar el horario leyendo los PDF que la Dirección dejó en la carpeta
+    //    "horarios" de Drive. Paso 1 = revisar (no escribe nada); paso 2 = aplicar. ──
+    function personalHorarioDriveFecha_(){
+      const fecha = (document.getElementById('horario-drive-fecha')||{}).value||'';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ alert('⚠️ Indica la fecha a partir de la cual entra en vigor el horario.'); return ''; }
+      return fecha;
+    }
+    async function personalRevisarHorarioDrive_(){
+      const fecha = personalHorarioDriveFecha_(); if(!fecha) return;
+      const btn = document.getElementById('btn-horario-drive-revisar');
+      const res = document.getElementById('horario-drive-resultado');
+      btn.disabled = true; btn.textContent = '⏳ Revisando Drive…';
+      res.innerHTML = '<span style="color:#7a6030">⏳ Buscando los PDF en Drive e interpretándolos (puede tardar hasta un minuto)…</span>';
+      try {
+        const json = await jsonpCall({accion:'aplicarHorarioDrive', usuario:_personalUsuario, fecha:fecha, modo:'revisar'}, 90000);
+        if (!json || json.timeout || json.networkError){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ Sin respuesta del servidor. Intenta de nuevo.</span>'; return; }
+        if (!json.ok){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_(json.mensaje||'No se pudo revisar Drive.')+'</span>'; return; }
+        let html = '<div style="font-weight:700;margin-bottom:0.3rem">Archivos encontrados en Drive:</div><ul style="margin:0 0 0.6rem 1.1rem;padding:0">'+
+          json.archivos.map(function(a){ return '<li><b>'+personalEsc_(a.tipo)+':</b> '+personalEsc_(a.nombre)+' <span style="color:#7a6030">(modificado '+personalEsc_(a.modificado)+')</span></li>'; }).join('')+'</ul>'+
+          '<div>Se leyeron <b>'+json.totalProfesores+'</b> profesor(es) y <b>'+json.totalGrupos+'</b> grupo(s). Fecha de vigencia: <b>'+personalEsc_(fecha)+'</b>.</div>';
+        if (json.avisoNombresNoResueltos && json.avisoNombresNoResueltos.length){
+          html += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">⚠️ Iniciales de maestro del PDF de grupos que no se pudieron cruzar con el de profesores: '+json.avisoNombresNoResueltos.map(personalEsc_).join(', ')+'</div>';
+        }
+        if (json.unificaciones && json.unificaciones.length){
+          html += '<details style="margin-top:0.5rem;font-size:0.8rem"><summary style="cursor:pointer">🔗 Nombres unificados con la hoja Personal: <b>'+json.unificaciones.length+'</b> (ver detalle)</summary><ul style="margin:0.3rem 0 0 1.1rem;padding:0">'+
+            json.unificaciones.map(function(u){ return '<li>'+personalEsc_(u.pdf)+' → <b>'+personalEsc_(u.sistema)+'</b></li>'; }).join('')+'</ul></details>';
+        }
+        if (json.sinUnificar && json.sinUnificar.length){
+          html += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fdecec;border:1px solid #d98a8a;border-radius:6px;font-size:0.8rem">⚠️ No se pudo asociar con seguridad a la hoja Personal: <b>'+json.sinUnificar.map(personalEsc_).join(', ')+'</b>. Agregue una fila en la hoja <b>AliasHorarios</b> (libro Personal Sistema): columna A = nombre como aparece en el PDF; columna B = nombre exacto en la hoja Personal. Después vuelva a pulsar «Revisar».</div>';
+        }
+        if (json.imagenesFaltantes && json.imagenesFaltantes.length){
+          const mostrar = json.imagenesFaltantes.slice(0,15).map(personalEsc_).join(', ');
+          html += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">🖼️ Faltan <b>'+json.imagenesFaltantes.length+'</b> imagen(es) en la carpeta de Drive: '+mostrar+(json.imagenesFaltantes.length>15?'…':'')+'. Puede aplicar el horario de todos modos; esas personas o grupos mostrarán "No hay horario disponible" hasta que suba la imagen.</div>';
+        } else {
+          html += '<div style="margin-top:0.5rem;color:#1a6b2e">🖼️ Todas las imágenes de maestros y grupos están en Drive.</div>';
+        }
+        if (json.bloqueos && json.bloqueos.length){
+          html += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fde8e8;border:1px solid #d98c8c;border-radius:6px;font-size:0.8rem">⛔ No se puede aplicar todavía: '+json.bloqueos.map(personalEsc_).join(' ')+'</div>';
+        } else {
+          html += '<div style="margin-top:0.7rem"><button class="btn-submit" id="btn-horario-drive-aplicar" onclick="personalAplicarHorarioDrive_()">✅ Aplicar desde el '+personalEsc_(fecha)+'</button></div>';
+        }
+        res.innerHTML = html;
+      } finally {
+        btn.disabled = false; btn.textContent = '🔍 Revisar archivos en Drive';
+      }
+    }
+    async function personalAplicarHorarioDrive_(){
+      const fecha = personalHorarioDriveFecha_(); if(!fecha) return;
+      if (!confirm('¿Aplicar el horario de los archivos de Drive a partir del '+fecha+'? El horario anterior se conserva y solo se marca vigente hasta el día anterior.')) return;
+      const btn = document.getElementById('btn-horario-drive-aplicar');
+      const res = document.getElementById('horario-drive-resultado');
+      if (btn){ btn.disabled = true; btn.textContent = '⏳ Aplicando…'; }
+      const json = await jsonpCall({accion:'aplicarHorarioDrive', usuario:_personalUsuario, fecha:fecha, modo:'aplicar'}, 120000);
+      if (!json || json.timeout || json.networkError){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ Sin respuesta del servidor. Pudo haberse aplicado; vuelva a pulsar "Revisar archivos en Drive" para comprobarlo (si ya quedó aplicado, avisará que existe un periodo con esa vigencia).</span>'; return; }
+      if (!json.ok){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_(json.mensaje||'No se pudo aplicar el horario.')+'</span>'; return; }
+      const r = json.resultado || {};
+      let msg = '✔ Horario aplicado desde el '+personalEsc_(fecha)+'.';
+      if (r.profesores) msg += ' Profesores: '+r.profesores.cerrados+' periodo(s) anterior(es) cerrados, '+r.profesores.insertados+' fila(s) nuevas.';
+      if (r.grupos) msg += ' Grupos: '+r.grupos.cerrados+' periodo(s) anterior(es) cerrados, '+r.grupos.insertados+' fila(s) nuevas.';
+      if (typeof r.horarioEscActualizado === 'number') msg += ' "horario 1"/"horario 2" (Control de Asistencia EST3): '+r.horarioEscActualizado+' maestro(s) actualizado(s) por NP.';
+      let html = '<span style="color:#1a6b2e;font-weight:700">'+msg+'</span>';
+      if (r.avisoProfesorSinNP && r.avisoProfesorSinNP.length){
+        html += '<div style="margin-top:0.5rem;padding:0.6rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">⚠️ No se pudo encontrar (o salió ambiguo) el NP en la hoja "Personal" de Control de Asistencia EST3 para: '+r.avisoProfesorSinNP.map(personalEsc_).join(', ')+'. A estos maestros NO se les actualizó "horario 1"/"horario 2"; revise el nombre a mano en esa hoja.</div>';
+      }
+      res.innerHTML = html;
     }
 
     async function personalGenerarImagenesHorario_(){
