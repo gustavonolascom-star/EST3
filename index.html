@@ -1,3 +1,5 @@
+<!-- v27 (13/oct/2026): nueva tarjeta «Auditar registros de puntualidad» (Revisar/Corregir) y la unificación ahora informa el periodo 1-18 sep. -->
+<!-- v26 (13/oct/2026): HorariosDocentes ahora guarda UNA fila por docente y por día (Entrada = primer módulo del día, Salida = último módulo). Cambió solo la tarjeta «Tabla única de horarios docentes» (texto y resultado de Revisar/Unificar). -->
 <!-- Generado: 05/octubre/2026, 00:15 (hora Zacatecas) — NUEVO, confirmado con el Director: al aplicar un horario de profesores (tarjeta "✅ Aplicar este horario — Fase 2"), el servidor ahora también actualiza "horario 1"/"horario 2" de Control de Asistencia EST3 por NP (ver el comentario de cabecera del .gs: hpActualizarHorarioEscDesdeProfesores_). Este archivo solo necesitó dos cambios: (1) la descripción de la tarjeta de aplicar ahora explica esto; (2) el resultado tras aplicar muestra cuántos maestros se actualizaron ("horarioEscActualizado") y, en amarillo, la lista de nombres cuyo NP no se pudo resolver en la hoja "Personal" ("avisoProfesorSinNP") -- a esos maestros NO se les tocó "horario 1"/"horario 2", para que la Dirección revise el nombre a mano en vez de que el sistema adivine. -->
 <!-- Versión anterior (23:40): CORREGIDA la Fase 1 de "Cargar horarios (PDF)" en el servidor (leerHorarioPdf_): el horario que ahora regresa el servidor ya NO es el rango de hora genérico/ficticio que imprime el PDF de aSc, sino el horario REAL de la escuela (traducido por número de módulo contra horEsc1/horEsc2 de Control de Asistencia EST3 -- ver el comentario de cabecera del .gs). Este archivo NO necesitó cambios estructurales en la vista previa (personalRenderPreviewHorarios_/personalHorarioDiasHtml_ ya mostraban lo que sea que entrada/salida/horaInicio/horaFin traigan); solo se agregó, junto al aviso ya existente de iniciales sin cruzar (avisoNombresNoResueltos), un nuevo aviso en rojo si el servidor regresa "avisoModuloNoResuelto" (algún día de algún profesor/grupo cuyo módulo no se pudo traducir a hora real) -- para que quede a la vista antes de aplicar, en vez de aplicarse en silencio con una hora vacía. -->
 <!-- Versión anterior (23:10): Fase 3 de "Cargar horarios (PDF)", CORREGIDA la misma noche: la tarjeta "⚙️ Generar incidencias automático" (Docentes > Todo el personal) ya no describe el horario como tomado del PDF -- ahora explica que Miércoles/Viernes se comparan contra "horario 1" (horEsc1, sin club) y Lunes/Martes/Jueves contra "horario 2" (horEsc2, con club), ambas de Control de Asistencia EST3, y que esos 3 días no se evalúan mientras "horario 2" siga sin filas capturadas (se avisa aparte, con el nuevo campo "diasSinFuenteHorario2"). También se muestra, si corresponde, el aviso de personal de turno especial (NP 32/33) excluido siempre ("turnoEspecialExcluido"). Sin cambios en personalPrecargarPeriodoIncAuto_; personalGenerarIncidenciasAutomatico_ solo ajustó el renderizado del resultado. -->
@@ -6031,7 +6033,40 @@
       const json = await jsonpCall({accion:'personalIncidenciasFicha', usuario:_personalUsuario, curp: curpObjetivo||''}, 20000);
       if(!cont.isConnected) return; // el expediente ya se cerró/cambió antes de que respondiera
       if(!json || !json.ok){ cont.innerHTML = personalErrorHtml_(json && json.mensaje); return; }
+      // Respaldo: si el servidor (versión anterior) no mandó el resumen o la
+      // clasificación de cada incidencia, se calcula aquí por el texto, para
+      // que "Positivas" nunca quede en cero cuando sí hay reconocimientos.
+      if(!json.resumen || !json.resumenTotal){
+        const r = personalResumenLocal_(json.incidencias || []);
+        json.resumen = r.resumen; json.resumenTotal = r.resumenTotal;
+      }
       cont.innerHTML = personalIncidenciasHtml_(json.incidencias, json.resumen, json.resumenTotal);
+    }
+
+    function personalClasificarLocal_(texto){
+      const t = (texto||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' ');
+      if(t.indexOf('RECONOCIMIENTO') === 0) return {clasificacion:'Positiva', categoria:'Evaluación Semanal'};
+      if(t.indexOf('INVITACION AL CUMPLIMIENTO') === 0 || t === 'EVALUACION SEMANAL') return {clasificacion:'Negativa', categoria:'Evaluación Semanal'};
+      if(t === 'FELICITACION') return {clasificacion:'Positiva', categoria:'Asistencia'};
+      if(t === 'INVITACION A LA PUNTUALIDAD' || t === 'RETARDO' || t === 'FALTA INJUSTIFICADA') return {clasificacion:'Negativa', categoria:'Asistencia'};
+      return {clasificacion:'Neutra', categoria:'Diversas'};
+    }
+
+    function personalResumenLocal_(incidencias){
+      const cats = ['Evaluación Semanal','Asistencia','Diversas'];
+      const resumen = {}; cats.forEach(function(c){ resumen[c] = {positivas:0,negativas:0,neutras:0,diferencia:0}; });
+      const total = {positivas:0,negativas:0,neutras:0,diferencia:0};
+      incidencias.forEach(function(inc){
+        const c = personalClasificarLocal_(inc.incidencia);
+        if(!inc.categoria) inc.categoria = c.categoria;
+        if(!inc.clasificacion) inc.clasificacion = c.clasificacion;
+        const b = resumen[cats.indexOf(inc.categoria) !== -1 ? inc.categoria : 'Diversas'];
+        const k = inc.clasificacion === 'Positiva' ? 'positivas' : (inc.clasificacion === 'Negativa' ? 'negativas' : 'neutras');
+        b[k]++; total[k]++;
+      });
+      cats.forEach(function(c){ resumen[c].diferencia = resumen[c].positivas - resumen[c].negativas; });
+      total.diferencia = total.positivas - total.negativas;
+      return {resumen:resumen, resumenTotal:total};
     }
 
     // Se muestra DENTRO de la misma página (visor propio del sitio,
@@ -6160,6 +6195,26 @@
             '<button class="btn-submit" id="btn-retardos-actualizar" onclick="personalActualizarRetardos_()">⏱️ Actualizar retardos</button>'+
           '</div>'+
           '<div id="retardos-resultado" style="margin-top:0.8rem;font-size:0.85rem;color:#5a4a1a"></div>'+
+          '<div style="margin-top:1rem;padding-top:0.8rem;border-top:1px dashed #d4c07a">'+
+            '<p style="margin:0 0 0.5rem;font-size:0.78rem;color:#7a6030">🧩 <b>Tabla única de horarios docentes.</b> El horario se toma de la hoja <b>HorariosDocentes</b> '+
+            'según la fecha de cada entrada (cada periodo tiene su vigencia). La tabla guarda <b>una fila por docente y por día</b>: '+
+            '<b>Entrada</b> = inicio del primer módulo del día y <b>Salida</b> = fin del último (el detalle por grupo queda en HorariosGrupos). Esta opción convierte la tabla actual a ese formato, '+
+            'migra el horario anterior de ASC como un periodo más y unifica los nombres con la hoja Personal (se guardan respaldos ocultos). Primero «Revisar»; no cambia nada hasta «Unificar».</p>'+
+            '<div style="display:flex;gap:0.6rem;flex-wrap:wrap">'+
+              '<button class="btn-cancel" id="btn-hd-revisar" onclick="personalUnificarHorarios_(\'revisar\')">🔍 Revisar tabla</button>'+
+              '<button class="btn-submit" id="btn-hd-aplicar" onclick="personalUnificarHorarios_(\'aplicar\')">🧩 Unificar tabla</button>'+
+            '</div>'+
+            '<div id="hd-resultado" style="margin-top:0.7rem;font-size:0.82rem;color:#5a4a1a"></div>'+
+          '</div>'+
+          '<div style="margin-top:1rem;padding-top:0.8rem;border-top:1px dashed #d4c07a">'+
+            '<p style="margin:0 0 0.5rem;font-size:0.78rem;color:#7a6030">🔎 <b>Auditar registros de puntualidad.</b> «Actualizar» no vuelve a tocar una persona y fecha ya registradas, así que si el horario estaba mal, el registro quedaba mal. '+
+            'Esta opción revisa <b>todas</b> las incidencias de puntualidad de MovIns contra el Checador y el horario vigente <b>de cada fecha</b>. «Revisar» solo informa; «Corregir» cambia en su lugar (misma fila y número) las que generó el sistema (Invitación ↔ Felicitación y su comentario). Las capturadas a mano nunca se modifican. No elimina ni duplica nada.</p>'+
+            '<div style="display:flex;gap:0.6rem;flex-wrap:wrap">'+
+              '<button class="btn-cancel" id="btn-aud-revisar" onclick="personalAuditarPuntualidad_(\'revisar\')">🔎 Revisar registros</button>'+
+              '<button class="btn-submit" id="btn-aud-aplicar" onclick="personalAuditarPuntualidad_(\'aplicar\')">🛠 Corregir registros</button>'+
+            '</div>'+
+            '<div id="aud-resultado" style="margin-top:0.7rem;font-size:0.82rem;color:#5a4a1a"></div>'+
+          '</div>'+
         '</div>';
       html += '<div class="ficha-section-title" style="margin-top:0.5rem">🔄 Sincronizar asistencia (Control de Asistencia EST3)</div>'+
         '<div style="background:#fffdf5;border:1.5px solid #e8d88a;border-radius:8px;padding:1rem;margin-bottom:1.2rem">'+
@@ -6296,6 +6351,87 @@
       if(json.sinTarjeta && json.sinTarjeta.length){
         html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
           'IDs del Checador sin Tarjeta asignada en "Personal" (no se procesaron): '+json.sinTarjeta.map(personalEsc_).join(', ')+'</div>';
+      }
+      if(json.sinHorario && json.sinHorario.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ Sin horario en la tabla (no se evaluaron): '+json.sinHorario.map(personalEsc_).join('; ')+'</div>';
+      }
+      if(json.usaronHorarioAnterior && json.usaronHorarioAnterior.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#f7f2e0;border:1px dashed #d4c07a;border-radius:6px;font-size:0.8rem">'+
+          'ℹ️ No aparecen en el periodo vigente (p. ej. personal que no viene en el PDF de profesores); se usó su último horario anterior: '+json.usaronHorarioAnterior.map(personalEsc_).join('; ')+'</div>';
+      }
+      if(json.fechasSinPeriodo && json.fechasSinPeriodo.length){
+        html += '<div style="margin-top:0.6rem;padding:0.7rem;background:#fff8e0;border:1px solid #e8c040;border-radius:6px;font-size:0.8rem">'+
+          '⚠️ Fechas del Checador sin ningún periodo de horario vigente (no se evaluaron): '+json.fechasSinPeriodo.map(personalEsc_).join(', ')+'</div>';
+      }
+      if(json.avisoHojaVieja){
+        html += '<div style="margin-top:0.6rem;font-size:0.78rem;color:#7a6030">'+personalEsc_(json.avisoHojaVieja)+'</div>';
+      }
+      res.innerHTML = html;
+    }
+
+    async function personalUnificarHorarios_(modo){
+      const res = document.getElementById('hd-resultado');
+      const b1 = document.getElementById('btn-hd-revisar'), b2 = document.getElementById('btn-hd-aplicar');
+      if(modo === 'aplicar' && !confirm('¿Unificar la tabla de horarios docentes?\n\nQuedará una fila por docente y por día (entrada = primer módulo, salida = último módulo). Se migrará el horario anterior como un periodo más, se unificarán nombres y horas, y se guardará un respaldo oculto. Es seguro repetirlo.')) return;
+      b1.disabled = b2.disabled = true;
+      res.innerHTML = '<span style="color:#7a6030">⏳ '+(modo==='aplicar'?'Unificando':'Revisando')+'…</span>';
+      const json = await jsonpCall({accion:'horariosDocentesUnificar', usuario:_personalUsuario, modo:modo}, 120000);
+      b1.disabled = b2.disabled = false;
+      if(!json || !json.ok){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo completar.')+'</span>'; return; }
+      const r = json.resumen || {};
+      let html = '<div style="font-weight:700;color:'+(modo==='aplicar'?'#1a6b2e':'#5a4a1a')+'">'+(modo==='aplicar'?'✔ Tabla unificada.':'Resultado de la revisión (no se cambió nada):')+'</div><ul style="margin:0.3rem 0 0 1.1rem;padding:0">'+
+        '<li>Filas actuales en HorariosDocentes: <b>'+(r.filasExistentes||0)+'</b>'+(r.formatoAnterior?' (formato anterior: una fila por clase)':'')+'</li>'+
+        '<li>Filas que quedarán (una por docente y día): <b>'+(r.filasResultantes||0)+'</b>'+((r.filasColapsadas||0)?' · filas por clase reunidas: <b>'+r.filasColapsadas+'</b>':'')+((r.filasDescartadas||0)?' · filas sin vigencia o sin nombre omitidas: <b>'+r.filasDescartadas+'</b>':'')+'</li>'+
+        '<li>Filas del horario anterior (ASC, rige desde el 21 de sep) '+(modo==='aplicar'?'migradas':'por migrar')+': <b>'+(r.filasMigradas||0)+'</b>'+(r.yaMigrado?' (ya estaba migrado)':'')+((r.redatadas||0)?' · re-fechadas al 21 de sep: <b>'+r.redatadas+'</b>':'')+'</li>'+
+        '<li>Horario del 1 al 18 de septiembre (horario 1) '+(modo==='aplicar'?'agregado':'por agregar')+': <b>'+(r.filasSep||0)+'</b> filas</li>'+
+        '<li>Horas ajustadas al formato H:MM: <b>'+(r.horasNormalizadas||0)+'</b></li>'+
+        '<li>Nombres unificados con Personal: <b>'+((r.renombres||[]).length)+'</b></li></ul>';
+      const per = r.periodos || {};
+      if(Object.keys(per).length){
+        html += '<div style="margin-top:0.4rem">Periodos: '+Object.keys(per).sort().map(function(k){ return personalEsc_(k)+' ('+per[k]+' filas)'; }).join(' · ')+'</div>';
+      }
+      if(r.renombres && r.renombres.length){
+        html += '<details style="margin-top:0.4rem"><summary style="cursor:pointer">Ver nombres unificados</summary><ul style="margin:0.3rem 0 0 1.1rem;padding:0">'+
+          r.renombres.map(function(x){ return '<li>'+personalEsc_(x.de)+' → <b>'+personalEsc_(x.a)+'</b></li>'; }).join('')+'</ul></details>';
+      }
+      if(r.avisoMigracion) html += '<div style="margin-top:0.4rem;color:#9b1c1c">⚠️ '+personalEsc_(r.avisoMigracion)+'</div>';
+      if(r.sinUnificar && r.sinUnificar.length){
+        html += '<div style="margin-top:0.4rem;padding:0.6rem;background:#fdecec;border:1px solid #d98a8a;border-radius:6px">⚠️ Sin asociar con seguridad a Personal: <b>'+r.sinUnificar.map(personalEsc_).join(', ')+
+          '</b>. Agregue una fila en la hoja <b>AliasHorarios</b> (A = nombre en la tabla; B = nombre exacto en Personal) y vuelva a pulsar.</div>';
+      }
+      if(modo==='aplicar' && r.hayCambios===false) html += '<div style="margin-top:0.4rem;color:#7a6030">La tabla ya estaba en el formato correcto; no hubo cambios.</div>';
+      if(modo==='aplicar' && r.respaldo) html += '<div style="margin-top:0.4rem;color:#7a6030">Respaldo (oculta): '+personalEsc_(r.respaldo)+(r.hojaViejaRenombrada?' · Hoja vieja renombrada y oculta: '+personalEsc_(r.hojaViejaRenombrada):'')+'</div>';
+      res.innerHTML = html;
+    }
+
+    async function personalAuditarPuntualidad_(modo){
+      const res = document.getElementById('aud-resultado');
+      const b1 = document.getElementById('btn-aud-revisar'), b2 = document.getElementById('btn-aud-aplicar');
+      if(modo === 'aplicar' && !confirm('¿Corregir los registros de puntualidad que el sistema generó con un horario equivocado?\n\nSe cambian en su lugar (Invitación ↔ Felicitación y su comentario). Las capturadas a mano no se tocan. Se recomienda haber pulsado antes «Revisar registros».')) return;
+      b1.disabled = b2.disabled = true;
+      res.innerHTML = '<span style="color:#7a6030">⏳ '+(modo==='aplicar'?'Corrigiendo':'Revisando')+' (puede tardar un momento)…</span>';
+      const json = await jsonpCall({accion:'puntualidadAuditar', usuario:_personalUsuario, modo:modo}, 170000);
+      b1.disabled = b2.disabled = false;
+      if(!json || !json.ok){ res.innerHTML = '<span style="color:#9b1c1c">⚠️ '+personalEsc_((json&&json.mensaje)||'No se pudo completar.')+'</span>'; return; }
+      const r = json.resumen || {};
+      const cor = r.corregidos || [], rep = r.reportados || [];
+      let html = '<div style="font-weight:700;color:'+(modo==='aplicar'?'#1a6b2e':'#5a4a1a')+'">'+(modo==='aplicar'?'✔ Registros corregidos.':'Resultado de la revisión (no se cambió nada):')+'</div><ul style="margin:0.3rem 0 0 1.1rem;padding:0">'+
+        '<li>Registros de puntualidad revisados: <b>'+(r.revisados||0)+'</b></li>'+
+        '<li>Correctos: <b>'+(r.correctos||0)+'</b></li>'+
+        '<li>'+(modo==='aplicar'?'Corregidos':'Por corregir')+' (cambia Invitación ↔ Felicitación): <b>'+cor.length+'</b></li>'+
+        '<li>Solo se ajusta el comentario (hora esperada): <b>'+(r.soloComentario||0)+'</b></li>'+
+        '<li>Para revisar a mano (no se modifican): <b>'+rep.length+'</b></li></ul>';
+      const cell = 'padding:0.25rem 0.5rem;border-bottom:1px solid #eadfb0;text-align:left';
+      if(cor.length){
+        html += '<details style="margin-top:0.5rem" '+(modo==='revisar'?'open':'')+'><summary style="cursor:pointer">Ver los '+cor.length+' registros '+(modo==='aplicar'?'corregidos':'por corregir')+'</summary>'+
+          '<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem"><tr><th style="'+cell+'">Fila</th><th style="'+cell+'">Fecha</th><th style="'+cell+'">Persona</th><th style="'+cell+'">Entrada</th><th style="'+cell+'">Horario</th><th style="'+cell+'">Estaba</th><th style="'+cell+'">Debe ser</th></tr>'+
+          cor.map(function(x){ return '<tr><td style="'+cell+'">'+x.fila+'</td><td style="'+cell+'">'+personalEsc_(x.fecha)+'</td><td style="'+cell+'">'+personalEsc_(x.nombre)+'</td><td style="'+cell+'">'+personalEsc_(x.entrada)+'</td><td style="'+cell+'">'+personalEsc_(x.esperado)+'</td><td style="'+cell+'">'+personalEsc_(x.de)+'</td><td style="'+cell+'"><b>'+personalEsc_(x.a)+'</b></td></tr>'; }).join('')+
+          '</table></div></details>';
+      }
+      if(rep.length){
+        html += '<details style="margin-top:0.5rem"><summary style="cursor:pointer">Ver los '+rep.length+' que requieren revisión a mano</summary><ul style="margin:0.3rem 0 0 1.1rem;padding:0;font-size:0.76rem">'+
+          rep.map(function(x){ return '<li>Fila '+x.fila+' · '+personalEsc_(x.fecha)+' · '+personalEsc_(x.nombre)+' · '+personalEsc_(x.incidencia)+' — '+personalEsc_(x.motivo)+'</li>'; }).join('')+'</ul></details>';
       }
       res.innerHTML = html;
     }
