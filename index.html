@@ -1,3 +1,4 @@
+<!-- v28 (15/oct/2026): Conducta = 100 - Reglamento - faltas/registro único + recuperación por cocina (ficha del alumno con detalle por fecha y columna Conducta de la ficha de grupo). -->
 <!-- v27 (13/oct/2026): nueva tarjeta «Auditar registros de puntualidad» (Revisar/Corregir) y la unificación ahora informa el periodo 1-18 sep. -->
 <!-- v26 (13/oct/2026): HorariosDocentes ahora guarda UNA fila por docente y por día (Entrada = primer módulo del día, Salida = último módulo). Cambió solo la tarjeta «Tabla única de horarios docentes» (texto y resultado de Revisar/Unificar). -->
 <!-- Generado: 05/octubre/2026, 00:15 (hora Zacatecas) — NUEVO, confirmado con el Director: al aplicar un horario de profesores (tarjeta "✅ Aplicar este horario — Fase 2"), el servidor ahora también actualiza "horario 1"/"horario 2" de Control de Asistencia EST3 por NP (ver el comentario de cabecera del .gs: hpActualizarHorarioEscDesdeProfesores_). Este archivo solo necesitó dos cambios: (1) la descripción de la tarjeta de aplicar ahora explica esto; (2) el resultado tras aplicar muestra cuántos maestros se actualizaron ("horarioEscActualizado") y, en amarillo, la lista de nombres cuyo NP no se pudo resolver en la hoja "Personal" ("avisoProfesorSinNP") -- a esos maestros NO se les tocó "horario 1"/"horario 2", para que la Dirección revise el nombre a mano en vez de que el sistema adivine. -->
@@ -3291,6 +3292,7 @@
     let _fichaIntervenciones    = [];
     let _fichaBitacoraDocentes  = [];
     let _fichaConductaRegistros = [];
+    let _fichaConductaExtra = { faltas: [], consumos: [], resumen: null };
     let _fichaAsistDetalle      = [];
     let _fichaFaltasDetalle     = [];
     let _fichaUsaerActual       = null; // respuesta completa de usaerAlumnoFicha (enUsaer + registros + fichaInf + aluUsaer)
@@ -3425,7 +3427,7 @@
         jsonpCall({ accion: 'resumenCalificacionesFicha', curp: curp, ciclo: ciclo }, 20000),
         jsonpCall({ accion: 'resumenAsistenciaFicha', curp: curp, nombre: nombre, ciclo: ciclo }, 20000),
         jsonpCall({ accion: 'datosTrabajoSocialFicha', nombre: nombre }, 20000),
-        jsonpCall({ accion: 'puntosConductaFicha', nombre: nombre }, 20000),
+        jsonpCall({ accion: 'puntosConductaFicha', nombre: nombre, curp: curp, ciclo: ciclo }, 30000),
         jsonpCall({ accion: 'bitacoraDocentesFicha', nombre: nombre }, 20000)
       ]);
 
@@ -3457,6 +3459,15 @@
       const puntosPerdidos = condOk ? datosConducta.puntosPerdidos : 0;
       const totalPuntos    = condOk ? datosConducta.totalPuntos : (puntosConducta - puntosPerdidos);
       _fichaConductaRegistros = condOk ? datosConducta.registros : [];
+      // v39: además del Reglamento, resta por faltas / registro único y recuperación por consumo en cocina.
+      const puntosRecuperados = condOk ? (datosConducta.puntosRecuperados || 0) : 0;
+      const puntosReglamento  = condOk ? (datosConducta.puntosReglamento !== undefined ? datosConducta.puntosReglamento : puntosPerdidos) : 0;
+      const puntosFaltas      = condOk ? (datosConducta.puntosFaltas || 0) : 0;
+      const diasCocina        = condOk ? (datosConducta.diasCocina || 0) : 0;
+      _fichaConductaExtra = condOk
+        ? { faltas: datosConducta.faltas || [], consumos: datosConducta.consumos || [],
+            resumen: { puntosReglamento, puntosFaltas, puntosPerdidos, diasCocina, puntosRecuperados, totalPuntos } }
+        : { faltas: [], consumos: [], resumen: null };
 
       // Bitácora de Docentes: EN VIVO desde bitacoraDocentesFicha (libro
       // "Registros Bitacora", hojas "Registros" y "Copia de Registros").
@@ -3686,7 +3697,18 @@
               ? `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#C0181A;
                      cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
                    onclick="abrirDetalleConducta()" title="Ver detalle de puntos perdidos">
-                   ${puntosPerdidos}</div>`
+                   ${puntosPerdidos}</div>
+                 <div style="font-size:0.72rem;color:#8a7a50;margin-top:0.15rem">Reglamento ${puntosReglamento} · Faltas ${puntosFaltas}</div>`
+              : `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#1D7A4E">0</div>`}
+          </div>
+          <div class="ficha-field">
+            <div class="ficha-field-label">Recuperados (Cocina)</div>
+            ${diasCocina > 0
+              ? `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#1D7A4E;
+                     cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+                   onclick="abrirDetalleConducta()" title="Ver días con consumo en cocina">
+                   +${puntosRecuperados}</div>
+                 <div style="font-size:0.72rem;color:#8a7a50;margin-top:0.15rem">${diasCocina} día${diasCocina === 1 ? '' : 's'} de consumo${puntosRecuperados < diasCocina ? ' (hasta lo perdido)' : ''}</div>`
               : `<div class="ficha-field-value" style="font-size:1.4rem;font-weight:800;color:#1D7A4E">0</div>`}
           </div>
           <div class="ficha-field">
@@ -4234,23 +4256,31 @@
     function abrirDetalleConducta() {
       const overlay = document.getElementById('detalle-cond-overlay');
       const body    = document.getElementById('detalle-cond-body');
-      const lista   = _fichaConductaRegistros || [];
-
-      const filas = lista.map((r) => `
-        <tr style="border-bottom:1px solid #f0e8c0">
-          <td style="padding:0.5rem 0.8rem;white-space:nowrap;font-size:0.82rem">${fmtFecha(r.fecha)}</td>
-          <td style="padding:0.5rem 0.8rem;text-align:center;font-size:0.82rem">${r.numRegla || '—'}</td>
-          <td style="padding:0.5rem 0.8rem;text-align:center;font-weight:700;color:#C0181A;font-size:0.82rem">
-            -${r.puntos}</td>
-          <td style="padding:0.5rem 0.8rem;font-size:0.82rem;line-height:1.5">${r.regla || '—'}</td>
-          <td style="padding:0.5rem 0.8rem;font-size:0.82rem;line-height:1.5">${r.motivo || '—'}</td>
-        </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;padding:1.2rem;color:#aaa">
-          Sin registros.</td></tr>`;
-
-      const suma = lista.reduce((a, r) => a + (r.puntos || 0), 0);
-
+      const ext     = _fichaConductaExtra || { faltas: [], consumos: [], resumen: null };
+      const celda   = 'padding:0.5rem 0.8rem;font-size:0.82rem;line-height:1.5';
+      const fila = (fecha, tipo, puntos, concepto, detalle) => {
+        const neg = puntos > 0;                       // puntos > 0 = se pierden; < 0 = se recuperan
+        const color = neg ? '#C0181A' : '#1D7A4E';
+        const txt = (neg ? '-' : '+') + Math.abs(puntos);
+        return `<tr style="border-bottom:1px solid #f0e8c0">
+          <td style="${celda};white-space:nowrap">${fmtFecha(fecha)}</td>
+          <td style="${celda}">${tipo}</td>
+          <td style="${celda};text-align:center;font-weight:700;color:${color}">${txt}</td>
+          <td style="${celda}">${concepto || '—'}</td>
+          <td style="${celda}">${detalle || '—'}</td></tr>`;
+      };
+      const filasReg = (_fichaConductaRegistros || []).map((r) =>
+        fila(r.fecha, 'Reglamento', Number(r.puntos) || 0, r.regla, (r.numRegla ? 'Regla ' + r.numRegla + (r.motivo ? ' · ' : '') : '') + (r.motivo || '')));
+      const filasFal = (ext.faltas || []).map((f) =>
+        fila(f.fecha, 'Asistencia', f.puntos || 1, 'Día de clase sin asistencia completa', f.motivo));
+      const filasCoc = (ext.consumos || []).map((c) =>
+        fila(c.fecha, 'Cocina', -1, 'Recuperación por consumo en cocina', '1 punto por día'));
+      const todas = filasReg.concat(filasFal, filasCoc);
+      const r = ext.resumen || {};
+      const nota = (r.diasCocina || 0) > (r.puntosRecuperados || 0)
+        ? `<div style="margin-top:0.7rem;font-size:0.78rem;color:#7a6030">La recuperación por cocina no puede dejar el total por encima de lo perdido: ${r.diasCocina} día(s) de consumo, ${r.puntosRecuperados} punto(s) aplicados.</div>` : '';
       document.getElementById('detalle-cond-titulo').textContent =
-        `⭐ Puntos Perdidos — ${lista.length} registro${lista.length === 1 ? '' : 's'} (-${suma} pts)`;
+        `⭐ Conducta — Perdidos ${r.puntosPerdidos !== undefined ? r.puntosPerdidos : ''} · Recuperados +${r.puntosRecuperados || 0} · Total ${r.totalPuntos !== undefined ? r.totalPuntos : ''}`;
 
       body.innerHTML = `
         <div style="overflow-x:auto">
@@ -4258,15 +4288,15 @@
             <thead>
               <tr style="background:linear-gradient(135deg,#1A1208,#3D2B0A);color:#F0C040">
                 <th style="padding:0.55rem 0.8rem;text-align:left">Fecha</th>
-                <th style="padding:0.55rem 0.8rem;text-align:center">No. Regla</th>
+                <th style="padding:0.55rem 0.8rem;text-align:left">Origen</th>
                 <th style="padding:0.55rem 0.8rem;text-align:center">Puntos</th>
-                <th style="padding:0.55rem 0.8rem;text-align:left">Regla</th>
-                <th style="padding:0.55rem 0.8rem;text-align:left">Motivo</th>
+                <th style="padding:0.55rem 0.8rem;text-align:left">Concepto</th>
+                <th style="padding:0.55rem 0.8rem;text-align:left">Detalle</th>
               </tr>
             </thead>
-            <tbody>${filas}</tbody>
+            <tbody>${todas.join('') || `<tr><td colspan="5" style="text-align:center;padding:1.2rem;color:#aaa">Sin registros.</td></tr>`}</tbody>
           </table>
-        </div>`;
+        </div>${nota}`;
 
       overlay.style.display = 'flex';
     }
@@ -4349,6 +4379,7 @@
       _fichaIntervenciones     = [];
       _fichaBitacoraDocentes   = [];
       _fichaConductaRegistros  = [];
+      _fichaConductaExtra      = { faltas: [], consumos: [], resumen: null };
       _fichaAsistDetalle       = [];
       _fichaFaltasDetalle      = [];
       _fichaUsaerActual        = null;
@@ -9011,6 +9042,10 @@
           } else if(c.campo === 'conductaTotal'){
             txt = val !== null && val !== undefined ? val : '—';
             color = colorGF_(val, c.tipo);
+            // v39: el total ya incluye la resta por faltas y la recuperación por cocina.
+            const tip = 'Reglamento: -'+(a.conductaReglamento||0)+' · Faltas: -'+(a.conductaFaltas||0)+' · Cocina: +'+(a.conductaRecuperados||0);
+            return '<td title="'+tip+'" style="padding:0.5rem 0.7rem;text-align:'+c.align+';font-weight:700;color:'+color+'">'+txt+
+              ((a.conductaFaltas||a.conductaRecuperados)?'<div style="font-size:0.66rem;font-weight:400;color:#8a7a50">'+(a.conductaFaltas?'-'+a.conductaFaltas+' falt.':'')+(a.conductaFaltas&&a.conductaRecuperados?' · ':'')+(a.conductaRecuperados?'+'+a.conductaRecuperados+' cocina':'')+'</div>':'')+'</td>';
           } else if(c.campo === 'estiloAprendizaje'){
             txt = val || '—';
           } else if(c.campo === 'aDistancia'){
